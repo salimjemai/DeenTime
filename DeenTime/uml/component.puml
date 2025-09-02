@@ -1,0 +1,59 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+title DeenTime – High‑level Component Diagram (Option A)
+
+package "Clients" {
+  component "PWA (Angular)\nfrontend/deentime-web" as PWA
+  component "Mobile (Capacitor)\niOS / Android" as Mobile
+  component "Desktop (Tauri)\nWindows / macOS" as Desktop
+}
+
+node "Internet" as NET
+
+package "DeenTime.Api (.NET 8 Minimal API)" as API {
+  component "Middleware Pipeline\nAuth(JWT), CORS, RateLimiter(public), OutputCache, Compression, Swagger" as MW
+  component "GET /api/v1/orgs" as Orgs
+  component "GET /api/v1/orgs/{id}" as OrgById
+  component "GET /api/v1/timings" as Timings
+  component "GET /health/*" as Health
+}
+
+package "DeenTime.Core" as CORE {
+  component "IsnaCalculator" as Calc
+  () "IPrayerTimeCalculator" as ICalc
+  Calc -- ICalc : provides
+}
+
+package "DeenTime.Infrastructure" as INFRA {
+  component "AppDbContext" as DbCtx
+  database "Relational DB\n(SQL Server / Postgres / MySQL)" as DB
+  DbCtx -down- DB : EF Core
+}
+
+package "DeenTime.Contracts" as CONTRACTS {
+  component "PrayerTimesDto"
+}
+
+cloud "OIDC Provider (Authority)\nAuth:Authority + Audience=deentime-api" as IDP
+
+' Clients reach API over the Internet
+PWA --> NET
+Mobile --> NET
+Desktop --> NET
+NET --> API : HTTPS (CORS-allowed origins)
+
+' Pipeline and endpoints
+API --> MW
+API --> Orgs
+API --> OrgById
+API --> Timings
+API --> Health
+
+' Data & services
+Orgs --> DbCtx
+OrgById --> DbCtx
+Timings --> DbCtx : Load Org + Criteria
+Timings ..> ICalc : uses
+API --> IDP : Validate JWT / get JWKS
+@enduml

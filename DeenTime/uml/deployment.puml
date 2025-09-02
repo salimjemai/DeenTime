@@ -1,0 +1,38 @@
+@startuml
+title DeenTime – Deployment Diagram
+
+node "User Device" {
+  artifact "PWA (Angular)\nserved via CDN" as PWA
+  artifact "Capacitor App\niOS / Android" as Cap
+  artifact "Tauri Desktop\nWin / macOS" as Tauri
+}
+
+cloud "Public Internet" as NET
+
+node "Static Hosting + CDN" as CDN {
+  artifact "deentime-web build\n(dist/)" as STATIC
+}
+
+node "App Host\n(Azure App Service / Container)" as APP {
+  component "DeenTime.Api\n(.NET 8)" as API
+  queue "OutputCache\n(in-memory)" as CACHE
+  artifact "RateLimiter\n(Fixed window)" as RL
+}
+
+database "PostgreSQL\n(DB: deentime)" as DB
+cloud "OIDC Provider" as IDP
+
+PWA -- NET
+Cap -- NET
+Tauri -- NET
+
+PWA --> CDN : HTTPS (static assets)
+PWA --> API : HTTPS (CORS)
+Cap --> API : HTTPS (CORS)
+Tauri --> API : HTTPS (CORS)
+
+API --> DB : EF Core (TCP)
+API --> IDP : OIDC discovery / JWKS
+API ..> CACHE
+API ..> RL
+@enduml

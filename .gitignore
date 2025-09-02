@@ -1,0 +1,14 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/DeenTime/.vs
+/.vs
+/DeenTime/backend/DeenTime.Api/bin/Debug/net8.0
+/DeenTime/backend/DeenTime.Api/obj/Debug
+/DeenTime/backend/DeenTime.Contracts/bin/Debug/net8.0
+/DeenTime/backend/DeenTime.Contracts/obj/Debug
+/DeenTime/backend/DeenTime.Core/bin/Debug/net8.0
+/DeenTime/backend/DeenTime.Core/obj/Debug
+/DeenTime/backend/DeenTime.Infrastructure/bin/Debug/net8.0
+/DeenTime/backend/DeenTime.Infrastructure/obj/Debug

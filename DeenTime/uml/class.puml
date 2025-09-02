@@ -1,0 +1,74 @@
+@startuml
+title DeenTime – Core Domain & Infrastructure Classes
+
+package "DeenTime.Core.Entities" {
+  class Organization {
+    +Id: Guid
+    +Name: string
+    +AddressLine: string?
+    +City: string?
+    +State: string?
+    +ZipCode: string?
+    +Phone: string?
+    +WebsiteUrl: string?
+    +Email: string?
+    +SocialUrl: string?
+    +Criteria: PrayerTimingCriteria?
+    +UpdatedAtUtc: DateTime
+  }
+
+  class PrayerTimingCriteria {
+    +Id: Guid
+    +OrganizationId: Guid
+    +Organization: Organization
+    +ZipCode: string
+    +Method: string = "ISNA"
+    +JuristicMethodAsr: string = "Other"
+    +Latitude: decimal
+    +Longitude: decimal
+    +MinutesAfterZawal: int = 1
+    +MinutesAfterMaghrib: int = 2
+    +KhutbahTimeMinutes: int = 30
+    +TimezoneId: string = "America/Chicago"
+    +DstObserved: bool = true
+    +DstBegins: DateOnly?
+    +DstEnds: DateOnly?
+    +UpdatedAtUtc: DateTime
+  }
+}
+
+package "DeenTime.Contracts.Timings" {
+  class PrayerTimesDto <<record>> {
+    +Date: DateOnly
+    +Fajr: TimeOnly
+    +Dhuhr: TimeOnly
+    +Asr: TimeOnly
+    +Maghrib: TimeOnly
+    +Isha: TimeOnly
+  }
+}
+
+package "DeenTime.Core.Services" {
+  interface IPrayerTimeCalculator {
+    +Compute(c: PrayerTimingCriteria, date: DateOnly): PrayerTimesDto
+  }
+  class IsnaCalculator {
+    +Compute(...): PrayerTimesDto
+  }
+  IPrayerTimeCalculator <|.. IsnaCalculator
+}
+
+package "DeenTime.Infrastructure" {
+  class AppDbContext {
+    +Organizations: DbSet<Organization>
+    +PrayerTimingCriteria: DbSet<PrayerTimingCriteria>
+    ..ModelCreating..
+    HasOne(Organization.Criteria) WithOne(PrayerTimingCriteria.Organization)
+    HasForeignKey(PrayerTimingCriteria.OrganizationId)
+    Index(Organization.Name)
+    Index(PrayerTimingCriteria.OrganizationId)
+  }
+}
+
+Organization "1" -- "0..1" PrayerTimingCriteria : one-to-one
+@enduml

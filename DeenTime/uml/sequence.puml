@@ -1,0 +1,38 @@
+@startuml
+title DeenTime – GET /api/v1/timings Flow
+
+actor User
+participant "Angular App\n(deentime-web)" as Web
+participant "OIDC Provider\n(Authority)" as IDP
+participant "DeenTime.Api\n(Middleware Pipeline)" as API
+participant "RateLimiter\n(public)" as RL
+participant "OutputCache\n(15m TTL)" as Cache
+participant "AppDbContext\n(EF Core)" as Db
+participant "IPrayerTimeCalculator\n(IsnaCalculator)" as Calc
+
+User -> Web : Open app
+Web -> IDP : (if needed) OIDC Auth (PKCE)
+IDP --> Web : id_token + access_token (JWT)
+
+Web -> API : GET /api/v1/timings?orgId=...&date=...\nAuthorization: Bearer <JWT>
+API -> RL : Check quota (60/5s)
+RL --> API : Allowed
+
+API -> Cache : Lookup timings:{orgId}:{date}
+alt cache hit
+  Cache --> API : PrayerTimesDto
+  API --> Web : 200 OK (cached JSON)
+else cache miss
+  API -> Db : Load Organization.Include(Criteria) by orgId
+  alt not found
+    Db --> API : null
+    API --> Web : 404 NotFound
+  else found
+    Db --> API : Organization + Criteria
+    API -> Calc : Compute(criteria, date)
+    Calc --> API : PrayerTimesDto
+    API -> Cache : Store (15m)
+    API --> Web : 200 OK (JSON)
+  end
+end
+@enduml
