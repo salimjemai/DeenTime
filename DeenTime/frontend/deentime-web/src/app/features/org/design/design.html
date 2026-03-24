@@ -1,1 +1,31 @@
-<p>design works!</p>
+<div class="page">
+  <h2 class="page-title">Design Settings</h2>
+
+  @if (loading()) {
+    <div class="center"><mat-spinner diameter="48" /></div>
+  } @else {
+    <mat-card>
+      <mat-card-content>
+        <form [formGroup]="form" class="form-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Header Image URL</mat-label>
+            <input matInput formControlName="headerImageUrl" placeholder="https://..." />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Footer HTML</mat-label>
+            <textarea matInput formControlName="footerHtml" rows="4" placeholder="<p>Your mosque footer</p>"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Theme</mat-label>
+            <mat-select formControlName="theme">
+              @for (t of themes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">Save</button>
+      </mat-card-actions>
+    </mat-card>
+  }
+</div>

@@ -1,0 +1,10 @@
+.page { max-width: 900px; }
+.page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.page-title { margin: 0; color: #1b5e20; font-size: 1.5rem; flex: 1; }
+.year-nav { display: flex; align-items: center; gap: 4px; }
+.year-label { font-weight: 600; font-size: 1.1rem; min-width: 48px; text-align: center; }
+.center { display: flex; justify-content: center; padding: 48px 0; }
+.full-width { width: 100%; }
+.inline-input { border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 0.9rem; }
+.inline-select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 0.9rem; }
+.empty { padding: 32px; text-align: center; color: #888; }

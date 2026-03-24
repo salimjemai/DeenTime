@@ -1,1 +1,20 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$green-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, 'Segoe UI', sans-serif;
+  background: #f5f5f5;
+}

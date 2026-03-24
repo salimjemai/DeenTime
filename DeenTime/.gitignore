@@ -1,0 +1,51 @@
+# Build outputs
+bin/
+obj/
+dist/
+out/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Secrets & environment overrides (never commit these)
+appsettings.Production.json
+appsettings.Staging.json
+*.local.json
+.env
+.env.*
+!.env.example
+
+# EF Core migration bundles
+efbundle
+efbundle.exe
+
+# Logs
+logs/
+*.log
+Serilog*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Angular
+node_modules/
+.angular/
+
+# Test results
+TestResults/
+coverage/
+*.trx
+*.coveragexml
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Docker volumes (local)
+pgdata/

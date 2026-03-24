@@ -43,7 +43,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
         b.Entity<Organization>()
             .HasMany<OrgUser>()
-            .WithOne()
+            .WithOne(ou => ou.Organization)
             .HasForeignKey(ou => ou.OrganizationId)
             .OnDelete(DeleteBehavior.Cascade);
 

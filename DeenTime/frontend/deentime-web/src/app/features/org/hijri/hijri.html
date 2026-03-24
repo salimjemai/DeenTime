@@ -1,1 +1,50 @@
-<p>hijri works!</p>
+<div class="page">
+  <div class="page-header">
+    <h2 class="page-title">Hijri Calendar</h2>
+    <div class="year-nav">
+      <button mat-icon-button (click)="changeYear(-1)"><mat-icon>chevron_left</mat-icon></button>
+      <span class="year-label">{{ year }}</span>
+      <button mat-icon-button (click)="changeYear(1)"><mat-icon>chevron_right</mat-icon></button>
+    </div>
+    <button mat-stroked-button (click)="regenerate()">
+      <mat-icon>autorenew</mat-icon> Regenerate
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="center"><mat-spinner diameter="48" /></div>
+  } @else {
+    <mat-card>
+      <table mat-table [dataSource]="rows()" class="full-width">
+        <ng-container matColumnDef="month">
+          <th mat-header-cell *matHeaderCellDef>Month</th>
+          <td mat-cell *matCellDef="let r">{{ monthName(r.month) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="hijriDayOnFirst">
+          <th mat-header-cell *matHeaderCellDef>Hijri Day on 1st</th>
+          <td mat-cell *matCellDef="let r">
+            <input [(ngModel)]="r.hijriDayOnFirst" type="number" min="1" max="30"
+                   class="inline-input" [disabled]="r.locked" />
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="locked">
+          <th mat-header-cell *matHeaderCellDef>Locked</th>
+          <td mat-cell *matCellDef="let r">
+            <mat-checkbox [(ngModel)]="r.locked"></mat-checkbox>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let r">
+            <button mat-icon-button color="primary" (click)="save(r)"><mat-icon>save</mat-icon></button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+      </table>
+      @if (rows().length === 0) {
+        <div class="empty">No Hijri data for {{ year }}. Click Regenerate to create rows.</div>
+      }
+    </mat-card>
+  }
+</div>

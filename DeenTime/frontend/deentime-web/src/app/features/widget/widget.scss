@@ -1,0 +1,8 @@
+.widget { max-width: 280px; }
+.prayer-list { margin-top: 8px; }
+.prayer-row {
+  display: flex; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid #eee; font-size: 0.95rem;
+}
+.name { color: #555; }
+.time { font-weight: 600; color: #1b5e20; }

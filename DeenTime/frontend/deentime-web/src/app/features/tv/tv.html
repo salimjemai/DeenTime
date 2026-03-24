@@ -1,1 +1,18 @@
-<p>tv works!</p>
+<div class="tv-page">
+  <div class="clock">{{ clock() }}</div>
+
+  @if (loading()) {
+    <mat-spinner diameter="64" />
+  } @else if (timings()) {
+    <div class="prayer-list">
+      @for (p of prayers; track p) {
+        <div class="prayer-row">
+          <span class="prayer-name">{{ labels[p] }}</span>
+          <span class="prayer-time">{{ timeFor(p) }}</span>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="error">Could not load prayer times.</p>
+  }
+</div>

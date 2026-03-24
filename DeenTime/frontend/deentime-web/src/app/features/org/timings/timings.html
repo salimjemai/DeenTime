@@ -1,1 +1,35 @@
-<p>timings works!</p>
+<div class="page">
+  <h2 class="page-title">Prayer Times</h2>
+
+  <div class="toolbar">
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>Date</mat-label>
+      <input matInput [matDatepicker]="picker" [(ngModel)]="selectedDate" (dateChange)="onDateChange($event.value)" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker" />
+      <mat-datepicker #picker />
+    </mat-form-field>
+    @if (isToday()) {
+      <span class="today-badge">Today</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="center"><mat-spinner diameter="48" /></div>
+  } @else if (error()) {
+    <mat-card class="error-card">
+      <mat-icon>warning</mat-icon> {{ error() }}
+    </mat-card>
+  } @else if (timings()) {
+    <div class="prayer-grid">
+      @for (p of prayers; track p.key) {
+        <mat-card class="prayer-card">
+          <mat-card-content>
+            <mat-icon class="prayer-icon">{{ p.icon }}</mat-icon>
+            <div class="prayer-label">{{ p.label }}</div>
+            <div class="prayer-time">{{ timeFor(p.key) }}</div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

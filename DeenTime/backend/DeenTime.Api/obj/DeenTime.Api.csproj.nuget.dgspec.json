@@ -1,48 +1,39 @@
 {
   "format": 1,
   "restore": {
-    "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Api\\DeenTime.Api.csproj": {}
+    "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Api/DeenTime.Api.csproj": {}
   },
   "projects": {
-    "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Api\\DeenTime.Api.csproj": {
+    "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Api/DeenTime.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Api\\DeenTime.Api.csproj",
+        "projectUniqueName": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Api/DeenTime.Api.csproj",
         "projectName": "DeenTime.Api",
-        "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Api\\DeenTime.Api.csproj",
-        "packagesPath": "C:\\Users\\jemas\\.nuget\\packages\\",
-        "outputPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Api\\obj\\",
+        "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Api/DeenTime.Api.csproj",
+        "packagesPath": "/Users/salim/.nuget/packages/",
+        "outputPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Api/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\jemas\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/salim/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "D:\\Publish-D": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/CAMPEIS/_packaging/CAMPEIS/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net9.0": {
+            "targetAlias": "net9.0",
             "projectReferences": {
-              "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj": {
-                "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj"
+              "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj": {
+                "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj"
               },
-              "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj": {
-                "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj"
+              "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj": {
+                "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj"
               },
-              "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Infrastructure\\DeenTime.Infrastructure.csproj": {
-                "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Infrastructure\\DeenTime.Infrastructure.csproj"
+              "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Infrastructure/DeenTime.Infrastructure.csproj": {
+                "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Infrastructure/DeenTime.Infrastructure.csproj"
               }
             }
           }
@@ -57,11 +48,11 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net9.0": {
+          "targetAlias": "net9.0",
           "dependencies": {
             "Asp.Versioning.Http": {
               "target": "Package",
@@ -91,9 +82,9 @@
               "target": "Package",
               "version": "[1.8.21, )"
             },
-            "Hangfire.SqlServer": {
+            "Hangfire.PostgreSql": {
               "target": "Package",
-              "version": "[1.8.21, )"
+              "version": "[1.20.9, )"
             },
             "Mapster": {
               "target": "Package",
@@ -105,11 +96,17 @@
             },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
-              "version": "[8.0.8, )"
+              "version": "[9.0.0, )"
             },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
-              "version": "[8.0.8, )"
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.0.4, )"
             },
             "Microsoft.IdentityModel.Protocols.OpenIdConnect": {
               "target": "Package",
@@ -133,7 +130,7 @@
             },
             "QuestPDF": {
               "target": "Package",
-              "version": "[2024.5.0, )"
+              "version": "[2024.6.0, )"
             },
             "Serilog.AspNetCore": {
               "target": "Package",
@@ -179,6 +176,20 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.osx-arm64",
+              "version": "[9.0.12, 9.0.12]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -187,40 +198,31 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.102/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj": {
+    "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj",
+        "projectUniqueName": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj",
         "projectName": "DeenTime.Contracts",
-        "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj",
-        "packagesPath": "C:\\Users\\jemas\\.nuget\\packages\\",
-        "outputPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\obj\\",
+        "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj",
+        "packagesPath": "/Users/salim/.nuget/packages/",
+        "outputPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\jemas\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/salim/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "D:\\Publish-D": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/CAMPEIS/_packaging/CAMPEIS/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net9.0": {
+            "targetAlias": "net9.0",
             "projectReferences": {}
           }
         },
@@ -234,11 +236,11 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net9.0": {
+          "targetAlias": "net9.0",
           "imports": [
             "net461",
             "net462",
@@ -250,48 +252,49 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.102/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj": {
+    "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj",
+        "projectUniqueName": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj",
         "projectName": "DeenTime.Core",
-        "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj",
-        "packagesPath": "C:\\Users\\jemas\\.nuget\\packages\\",
-        "outputPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\obj\\",
+        "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj",
+        "packagesPath": "/Users/salim/.nuget/packages/",
+        "outputPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\jemas\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/salim/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "D:\\Publish-D": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/CAMPEIS/_packaging/CAMPEIS/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net9.0": {
+            "targetAlias": "net9.0",
             "projectReferences": {
-              "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj": {
-                "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj"
+              "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj": {
+                "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj"
               }
             }
           }
@@ -306,11 +309,11 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net9.0": {
+          "targetAlias": "net9.0",
           "imports": [
             "net461",
             "net462",
@@ -322,48 +325,49 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.102/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Infrastructure\\DeenTime.Infrastructure.csproj": {
+    "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Infrastructure/DeenTime.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Infrastructure\\DeenTime.Infrastructure.csproj",
+        "projectUniqueName": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Infrastructure/DeenTime.Infrastructure.csproj",
         "projectName": "DeenTime.Infrastructure",
-        "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Infrastructure\\DeenTime.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\jemas\\.nuget\\packages\\",
-        "outputPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Infrastructure\\obj\\",
+        "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Infrastructure/DeenTime.Infrastructure.csproj",
+        "packagesPath": "/Users/salim/.nuget/packages/",
+        "outputPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Infrastructure/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\jemas\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/salim/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "D:\\Publish-D": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/CAMPEIS/_packaging/CAMPEIS/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net9.0": {
+            "targetAlias": "net9.0",
             "projectReferences": {
-              "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj": {
-                "projectPath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Core\\DeenTime.Core.csproj"
+              "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj": {
+                "projectPath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Core/DeenTime.Core.csproj"
               }
             }
           }
@@ -378,25 +382,25 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net9.0": {
+          "targetAlias": "net9.0",
           "dependencies": {
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[8.0.8, )"
+              "version": "[9.0.4, )"
             },
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[8.0.8, )"
+              "version": "[9.0.4, )"
             },
-            "Microsoft.EntityFrameworkCore.SqlServer": {
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
-              "version": "[8.0.8, )"
+              "version": "[9.0.4, )"
             }
           },
           "imports": [
@@ -410,12 +414,22 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.12, 9.0.12]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.102/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

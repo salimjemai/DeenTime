@@ -1,1 +1,19 @@
-<p>widget works!</p>
+<mat-card class="widget">
+  <mat-card-header>
+    <mat-card-title>Prayer Times</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loading()) {
+      <mat-spinner diameter="32" />
+    } @else {
+      <div class="prayer-list">
+        @for (p of prayers; track p.key) {
+          <div class="prayer-row">
+            <span class="name">{{ p.label }}</span>
+            <span class="time">{{ timeFor(p.key) }}</span>
+          </div>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

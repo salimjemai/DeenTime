@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: deentime
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/DeenTime.Api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=deentime;Username=postgres;Password=postgres"
+      Auth__Issuer: deentime-local
+      Auth__Audience: deentime-api
+      Auth__SigningKey: "dev-local-signing-key-change-before-production-32ch"
+      Cors__AllowedOrigins__0: "http://localhost:4200"
+      SuperUser__Email: "admin@deentime.dev"
+      SuperUser__Password: "Admin@1234"
+      SuperUser__OrgName: "DeenTime Admin"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

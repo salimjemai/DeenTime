@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "ZmYRlVGv7hE=",
+  "dgSpecHash": "rLtGcGpziII=",
   "success": true,
-  "projectFilePath": "D:\\GitHub\\Deen\\DeenTime\\backend\\DeenTime.Contracts\\DeenTime.Contracts.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Contracts/DeenTime.Contracts.csproj",
+  "expectedPackageFiles": [
+    "/Users/salim/.nuget/packages/microsoft.netcore.app.ref/9.0.12/microsoft.netcore.app.ref.9.0.12.nupkg.sha512",
+    "/Users/salim/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.12/microsoft.aspnetcore.app.ref.9.0.12.nupkg.sha512"
+  ],
   "logs": []
 }

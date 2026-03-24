@@ -67,10 +67,11 @@ namespace DeenTime.Api.Controllers
 			var claims = new List<Claim>
 			{
 				new(JwtRegisteredClaimNames.Sub, user.Id),
-				new(ClaimTypes.Email, user.Email ?? string.Empty),
-				new("orgId", orgId.ToString())
+				new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+				new("orgId", orgId.ToString()),
+				new("email", user.Email ?? string.Empty)
 			};
-			claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+			claims.AddRange(roles.Select(r => new Claim("role", r)));
 			var creds = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)), SecurityAlgorithms.HmacSha256);
 			var jwt = new JwtSecurityToken(issuer, audience, claims, expires: DateTime.UtcNow.AddHours(12), signingCredentials: creds);
 			return new JwtSecurityTokenHandler().WriteToken(jwt);

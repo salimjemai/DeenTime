@@ -1,0 +1,31 @@
+<mat-sidenav-container class="shell-container">
+
+  <mat-sidenav mode="side" opened class="sidenav">
+    <div class="sidenav-header">
+      <span class="brand">DeenTime</span>
+      <span class="org-id">{{ email() }}</span>
+    </div>
+
+    <mat-nav-list>
+      @for (item of navItems; track item.path) {
+        <a mat-list-item
+           [routerLink]="['/org', orgId(), item.path]"
+           routerLinkActive="active-link">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+
+    <div class="sidenav-footer">
+      <button mat-button (click)="logout()">
+        <mat-icon>logout</mat-icon> Sign out
+      </button>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main-content">
+    <router-outlet />
+  </mat-sidenav-content>
+
+</mat-sidenav-container>
