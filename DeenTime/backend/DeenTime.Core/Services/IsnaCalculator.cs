@@ -52,6 +52,9 @@ public sealed class IsnaCalculator : IPrayerTimeCalculator
         double fajrHours   = noon - HourAngle(-15.0);
         double ishaHours   = noon + HourAngle(-15.0);
 
+        // Sunrise: sun at -0.8333° (accounts for refraction + solar disk radius)
+        double sunriseHours = noon - HourAngle(-0.8333);
+
         // Dhuhr: solar noon + configured offset
         double dhuhrHours  = noon + c.MinutesAfterZawal / 60.0;
 
@@ -60,8 +63,10 @@ public sealed class IsnaCalculator : IPrayerTimeCalculator
         double asrAlt      = ToDeg(Math.Atan(1.0 / (shadow + Math.Tan(Math.Abs(decl - ToRad(lat))))));
         double asrHours    = noon + HourAngle(asrAlt);
 
-        // Maghrib: sunset + configured offset
+        // Sunset: sun at -0.8333°
         double sunsetHours = noon + HourAngle(-0.8333);
+
+        // Maghrib: sunset + configured offset
         double maghribHours = sunsetHours + c.MinutesAfterMaghrib / 60.0;
 
         // Convert UTC decimal hours to local TimeOnly
@@ -77,9 +82,11 @@ public sealed class IsnaCalculator : IPrayerTimeCalculator
         return new PrayerTimesDto(
             date,
             ToLocal(fajrHours),
+            ToLocal(sunriseHours),
             ToLocal(dhuhrHours),
             ToLocal(asrHours),
             ToLocal(maghribHours),
+            ToLocal(sunsetHours),
             ToLocal(ishaHours));
     }
 

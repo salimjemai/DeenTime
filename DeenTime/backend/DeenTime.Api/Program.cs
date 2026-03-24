@@ -59,13 +59,18 @@ else if (!string.IsNullOrWhiteSpace(signingKey))
 
 b.Services.AddAuthorization(opts =>
   {
-    opts.AddPolicy("Admin", p => p.RequireClaim("role", "admin", "owner"));
+    opts.AddPolicy("Admin", p => p.RequireClaim("role", "Admin", "admin", "owner", "SuperUser"));
   }
 );
 b.Services.AddEndpointsApiExplorer().AddSwaggerGen();
 b.Services.AddOutputCache(o => {  o.AddPolicy("public-read", p => p.Expire(TimeSpan.FromMinutes(10)));});
 b.Services.AddResponseCompression();
-b.Services.AddControllers();
+b.Services.AddControllers()
+  .AddJsonOptions(o =>
+  {
+    o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+  });
 b.Services.AddFluentValidationAutoValidation();
 
 // ProblemDetails for model validation
@@ -189,9 +194,51 @@ static async Task SeedSuperUserAsync(WebApplication app)
     {
         Id   = Guid.NewGuid(),
         Slug = "admin",
-        Name = orgName
+        Name = orgName,
+        AddressLine = app.Configuration["SuperUser:AddressLine"],
+        City        = app.Configuration["SuperUser:City"],
+        State       = app.Configuration["SuperUser:State"],
+        ZipCode     = app.Configuration["SuperUser:ZipCode"],
+        Phone       = app.Configuration["SuperUser:Phone"],
+        Email       = app.Configuration["SuperUser:OrgEmail"],
+        WebsiteUrl  = app.Configuration["SuperUser:WebsiteUrl"],
+        SocialUrl   = app.Configuration["SuperUser:SocialUrl"],
     };
     db.Organizations.Add(org);
+
+    // ── Seed default prayer timing criteria ───────────────────────────────
+    var lat  = app.Configuration["SuperUser:Latitude"];
+    var lng  = app.Configuration["SuperUser:Longitude"];
+    var tzId = app.Configuration["SuperUser:TimezoneId"] ?? "America/Chicago";
+
+    if (!string.IsNullOrWhiteSpace(lat) && !string.IsNullOrWhiteSpace(lng))
+    {
+        db.PrayerTimingCriteria.Add(new DeenTime.Core.Entities.PrayerTimingCriteria
+        {
+            Id                 = Guid.NewGuid(),
+            OrganizationId     = org.Id,
+            Method             = app.Configuration["SuperUser:Method"] ?? "ISNA",
+            JuristicMethodAsr  = app.Configuration["SuperUser:JuristicMethodAsr"] ?? "Other",
+            Latitude           = decimal.Parse(lat),
+            Longitude          = decimal.Parse(lng),
+            TimezoneId         = tzId,
+            DstObserved        = true,
+            ZipCode            = org.ZipCode ?? "",
+            MinutesAfterZawal  = int.TryParse(app.Configuration["SuperUser:MinutesAfterZawal"], out var maz) ? maz : 5,
+            MinutesAfterMaghrib = int.TryParse(app.Configuration["SuperUser:MinutesAfterMaghrib"], out var mam) ? mam : 1,
+            KhutbahTimeMinutes = int.TryParse(app.Configuration["SuperUser:KhutbahTimeMinutes"], out var kt) ? kt : 20,
+        });
+    }
+
+    // ── Seed default design settings ──────────────────────────────────────
+    db.DesignSettings.Add(new DeenTime.Core.Entities.DesignSettings
+    {
+        Id              = Guid.NewGuid(),
+        OrganizationId  = org.Id,
+        IqamaHeadings   = new[] { "FAJR", "IQM*", "SUNRISE", "DUHUR", "IQM*", "ASR", "IQM*", "SUNSET", "ISHA", "IQM*" },
+        FooterHtml      = $"© {DateTime.UtcNow.Year} {orgName}",
+        Theme           = "light",
+    });
 
     db.OrgUsers.Add(new DeenTime.Core.Entities.OrgUser
     {

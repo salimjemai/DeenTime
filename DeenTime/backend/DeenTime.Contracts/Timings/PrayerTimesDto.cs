@@ -6,5 +6,13 @@ using System.Threading.Tasks;
 
 namespace DeenTime.Contracts.Timings;
 
-public sealed record PrayerTimesDto(DateOnly Date, TimeOnly Fajr, TimeOnly Dhuhr, TimeOnly Asr, TimeOnly Maghrib, TimeOnly Isha);
+public sealed record PrayerTimesDto(
+    DateOnly Date,
+    TimeOnly Fajr,
+    TimeOnly Sunrise,
+    TimeOnly Dhuhr,
+    TimeOnly Asr,
+    TimeOnly Maghrib,
+    TimeOnly Sunset,
+    TimeOnly Isha);
 

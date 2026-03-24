@@ -15,7 +15,7 @@ namespace DeenTime.Core.Entities
         public string? FooterHtml { get; set; }        // rich text for publish PDFs & widgets
         public string Theme { get; set; } = "light";   // allow dark/brand themes
         public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
-        public Organization Organization { get; set; } = default!;
+        public Organization? Organization { get; set; }
     }
 
 }

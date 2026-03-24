@@ -14,7 +14,6 @@ namespace DeenTime.Api.Controllers
 	[Route("api/v1/[controller]")]
 	public sealed class PublishController : ControllerBase
 	{
-		public record PdfGenerateRequest(Guid OrgId, int Year, int Month, PdfSize Size, PdfOrientation Orientation);
 		private readonly AppDbContext _db;
 		public PublishController(AppDbContext db) { _db = db; }
 

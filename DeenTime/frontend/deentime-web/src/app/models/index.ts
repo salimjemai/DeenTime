@@ -53,9 +53,11 @@ export interface PrayerTimingCriteria {
 export interface PrayerTimesDto {
   date: string;       // YYYY-MM-DD
   fajr: string;       // HH:mm
+  sunrise: string;
   dhuhr: string;
   asr: string;
   maghrib: string;
+  sunset: string;
   isha: string;
 }
 

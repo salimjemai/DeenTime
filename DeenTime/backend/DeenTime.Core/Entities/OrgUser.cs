@@ -20,6 +20,6 @@ namespace DeenTime.Core.Entities
         public string[] Roles { get; set; } = [];   // or a join table if you prefer
         public DateTime LastSeenUtc { get; set; } = DateTime.UtcNow;
 
-        public Organization Organization { get; set; } = default!;
+        public Organization? Organization { get; set; }
     }
 }

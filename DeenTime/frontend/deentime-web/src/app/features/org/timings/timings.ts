@@ -38,9 +38,11 @@ export class TimingsComponent implements OnInit {
 
   prayers = [
     { key: 'fajr',    label: 'Fajr',    icon: 'wb_twilight' },
+    { key: 'sunrise', label: 'Sunrise', icon: 'wb_sunny' },
     { key: 'dhuhr',   label: 'Dhuhr',   icon: 'wb_sunny' },
     { key: 'asr',     label: 'Asr',     icon: 'light_mode' },
     { key: 'maghrib', label: 'Maghrib', icon: 'wb_twighlight' },
+    { key: 'sunset',  label: 'Sunset',  icon: 'wb_twilight' },
     { key: 'isha',    label: 'Isha',    icon: 'nights_stay' },
   ];
 

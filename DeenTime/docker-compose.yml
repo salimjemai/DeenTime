@@ -34,7 +34,22 @@ services:
       Cors__AllowedOrigins__0: "http://localhost:4200"
       SuperUser__Email: "admin@deentime.dev"
       SuperUser__Password: "Admin@1234"
-      SuperUser__OrgName: "DeenTime Admin"
+      SuperUser__OrgName: "DeenTime Demo Mosque"
+      SuperUser__AddressLine: "14300 Rountree Ranch Lane"
+      SuperUser__City: "Austin"
+      SuperUser__State: "TX"
+      SuperUser__ZipCode: "78717"
+      SuperUser__Phone: "4094543454"
+      SuperUser__OrgEmail: "admin@deentime.dev"
+      SuperUser__WebsiteUrl: "https://deentime.dev"
+      SuperUser__Latitude: "30.5119418"
+      SuperUser__Longitude: "-97.8177601"
+      SuperUser__TimezoneId: "America/Chicago"
+      SuperUser__Method: "ISNA"
+      SuperUser__JuristicMethodAsr: "Other"
+      SuperUser__MinutesAfterZawal: "5"
+      SuperUser__MinutesAfterMaghrib: "1"
+      SuperUser__KhutbahTimeMinutes: "20"
     depends_on:
       db:
         condition: service_healthy

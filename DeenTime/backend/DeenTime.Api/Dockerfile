@@ -20,6 +20,14 @@ RUN dotnet publish backend/DeenTime.Api/DeenTime.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
+# QuestPDF needs system fonts to render PDFs; the base image ships none.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libfontconfig1 \
+        fonts-liberation \
+        fonts-dejavu-core && \
+    rm -rf /var/lib/apt/lists/*
+
 # Create uploads dir for local storage fallback
 RUN mkdir -p /app/wwwroot/uploads
 

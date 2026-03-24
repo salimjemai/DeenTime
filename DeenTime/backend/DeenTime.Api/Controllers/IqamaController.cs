@@ -14,7 +14,6 @@ namespace DeenTime.Api.Controllers
 	[Route("api/v1/[controller]")]
 	public sealed class IqamaController : ControllerBase
 	{
-		public record IqamaUpsertRequest(Guid OrganizationId, DateOnly Date, SalahType Salah, TimeOnly Time, string? Note);
 		private readonly AppDbContext _db;
 		public IqamaController(AppDbContext db) { _db = db; }
 
@@ -25,8 +24,7 @@ namespace DeenTime.Api.Controllers
 			var items = await _db.IqamaEntries.AsNoTracking()
 				.Where(i => i.OrganizationId == orgId && i.Date.Year == year)
 				.OrderBy(i => i.Date).ThenBy(i => i.Salah).ToListAsync();
-			var grouped = items.GroupBy(i => i.Date.Month).OrderBy(g => g.Key).ToDictionary(g => g.Key, g => g.ToList());
-			return Ok(grouped);
+			return Ok(items);
 		}
 
 		[HttpPost]

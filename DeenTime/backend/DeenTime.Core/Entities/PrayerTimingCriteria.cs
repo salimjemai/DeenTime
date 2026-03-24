@@ -24,5 +24,5 @@ public sealed class PrayerTimingCriteria
     public int MinutesAfterMaghrib { get; set; } = 2;
     public int KhutbahTimeMinutes { get; set; } = 30;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
-    public Organization Organization { get; set; } = default!;
+    public Organization? Organization { get; set; }
 }
