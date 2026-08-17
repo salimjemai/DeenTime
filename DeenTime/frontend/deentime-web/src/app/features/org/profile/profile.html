@@ -24,6 +24,8 @@
             <input matInput formControlName="email" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Website</mat-label>
             <input matInput formControlName="websiteUrl" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Facebook / Social URL</mat-label>
+            <input matInput formControlName="socialUrl" /></mat-form-field>
         </form>
       </mat-card-content>
       <mat-card-actions align="end">
@@ -35,6 +37,8 @@
       <mat-card-header><mat-card-title>Prayer Time Criteria</mat-card-title></mat-card-header>
       <mat-card-content>
         <form [formGroup]="criteriaForm" class="form-grid">
+          <mat-form-field appearance="outline"><mat-label>ZIP / Postal Code</mat-label>
+            <input matInput formControlName="zipCode" /></mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Calculation Method</mat-label>
             <mat-select formControlName="method">
@@ -52,16 +56,24 @@
           <mat-form-field appearance="outline"><mat-label>Longitude</mat-label>
             <input matInput type="number" formControlName="longitude" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Timezone (IANA)</mat-label>
-            <input matInput formControlName="timezoneId" placeholder="America/Chicago" /></mat-form-field>
+            <mat-select formControlName="timezoneId">
+              @for (timezone of timezones; track timezone.value) { <mat-option [value]="timezone.value">{{ timezone.label }} · {{ timezone.value }}</mat-option> }
+            </mat-select></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Minutes After Zawal</mat-label>
             <input matInput type="number" formControlName="minutesAfterZawal" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Minutes After Maghrib</mat-label>
             <input matInput type="number" formControlName="minutesAfterMaghrib" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Khutbah Duration (min)</mat-label>
             <input matInput type="number" formControlName="khutbahTimeMinutes" /></mat-form-field>
+          <mat-checkbox formControlName="dstObserved">Observe daylight saving time</mat-checkbox>
+          <mat-form-field appearance="outline"><mat-label>DST begins</mat-label>
+            <input matInput type="date" formControlName="dstBegins" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>DST ends</mat-label>
+            <input matInput type="date" formControlName="dstEnds" /></mat-form-field>
         </form>
       </mat-card-content>
       <mat-card-actions align="end">
+        <button mat-button class="danger-action" (click)="resetCriteria()" [disabled]="saving()">Remove criteria</button>
         <button mat-flat-button color="primary" (click)="saveCriteria()" [disabled]="saving()">Save Criteria</button>
       </mat-card-actions>
     </mat-card>

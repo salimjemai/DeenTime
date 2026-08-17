@@ -1,19 +1,67 @@
-<mat-card class="widget">
-  <mat-card-header>
-    <mat-card-title>Prayer Times</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
+<article
+  class="widget"
+  [class.compact]="variant === 'compact'"
+  [class.dark]="display()?.design?.theme === 'dark'"
+  [class.classic]="display()?.design?.theme === 'classic'"
+  [class.has-background]="!!backgroundImage()"
+  [style.--accent]="accentColor()"
+  [style.--background-image]="backgroundImage()">
+  <div class="widget-background" aria-hidden="true"></div>
+  <header class="widget-hero">
+    @if (display()?.design?.backgroundImageUrl ?? display()?.design?.headerImageUrl; as headerImage) { <img class="hero-image" [src]="headerImage" alt="" /> }
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="brand-line"><span class="brand-mark"></span><span>DAILY PRAYER TIMES</span></div>
+      <h1>{{ display()?.organization?.name ?? 'Prayer Times' }}</h1>
+      @if (locationLabel()) { <p>{{ locationLabel() }}</p> }
+      <div class="date-card">
+        <strong>{{ dateLabel() }}</strong>
+        @if (display()?.hijri; as hijri) { <span>{{ hijri.formatted }}</span> }
+      </div>
+    </div>
+  </header>
+
+  <div class="widget-content">
     @if (loading()) {
-      <mat-spinner diameter="32" />
+      <div class="loading"><mat-spinner diameter="38" /></div>
+    } @else if (error()) {
+      <div class="empty-state"><mat-icon>schedule</mat-icon><span>Prayer times are not available for this organization.</span></div>
     } @else {
-      <div class="prayer-list">
-        @for (p of prayers; track p.key) {
-          <div class="prayer-row">
-            <span class="name">{{ p.label }}</span>
-            <span class="time">{{ timeFor(p.key) }}</span>
+      <section class="daily-schedule">
+        <div class="column-head"><span>Prayer</span><span>Start</span><span>Iqama</span></div>
+        @for (prayer of prayers; track prayer.key) {
+          <div class="prayer-row" [class.sunrise]="!prayer.salah">
+            <span class="prayer-name"><strong>{{ prayer.label }}</strong><small>{{ prayer.detail }}</small></span>
+            <span class="start-time">{{ timeFor(prayer.key) }}</span>
+            <span class="iqama-time">{{ prayer.salah ? iqamaFor(prayer.salah) : 'Shuruq' }}</span>
           </div>
         }
-      </div>
+      </section>
+
+      <section class="jumuah-section">
+        <div class="section-heading"><div><small>FRIDAY</small><strong>Jumu’ah</strong></div><span>Khutbah & Salah</span></div>
+        @if (jumuahEntries().length > 0) {
+          <div class="jumuah-grid">
+            @for (entry of jumuahEntries(); track entry.salah) {
+              <div class="jumuah-card">
+                <strong>{{ jumuahLabel(entry.salah) }}</strong>
+                <div><span>Khutbah</span><b>{{ formatTime(entry.time) }}</b></div>
+                <div><span>Salah</span><b>{{ formatTime(entry.salahTime) }}</b></div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="jumuah-empty">Friday prayer times are not scheduled yet.</p>
+        }
+      </section>
+
+      @if (display()?.monthlyPdfUrl; as pdfUrl) {
+        <a class="pdf-link" [href]="pdfUrl" target="_blank"><mat-icon>download</mat-icon><span><strong>Monthly timetable</strong><small>Download the printable PDF</small></span><mat-icon>arrow_forward</mat-icon></a>
+      }
+      <footer class="widget-footer">
+        @if (display()?.design?.footerHtml; as footer) { <div [innerHTML]="footer"></div> }
+        <span>Powered by DeenTime</span>
+      </footer>
     }
-  </mat-card-content>
-</mat-card>
+  </div>
+</article>

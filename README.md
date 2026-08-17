@@ -2,6 +2,20 @@
 
 A .NET 9 + Angular 20 platform for mosque organizations to compute daily prayer times, manage iqama schedules, maintain Hijri month maps, design publishable PDFs, and serve public TV/widget views.
 
+## Legacy IqamaTime migration coverage
+
+| Legacy area | DeenTime coverage | Modern improvement |
+|-------------|-------------------|--------------------|
+| Profile | Organization identity, address, contact details and calculation criteria | One organization-scoped admin workspace with live validation |
+| Iqama | Effective-date schedules for Fajr, Dhuhr, Asr, Maghrib, Isha and up to four Jumu'ah services | Fast five-prayer editor, fixed or prayer-relative times, recurring rules and history |
+| Design | Shared image, published headings, footer and theme | One upload propagates immediately to TV, full widget, compact widget and previews |
+| Timings | Daily and monthly calculated prayer starts | Multiple calculation methods, juristic settings and live previews |
+| Hijri | Month mapping and manual adjustments | Lockable month mappings and controlled regeneration |
+| Publish | TV link, two website widgets and downloadable monthly timetable | Responsive TV, modern widgets, embed code, monthly/Ramadan PDFs and output controls |
+| Legacy URLs | `/clock`, `iqama-widget.php`, `iqama-widget2.php` | Compatibility redirects preserve existing masjid integrations |
+
+DeenTime also adds the Quran/Hadith content library and rate-limited public JSON APIs without removing the migrated scheduling workflows.
+
 ---
 
 ## Projects
@@ -36,7 +50,7 @@ The `docker-compose.yml` spins up PostgreSQL 16 and the API together. The DB sch
 ### Prerequisites
 - .NET 9 SDK
 - PostgreSQL 16 (or via `docker compose up db`)
-- Node.js 20+ / Angular CLI 20
+- Node.js 20.19+, 22.12+, or 24+ (Angular CLI is installed locally)
 
 ### 1 — API
 
@@ -60,7 +74,7 @@ The `appsettings.Development.json` includes a pre-set signing key and local DB c
 
 ```bash
 cd DeenTime/frontend/deentime-web
-npm install
+npm ci
 npm start          # ng serve — http://localhost:4200
 ```
 
@@ -105,6 +119,7 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 | PUT | `/api/v1/orgs/{id}` _(Admin)_ |
 | GET | `/api/v1/orgs/{id}/criteria` |
 | PUT | `/api/v1/orgs/{id}/criteria` |
+| DELETE | `/api/v1/orgs/{id}/criteria` |
 
 ### Timings (computed)
 | Method | Path |
@@ -117,6 +132,8 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 | Method | Path |
 |--------|------|
 | GET | `/api/v1/iqama?orgId=&year=YYYY` |
+| GET | `/api/v1/iqama/current?orgId=&date=YYYY-MM-DD` |
+| PUT | `/api/v1/iqama/schedule` _(atomic five-prayer editor)_ |
 | POST | `/api/v1/iqama` |
 | PUT | `/api/v1/iqama/{id}` |
 | DELETE | `/api/v1/iqama/{id}` |
@@ -126,7 +143,7 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 |--------|------|
 | GET | `/api/v1/design/{orgId}` |
 | PUT | `/api/v1/design/{orgId}` |
-| POST | `/api/v1/files/header-image?orgId=` |
+| POST | `/api/v1/design/files/header-image?orgId=` _(uploads and applies to every public view)_ |
 
 ### Hijri
 | Method | Path |
@@ -142,14 +159,18 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 | GET | `/api/v1/publish/embed-code/{orgId}` |
 | GET | `/api/v1/publish/tv-config/{orgId}` |
 | POST | `/api/v1/publish/pdf/generate` |
+| POST | `/api/v1/publish/pdf/ramadan` |
 | GET | `/api/v1/publish/artifacts?orgId=&year=` |
 | GET | `/api/v1/publish/pdf/{artifactId}` |
 
 ### Public (unauthenticated)
 | Method | Path |
 |--------|------|
-| GET | `/public/widget/{slug}` |
-| GET | `/public/tv/{slug}` |
+| GET | `/public/display/{slug}` |
+| GET | `/public/widget/{slug}` _(redirects to `/w/{slug}`)_ |
+| GET | `/public/tv/{slug}` _(redirects to `/tv/{slug}`)_ |
+| GET | `/clock?masjid={slug}` _(legacy-compatible redirect)_ |
+| GET | `/iqama-widget.php?...` and `/iqama-widget2.php?...` _(legacy-compatible redirects)_ |
 
 ### Health
 | Method | Path |
@@ -165,9 +186,9 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 |--------|-----------|
 | `Organization` | Id, Slug (unique), Name, Address, Criteria, Design |
 | `PrayerTimingCriteria` | Method, JuristicMethodAsr, Lat/Lng, TimezoneId, MinutesAfterZawal/Maghrib |
-| `IqamaEntry` | OrganizationId, Date, Salah, Time, Note |
+| `IqamaEntry` | OrganizationId, effective Date, Salah, Time or prayer-relative OffsetMinutes, Note |
 | `DesignSettings` | OrganizationId, HeaderImageUrl, IqamaHeadings[], FooterHtml, Theme |
-| `HijriMonthMap` | OrganizationId, Year, Month, HijriDayOnFirst, Locked |
+| `HijriMonthMap` | OrganizationId, Gregorian Year/Month, full Hijri date on the first, Locked |
 | `PublishArtifact` | OrganizationId, Year, Month, Size, Orientation, StorageUrl |
 | `TvDisplayConfig` | OrganizationId, ShowSeconds, ShowHijri, AccentColor, AutoRefreshSeconds |
 | `OrgUser` | OrganizationId, Issuer, Subject (JWT sub), Roles[] |
@@ -177,9 +198,9 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 
 ## Prayer time algorithm
 
-`IsnaCalculator` implements the full ISNA solar-angle method:
+`IsnaCalculator` implements the solar-angle calculation used by the legacy service and supports ISNA, Karachi, Muslim World League, Umm al-Qura, Egyptian, Gulf, Kuwait, Qatar, Tehran, and Jafari presets:
 
-- **Fajr / Isha**: 15° below the horizon
+- **Fajr / Isha**: method-specific angles or fixed intervals
 - **Dhuhr**: solar noon + `MinutesAfterZawal`
 - **Asr**: Shafi'i (shadow factor 1) or Hanafi (shadow factor 2), controlled by `JuristicMethodAsr`
 - **Maghrib**: sunset + `MinutesAfterMaghrib`

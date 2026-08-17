@@ -13,7 +13,7 @@ import { HijriService } from '../../../services/hijri';
 import { AuthService } from '../../../services/auth';
 import { HijriMonthMap } from '../../../models';
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 @Component({
   selector: 'app-hijri',
@@ -35,16 +35,16 @@ export class HijriComponent implements OnInit {
   year    = new Date().getFullYear();
   loading = signal(false);
   rows    = signal<HijriMonthMap[]>([]);
-  columns = ['month','hijriDayOnFirst','locked','actions'];
+  columns = ['month','hijriDateOnFirst','locked','actions'];
 
-  monthName(m: number) { return MONTHS[m - 1] ?? m; }
+  monthName(row: HijriMonthMap) { return `${MONTHS[row.month - 1] ?? row.month} ${row.year}`; }
 
   ngOnInit() { this.load(); }
 
   load() {
     this.loading.set(true);
-    const from = `${this.year}-01`;
-    const to   = `${this.year}-12`;
+    const from = `${this.year - 1}-12`;
+    const to   = `${this.year + 1}-03`;
     this.svc.list(this.orgId, from, to).subscribe({
       next: r => { this.rows.set(r); this.loading.set(false); },
       error: () => this.loading.set(false)
@@ -59,10 +59,20 @@ export class HijriComponent implements OnInit {
   }
 
   regenerate() {
-    this.svc.regenerate(this.orgId, `${this.year}-01`, `${this.year}-12`).subscribe({
+    this.svc.regenerate(this.orgId, `${this.year - 1}-12`, `${this.year + 1}-03`).subscribe({
       next: () => { this.load(); this.snack.open('Regenerated', '', { duration: 2000 }); },
       error: () => this.snack.open('Failed', 'Dismiss', { duration: 3000 })
     });
+  }
+
+  hijriDate(row: HijriMonthMap) {
+    return `${row.hijriDayOnFirst}-${row.hijriMonthOnFirst}-${row.hijriYearOnFirst}`;
+  }
+
+  setHijriDate(row: HijriMonthMap, value: string) {
+    const parts = value.trim().split(/[/-]/).map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return;
+    [row.hijriDayOnFirst, row.hijriMonthOnFirst, row.hijriYearOnFirst] = parts;
   }
 
   changeYear(delta: number) { this.year += delta; this.load(); }

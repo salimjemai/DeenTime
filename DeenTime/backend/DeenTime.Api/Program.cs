@@ -14,6 +14,8 @@ using OpenTelemetry.Trace;
 using Hangfire;
 using Hangfire.PostgreSql;
 using QuestPDF.Infrastructure;
+using DeenTime.Api.Services.IslamicContent;
+using System.Net;
 
 
 var b = WebApplication.CreateBuilder(args);
@@ -27,7 +29,50 @@ b.Host.UseSerilog((ctx, services, lc) => lc
     .Enrich.FromLogContext()
     .WriteTo.Console());
 
-b.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(b.Configuration.GetConnectionString("Default")));
+b.Services.AddDbContextFactory<AppDbContext>(o => o.UseNpgsql(b.Configuration.GetConnectionString("Default")));
+
+b.Services.AddOptions<IslamicContentOptions>()
+  .Bind(b.Configuration.GetSection(IslamicContentOptions.SectionName))
+  .Validate(options =>
+      string.Equals(
+          options.QuranBaseUrl.TrimEnd('/') + "/",
+          IslamicContentOptions.RequiredQuranBaseUrl,
+          StringComparison.OrdinalIgnoreCase),
+      $"IslamicContent:QuranBaseUrl must use the primary server {IslamicContentOptions.RequiredQuranBaseUrl}")
+  .ValidateOnStart();
+
+b.Services.AddHttpClient<QuranProviderClient>((services, client) =>
+  {
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<IslamicContentOptions>>().Value;
+    client.BaseAddress = new Uri(options.QuranBaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromMinutes(3);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("DeenTime/1.0");
+  })
+  .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+  {
+    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+    PooledConnectionLifetime = TimeSpan.FromMinutes(10)
+  });
+
+// HadithAPI requires its key in the query string. Remove HttpClient logging so
+// request URIs can never place that server-side secret in application logs.
+b.Services.AddHttpClient<HadithProviderClient>((services, client) =>
+  {
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<IslamicContentOptions>>().Value;
+    client.BaseAddress = new Uri(options.HadithBaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromMinutes(3);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("DeenTime/1.0");
+  })
+  .RemoveAllLoggers()
+  .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+  {
+    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+    PooledConnectionLifetime = TimeSpan.FromMinutes(10)
+  });
+
+b.Services.AddSingleton<IIslamicContentSyncQueue, IslamicContentSyncQueue>();
+b.Services.AddScoped<IslamicContentSyncService>();
+b.Services.AddHostedService<IslamicContentSyncWorker>();
 
 var authAuthority = b.Configuration["Auth:Authority"];
 var authAudience  = b.Configuration["Auth:Audience"];
@@ -59,7 +104,7 @@ else if (!string.IsNullOrWhiteSpace(signingKey))
 
 b.Services.AddAuthorization(opts =>
   {
-    opts.AddPolicy("Admin", p => p.RequireClaim("role", "Admin", "admin", "owner", "SuperUser"));
+    opts.AddPolicy("Admin", p => p.RequireRole("Admin", "admin", "owner", "SuperUser"));
   }
 );
 b.Services.AddEndpointsApiExplorer().AddSwaggerGen();
@@ -114,7 +159,8 @@ b.Services.AddScoped<IPdfGenerator, QuestPdfGenerator>();
 b.Services.AddOpenTelemetry().WithTracing(tp =>
 {
     tp.AddAspNetCoreInstrumentation();
-    tp.AddConsoleExporter();
+    if (b.Configuration.GetValue<bool>("OpenTelemetry:ConsoleExporter"))
+        tp.AddConsoleExporter();
 });
 
 // Hangfire (optional — requires PostgreSQL connection string in Hangfire:ConnectionString)

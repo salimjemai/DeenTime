@@ -83,6 +83,156 @@ namespace DeenTime.Infrastructure.Migrations
                     b.ToTable("DesignSettings");
                 });
 
+            modelBuilder.Entity("DeenTime.Core.Entities.HadithBook", b =>
+                {
+                    b.Property<int>("ProviderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AboutWriter")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BookName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BookSlug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("ChapterCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HadithCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SyncedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WriterDeath")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WriterName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("ProviderId");
+
+                    b.HasIndex("BookSlug")
+                        .IsUnique();
+
+                    b.ToTable("HadithBooks");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.HadithChapter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BookSlug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("ChapterArabic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ChapterEnglish")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ChapterNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ChapterUrdu")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProviderId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SyncedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("BookSlug", "ChapterNumber")
+                        .IsUnique();
+
+                    b.ToTable("HadithChapters");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.HadithRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BookSlug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int?>("ChapterNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EnglishNarrator")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HadithArabic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HadithEnglish")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HadithNumber")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("HadithUrdu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HeadingArabic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HeadingEnglish")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HeadingUrdu")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProviderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("SyncedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UrduNarrator")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("Volume")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("BookSlug", "ChapterNumber");
+
+                    b.HasIndex("BookSlug", "HadithNumber")
+                        .IsUnique();
+
+                    b.ToTable("HadithRecords");
+                });
+
             modelBuilder.Entity("DeenTime.Core.Entities.HijriMonthMap", b =>
                 {
                     b.Property<Guid>("Id")
@@ -90,6 +240,12 @@ namespace DeenTime.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("HijriDayOnFirst")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HijriMonthOnFirst")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HijriYearOnFirst")
                         .HasColumnType("integer");
 
                     b.Property<bool>("Locked")
@@ -127,6 +283,9 @@ namespace DeenTime.Infrastructure.Migrations
                     b.Property<string>("Note")
                         .HasColumnType("text");
 
+                    b.Property<int?>("OffsetMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
@@ -145,6 +304,94 @@ namespace DeenTime.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("IqamaEntries");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.IslamicContentCacheEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CacheKey")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("PayloadBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("RetrievedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("Provider", "CacheKey")
+                        .IsUnique();
+
+                    b.ToTable("IslamicContentCacheEntries");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.IslamicContentSyncState", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProcessedItems")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<int>("TotalItems")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("IslamicContentSyncStates");
                 });
 
             modelBuilder.Entity("DeenTime.Core.Entities.OrgUser", b =>
@@ -329,6 +576,49 @@ namespace DeenTime.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "Year", "Month");
 
                     b.ToTable("PublishArtifacts");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.QuranEdition", b =>
+                {
+                    b.Property<string>("Identifier")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Direction")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("EnglishName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("SyncedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Identifier");
+
+                    b.HasIndex("Language", "Format", "Type");
+
+                    b.ToTable("QuranEditions");
                 });
 
             modelBuilder.Entity("DeenTime.Core.Entities.TvDisplayConfig", b =>

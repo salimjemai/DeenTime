@@ -1,0 +1,42 @@
+<div class="tv-page" [class.classic]="display()?.design?.theme === 'classic'" [style.--accent]="accentColor()">
+  @if (display()?.design?.headerImageUrl; as headerImage) {
+    <img class="header-image" [src]="headerImage" alt="" />
+  }
+  <div class="tv-brand">
+    <span class="live-mark"></span>
+    <span>{{ display()?.organization?.name ?? 'Prayer Times' }}</span>
+  </div>
+  <div class="date-line">
+    <span>{{ dateLabel() }}</span>
+    @if (showHijri()) { <span>Hijri {{ display()?.hijri?.formatted }}</span> }
+    <strong>{{ clock() }}</strong>
+  </div>
+
+  @if (loading()) {
+    <mat-spinner diameter="64" />
+  } @else if (timings()) {
+    <div class="prayer-list">
+      <div class="list-head"><span>Prayer</span><span>Start</span><span>Iqama</span></div>
+      @for (p of prayers; track p) {
+        <div class="prayer-row">
+          <span class="prayer-name">{{ labels[p] }}</span>
+          <span class="prayer-time">{{ timeFor(p) }}</span>
+          <span class="iqama-time">{{ iqamaFor(labels[p]) }}</span>
+        </div>
+      }
+    </div>
+    @if (jumuahEntries().length > 0) {
+      <div class="jumuah-block">
+        <div class="jumuah-title"><span>Friday / Jumu’ah</span><span>Khutbah · Salah</span></div>
+        @for (entry of jumuahEntries(); track entry.salah) {
+          <div class="jumuah-row"><span>{{ entry.salah }}</span><span>{{ formatTime(entry.time) }} · {{ formatTime(entry.salahTime) }}</span></div>
+        }
+      </div>
+    }
+  } @else {
+    <p class="error">Could not load prayer times.</p>
+  }
+  @if (display()?.design?.footerHtml; as footer) {
+    <div class="tv-footer" [innerHTML]="footer"></div>
+  }
+</div>

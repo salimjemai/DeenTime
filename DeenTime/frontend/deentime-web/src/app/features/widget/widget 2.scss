@@ -1,0 +1,30 @@
+.widget { max-width: 390px; overflow: hidden; --accent: #3d8b63; }
+.header-image { display: block; width: 100%; max-height: 118px; object-fit: cover; }
+.prayer-list { margin-top: 8px; }
+.column-head { display: grid; grid-template-columns: 1.25fr 0.8fr 0.8fr; gap: 8px; margin-top: 12px; color: #8a968d; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.prayer-row {
+  display: grid; grid-template-columns: 1.25fr 0.8fr 0.8fr; gap: 8px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.9rem;
+}
+.name { color: #555; }
+.time { font-weight: 600; color: var(--accent); }
+.iqama { color: #4d6d53; font-weight: 600; }
+.empty-state { display: flex; align-items: flex-start; gap: 8px; color: #6b756d; font-size: 0.85rem; line-height: 1.4; }
+.empty-state mat-icon { color: #6a9a70; }
+.jumuah { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5ebe5; color: #4e6654; font-size: 0.84rem; }
+.jumuah > div { display: flex; justify-content: space-between; padding-top: 6px; }
+.jumuah .jumuah-head { align-items: flex-end; padding-top: 0; }
+.jumuah-head span { color: #8b968e; font-size: .64rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.pdf-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 16px; color: var(--accent); font-size: .78rem; font-weight: 700; text-decoration: none; }
+.pdf-link mat-icon { width: 17px; height: 17px; font-size: 17px; }
+.widget-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5ebe5; color: #6d776f; font-size: .76rem; text-align: center; }
+.widget.dark { background: #14251b; color: #f3f8f4; }
+.widget.dark .name, .widget.dark .iqama, .widget.dark .widget-footer { color: #c7d5ca; }
+.widget.dark .prayer-row, .widget.dark .jumuah, .widget.dark .widget-footer { border-color: rgba(255,255,255,.12); }
+.widget.classic { border: 2px solid #a7833f; border-radius: 2px; background: #fffaf0; --accent: #7c5b20; }
+.widget.classic .prayer-row { border-color: #e6d9bb; }
+.widget.compact { max-width: 320px; border-radius: 8px; }
+.widget.compact .header-image { max-height: 82px; }
+.widget.compact .prayer-row { padding: 6px 0; font-size: .82rem; }
+.widget.compact .column-head { font-size: .61rem; }
+.widget.compact .widget-footer { display: none; }

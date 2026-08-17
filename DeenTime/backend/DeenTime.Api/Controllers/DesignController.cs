@@ -3,8 +3,8 @@ using DeenTime.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.OutputCaching;
 using DeenTime.Api.Requests.Design;
+using DeenTime.Api.Authorization;
 using DeenTime.Core.Services;
 
 namespace DeenTime.Api.Controllers
@@ -19,9 +19,9 @@ namespace DeenTime.Api.Controllers
 		public DesignController(AppDbContext db) { _db = db; }
 
 		[HttpGet("{orgId:guid}")]
-		[OutputCache(PolicyName = "public-read")]
 		public async Task<IActionResult> Get(Guid orgId)
 		{
+			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			var design = await _db.DesignSettings.AsNoTracking().FirstOrDefaultAsync(d => d.OrganizationId == orgId);
 			return design is not null ? Ok(design) : NotFound();
 		}
@@ -30,6 +30,7 @@ namespace DeenTime.Api.Controllers
 		[Authorize(Roles = "Admin,Editor")]
 		public async Task<IActionResult> Put(Guid orgId, [FromBody] DesignRequest req)
 		{
+			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			var design = await _db.DesignSettings.FirstOrDefaultAsync(d => d.OrganizationId == orgId);
 			if (design is null)
 			{
@@ -57,11 +58,49 @@ namespace DeenTime.Api.Controllers
 
 		[HttpPost("files/header-image")]
 		[Authorize(Roles = "Admin,Editor")]
-		public async Task<IActionResult> UploadHeaderImage([FromQuery] Guid orgId, [FromServices] IStorageService storage, [FromQuery] string contentType = "image/jpeg")
+		[RequestSizeLimit(8 * 1024 * 1024)]
+		public async Task<IActionResult> UploadHeaderImage(
+			[FromQuery] Guid orgId,
+			[FromForm] IFormFile? file,
+			[FromServices] IStorageService storage)
 		{
-			var key = $"orgs/{orgId}/header-{Guid.NewGuid()}.jpg";
-			var presigned = await storage.CreatePresignedUploadAsync(key, contentType);
-			return Ok(new { uploadUrl = presigned.UploadUrl, publicUrl = presigned.PublicUrl });
+			if (!User.CanAccessOrganization(orgId)) return Forbid();
+			if (file is null || file.Length == 0) return BadRequest("Choose an image first.");
+			if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+				return BadRequest("Header image must be an image file.");
+
+			var extension = Path.GetExtension(file.FileName);
+			if (string.IsNullOrWhiteSpace(extension) || extension.Length > 6) extension = ".jpg";
+			var key = $"orgs/{orgId}/header-{Guid.NewGuid()}{extension.ToLowerInvariant()}";
+			await using var stream = file.OpenReadStream();
+			using var memory = new MemoryStream();
+			await stream.CopyToAsync(memory);
+			var publicUrl = await storage.UploadAsync(key, file.ContentType, memory.ToArray());
+
+			var design = await _db.DesignSettings.FirstOrDefaultAsync(d => d.OrganizationId == orgId);
+			if (design is null)
+			{
+				design = new DesignSettings
+				{
+					Id = Guid.NewGuid(),
+					OrganizationId = orgId,
+					HeaderImageUrl = publicUrl,
+					Theme = "default"
+				};
+				_db.DesignSettings.Add(design);
+			}
+			else
+			{
+				design.HeaderImageUrl = publicUrl;
+				design.UpdatedAtUtc = DateTime.UtcNow;
+			}
+			await _db.SaveChangesAsync();
+
+			return Ok(new
+			{
+				publicUrl,
+				appliedTo = new[] { "tv", "widget", "compactWidget", "schedulePreview" }
+			});
 		}
 	}
 }

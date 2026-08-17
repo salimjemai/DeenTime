@@ -1,9 +1,18 @@
-.page { max-width: 600px; }
+.page { max-width: 840px; margin: 0 auto; }
 .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-.page-title { margin: 0; color: #1b5e20; font-size: 1.5rem; flex: 1; }
+.title-block { flex: 1; }
+.eyebrow { color: #47805a; font-size: .7rem; font-weight: 800; letter-spacing: .12em; }
+.page-title { margin: 4px 0 4px; color: #173c22; font-size: 1.65rem; }
+.title-block p { margin: 0; color: #6b786e; font-size: .86rem; }
 .year-nav { display: flex; align-items: center; gap: 4px; }
 .year-label { font-weight: 600; font-size: 1.1rem; min-width: 48px; text-align: center; }
 .center { display: flex; justify-content: center; padding: 48px 0; }
 .full-width { width: 100%; }
 .inline-input { border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; width: 60px; }
+.date-input { width: 180px; border-radius: 8px; padding: 8px 10px; }
 .empty { padding: 32px; text-align: center; color: #888; }
+
+@media (max-width: 680px) {
+  .page-header { align-items: flex-start; flex-wrap: wrap; }
+  .title-block { flex-basis: 100%; }
+}

@@ -1,0 +1,40 @@
+.tv-page {
+  min-height: 100vh;
+  background: #0a1628;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+  padding: 40px;
+  --accent: #6fdc81;
+}
+.tv-page.classic { background: radial-gradient(circle at top, #3b2c18, #171109 72%); }
+.header-image { width: min(760px, 90vw); max-height: 150px; margin-bottom: 26px; border-radius: 18px; object-fit: cover; }
+.tv-brand { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.82); font-size: 1.1rem; letter-spacing: 0.04em; }
+.live-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent); }
+.date-line { display: flex; align-items: center; gap: 14px; margin: 16px 0 36px; color: rgba(255,255,255,0.58); font-size: 1rem; }
+.date-line span + span { padding-left: 14px; border-left: 1px solid rgba(255,255,255,.16); }
+.date-line strong { color: #fff; font-size: 1.15rem; }
+.prayer-list { width: 100%; max-width: 600px; }
+.list-head { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 18px; padding-bottom: 10px; color: rgba(255,255,255,0.42); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.prayer-row {
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 18px; align-items: center;
+  padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 2rem;
+}
+.prayer-name { font-weight: 300; color: rgba(255,255,255,0.7); }
+.prayer-time, .iqama-time { font-weight: 600; color: var(--accent); }
+.iqama-time { color: rgba(255,255,255,0.92); }
+.jumuah-block { width: 100%; max-width: 600px; margin-top: 34px; padding: 18px 0 0; border-top: 1px solid rgba(255,255,255,0.12); }
+.jumuah-title { display: flex; justify-content: space-between; color: rgba(255,255,255,0.62); font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.jumuah-row { display: flex; justify-content: space-between; padding-top: 10px; color: var(--accent); font-size: 1.25rem; }
+.error { color: #ef5350; }
+.tv-footer { width: min(760px, 90vw); margin-top: 26px; color: rgba(255,255,255,.62); text-align: center; font-size: .9rem; }
+
+@media (max-width: 700px) {
+  .tv-page { padding: 28px 20px; }
+  .prayer-row { font-size: 1.25rem; }
+  .date-line { flex-direction: column; gap: 5px; }
+  .date-line span + span { padding-left: 0; border-left: 0; }
+}

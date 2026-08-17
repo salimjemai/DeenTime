@@ -1,0 +1,96 @@
+<main class="help-page">
+  <section class="help-hero">
+    <div class="hero-copy">
+      <span class="hero-kicker"><mat-icon>tips_and_updates</mat-icon> DEENTIME GUIDE</span>
+      <h2>One place to run every public masjid surface.</h2>
+      <p>Set up the masjid, keep the schedule current, and publish the same trusted information everywhere.</p>
+      <div class="hero-actions">
+        <a mat-flat-button [routerLink]="['/org', orgId, 'profile']"><mat-icon>rocket_launch</mat-icon> Start with Profile</a>
+        <button mat-stroked-button type="button" (click)="toggleTips()">
+          <mat-icon>{{ tips.tipsEnabled() ? 'visibility' : 'visibility_off' }}</mat-icon>
+          {{ tips.tipsEnabled() ? 'Pro tips are on' : 'Turn pro tips on' }}
+        </button>
+      </div>
+    </div>
+    <div class="hero-orbit" aria-label="DeenTime connects mosque settings to every community surface">
+      <div class="orbit-ring outer"></div>
+      <div class="orbit-ring inner"></div>
+      <div class="orbit-core"><mat-icon>mosque</mat-icon><strong>DeenTime</strong><span>One source</span></div>
+      <span class="orbit-node node-tv"><mat-icon>tv</mat-icon></span>
+      <span class="orbit-node node-web"><mat-icon>web</mat-icon></span>
+      <span class="orbit-node node-pdf"><mat-icon>picture_as_pdf</mat-icon></span>
+      <span class="orbit-node node-api"><mat-icon>api</mat-icon></span>
+    </div>
+  </section>
+
+  <section class="journey-heading">
+    <div>
+      <span>THE COMPLETE WORKFLOW</span>
+      <h3>Seven tabs. One connected journey.</h3>
+    </div>
+    <p>Each card explains what to do, why it matters, and where to go next.</p>
+  </section>
+
+  <section class="phase-rail" aria-label="DeenTime workflow phases">
+    <div><span>1</span><strong>Set up</strong><small>Identity, calculation, and brand</small></div>
+    <i></i>
+    <div><span>2</span><strong>Keep current</strong><small>Prayer, Iqama, Hijri, and content</small></div>
+    <i></i>
+    <div><span>3</span><strong>Publish</strong><small>TV, widgets, PDFs, and apps</small></div>
+  </section>
+
+  <section class="tab-guide" aria-label="Help for every DeenTime tab">
+    @for (tab of tabs; track tab.path; let number = $index) {
+      <article [class]="'guide-card tone-' + tab.tone">
+        <header>
+          <span class="guide-number">{{ number + 1 }}</span>
+          <span class="guide-icon"><mat-icon>{{ tab.icon }}</mat-icon></span>
+          <span class="phase-label">{{ tab.phase }}</span>
+        </header>
+        <h3>{{ tab.label }}</h3>
+        <h4>{{ tab.headline }}</h4>
+        <p>{{ tab.summary }}</p>
+        <ul>
+          @for (action of tab.actions; track action) {
+            <li><mat-icon>check_circle</mat-icon>{{ action }}</li>
+          }
+        </ul>
+        <div class="card-outcome"><mat-icon>arrow_forward</mat-icon><span>{{ tab.outcome }}</span></div>
+        <a [routerLink]="['/org', orgId, tab.path]">Open {{ tab.label }} <mat-icon>north_east</mat-icon></a>
+      </article>
+    }
+  </section>
+
+  <section class="output-map">
+    <div class="output-source">
+      <span class="source-icon"><mat-icon>hub</mat-icon></span>
+      <div><small>ONE UPDATE</small><strong>DeenTime</strong><p>Schedule + design + content</p></div>
+    </div>
+    <div class="broadcast-line" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="output-destinations">
+      @for (output of outputs; track output.label) {
+        <article>
+          <mat-icon>{{ output.icon }}</mat-icon>
+          <div><strong>{{ output.label }}</strong><span>{{ output.detail }}</span></div>
+        </article>
+      }
+    </div>
+    <div class="community-result"><mat-icon>groups</mat-icon><span><strong>One informed community</strong><small>Accurate, consistent, and beautifully branded everywhere.</small></span></div>
+  </section>
+
+  <section class="tip-settings">
+    <div class="tip-mark"><mat-icon>lightbulb</mat-icon></div>
+    <div>
+      <span>CONTEXTUAL HELP</span>
+      <h3>Pro tips follow users around the app.</h3>
+      <p>Every core tab includes a short, dismissible reminder. This guide always remains available from the navigation.</p>
+    </div>
+    <div class="tip-actions">
+      <button mat-flat-button type="button" (click)="toggleTips()">
+        <mat-icon>{{ tips.tipsEnabled() ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+        {{ tips.tipsEnabled() ? 'Hide pro tips' : 'Show pro tips' }}
+      </button>
+      <button mat-button type="button" (click)="restartGuidance()">Restart first-time guidance</button>
+    </div>
+  </section>
+</main>

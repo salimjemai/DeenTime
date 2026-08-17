@@ -1,18 +1,82 @@
-<div class="tv-page">
-  <div class="clock">{{ clock() }}</div>
+<main
+  class="tv-page"
+  [class.classic]="display()?.design?.theme === 'classic'"
+  [class.light]="display()?.design?.theme === 'light'"
+  [style.--accent]="accentColor()">
+  <div class="ambient-image" [style.background-image]="heroBackground()"></div>
+  <div class="ambient-glow"></div>
 
   @if (loading()) {
-    <mat-spinner diameter="64" />
+    <div class="loading-state"><mat-spinner diameter="72" /><span>Preparing today’s prayer display…</span></div>
   } @else if (timings()) {
-    <div class="prayer-list">
-      @for (p of prayers; track p) {
-        <div class="prayer-row">
-          <span class="prayer-name">{{ labels[p] }}</span>
-          <span class="prayer-time">{{ timeFor(p) }}</span>
+    <div class="tv-shell">
+      <header class="topbar">
+        <div class="identity">
+          <span class="identity-mark"><span></span></span>
+          <div>
+            <small>LIVE PRAYER DISPLAY</small>
+            <h1>{{ display()?.organization?.name ?? 'Prayer Times' }}</h1>
+            @if (locationLabel()) { <p>{{ locationLabel() }}</p> }
+          </div>
         </div>
-      }
+        <div class="calendar">
+          <strong>{{ dateLabel() }}</strong>
+          @if (showHijri()) { <span>{{ display()?.hijri?.formatted }}</span> }
+        </div>
+      </header>
+
+      <section class="hero">
+        <aside class="friday-panel">
+          <div class="panel-title">
+            <div><span>FRIDAY PRAYERS</span><strong>Jumu’ah services</strong></div>
+            <span class="service-count">{{ jumuahEntries().length || 0 }}</span>
+          </div>
+          @if (jumuahEntries().length > 0) {
+            <div class="friday-list">
+              @for (entry of jumuahEntries(); track entry.salah) {
+                <div class="friday-service">
+                  <strong>{{ jumuahLabel(entry.salah) }}</strong>
+                  <div><span>Khutbah</span><b>{{ formatTime(entry.time) }}</b></div>
+                  <div><span>Salah</span><b>{{ formatTime(entry.salahTime) }}</b></div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="friday-empty">Friday prayer times have not been scheduled yet.</div>
+          }
+        </aside>
+
+        <div class="clock-panel">
+          <span class="clock-label">LOCAL TIME</span>
+          <div class="hero-clock">
+            <strong>{{ clockTime() }}</strong>
+            <div class="clock-side"><span>{{ clockPeriod() }}</span>@if (clockSeconds()) { <b>{{ clockSeconds() }}</b> }</div>
+          </div>
+          <div class="timezone-note"><span class="pulse"></span> Live · {{ display()?.timezoneId }}</div>
+        </div>
+      </section>
+
+      <section class="prayer-strip" aria-label="Today’s prayer and iqama times">
+        @for (prayer of prayers; track prayer.key) {
+          <article class="prayer-card" [class.sunrise]="!prayer.salah" [class.unset]="prayer.salah && !hasIqama(prayer.salah)">
+            <div class="prayer-heading"><strong>{{ prayer.label }}</strong><span>{{ prayer.detail }}</span></div>
+            @if (prayer.salah) {
+              <div class="primary-time"><small>IQAMA</small><strong>{{ iqamaFor(prayer.salah) }}</strong></div>
+              <div class="start-time"><span>Starts</span><b>{{ timeFor(prayer.key) }}</b></div>
+            } @else {
+              <div class="primary-time"><small>SHURUQ</small><strong>{{ timeFor(prayer.key) }}</strong></div>
+              <div class="start-time"><span>Sunrise</span><b>—</b></div>
+            }
+          </article>
+        }
+      </section>
+
+      <footer class="tv-footer">
+        <span>Prayer start and congregational Iqama times update automatically.</span>
+        @if (display()?.design?.footerHtml; as footer) { <div [innerHTML]="footer"></div> }
+      </footer>
     </div>
   } @else {
-    <p class="error">Could not load prayer times.</p>
+    <div class="error-state">Prayer times are temporarily unavailable.</div>
   }
-</div>
+</main>

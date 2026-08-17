@@ -1,31 +1,132 @@
 <div class="page">
-  <h2 class="page-title">Design Settings</h2>
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">PUBLIC-FACING BRAND</div>
+      <h2 class="page-title">Design your schedule</h2>
+      <p class="page-subtitle">Shape the widget, TV display, and printed schedules your community sees.</p>
+    </div>
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="saving() || uploading()">
+      <mat-icon>save</mat-icon> Save changes
+    </button>
+  </div>
 
   @if (loading()) {
     <div class="center"><mat-spinner diameter="48" /></div>
   } @else {
-    <mat-card>
+    <div class="design-grid">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Visual identity</mat-card-title>
+          <mat-card-subtitle>A recognizable header keeps every output connected to your center.</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="form" class="form-col">
+            <div class="image-uploader">
+              <div class="image-preview" [class.has-image]="form.controls.headerImageUrl.value">
+                @if (form.controls.headerImageUrl.value) {
+                  <img [src]="form.controls.headerImageUrl.value" alt="Header preview" />
+                } @else {
+                  <mat-icon>image</mat-icon>
+                  <span>750 × 200 recommended</span>
+                }
+              </div>
+              <div class="upload-copy">
+                <strong>Shared background image</strong>
+                <span>Use a wide masjid photo or branded banner. Uploading applies it immediately.</span>
+                <label class="file-button" for="header-file">
+                  <mat-icon>upload</mat-icon> {{ uploading() ? 'Uploading…' : 'Choose image' }}
+                </label>
+                <input id="header-file" type="file" accept="image/*" (change)="onFileSelected($event)" />
+              </div>
+            </div>
+            <div class="propagation-note">
+              <span><mat-icon>tv</mat-icon> TV display</span>
+              <span><mat-icon>web</mat-icon> Website widget</span>
+              <span><mat-icon>view_compact</mat-icon> Compact widget</span>
+            </div>
+            <mat-form-field appearance="outline">
+              <mat-label>Shared background image URL</mat-label>
+              <input matInput formControlName="headerImageUrl" placeholder="https://..." />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Iqama column headings</mat-label>
+              <input matInput formControlName="iqamaHeadings" placeholder="Fajr, IQM*, Sunrise, ..." />
+              <mat-hint>Comma-separated labels used in your published schedule.</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Theme</mat-label>
+              <mat-select formControlName="theme">
+                @for (t of themes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="preview-card">
+        <mat-card-header>
+          <mat-card-title>Schedule preview</mat-card-title>
+          <mat-card-subtitle>A quick view of your public presentation.</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (orgSlug()) {
+            <div class="output-links">
+              <a mat-stroked-button [href]="'/tv/' + orgSlug()" target="_blank"><mat-icon>tv</mat-icon> TV</a>
+              <a mat-stroked-button [href]="'/w/' + orgSlug()" target="_blank"><mat-icon>web</mat-icon> Widget</a>
+              <a mat-stroked-button [href]="'/w2/' + orgSlug()" target="_blank"><mat-icon>view_compact</mat-icon> Compact</a>
+            </div>
+          }
+          <div class="preview-shell" [class.dark]="form.controls.theme.value === 'dark'" [class.classic]="form.controls.theme.value === 'classic'">
+            @if (form.controls.headerImageUrl.value) {
+              <img class="preview-banner" [src]="form.controls.headerImageUrl.value" alt="" />
+            }
+            @if (previewLoading()) {
+              <div class="preview-state"><mat-spinner diameter="34" /><span>Loading today’s schedule…</span></div>
+            } @else if (previewError() || !display()) {
+              <div class="preview-state"><mat-icon>schedule</mat-icon><span>Today’s prayer schedule is unavailable.</span></div>
+            } @else {
+              <div class="preview-heading">{{ display()!.organization.name }} · Daily timings</div>
+              <div class="preview-date">
+                <span>{{ dateLabel() }}</span>
+                @if (display()!.hijri; as hijri) { <span>{{ hijri.formatted }}</span> }
+              </div>
+              <div class="preview-columns"><span>Prayer</span><span>Adhan / Start</span><span>Iqama</span></div>
+              <div class="preview-rows">
+                @for (prayer of prayers; track prayer.key) {
+                  <div>
+                    <span>{{ prayer.label }}</span>
+                    <strong>{{ timeFor(prayer.key) }}</strong>
+                    <strong [class.no-iqama]="!prayer.salah">{{ iqamaFor(prayer.salah) }}</strong>
+                  </div>
+                }
+              </div>
+              @if (jumuahEntries().length) {
+                <div class="preview-jumuah">
+                  <div class="preview-jumuah-heading"><strong>Jumu’ah</strong><span>Khutbah · Salah</span></div>
+                  <div class="preview-jumuah-times">
+                    @for (entry of jumuahEntries(); track entry.salah) {
+                      <div><span>{{ jumuahLabel(entry.salah) }}</span><b>{{ formatTime(entry.time) }}</b><b>{{ formatTime(entry.salahTime) }}</b></div>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-card class="footer-card">
+      <mat-card-header>
+        <mat-card-title>Published footer</mat-card-title>
+        <mat-card-subtitle>Add a short note, Jumu’ah details, or a community message below the schedule.</mat-card-subtitle>
+      </mat-card-header>
       <mat-card-content>
-        <form [formGroup]="form" class="form-col">
-          <mat-form-field appearance="outline">
-            <mat-label>Header Image URL</mat-label>
-            <input matInput formControlName="headerImageUrl" placeholder="https://..." />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Footer HTML</mat-label>
-            <textarea matInput formControlName="footerHtml" rows="4" placeholder="<p>Your mosque footer</p>"></textarea>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Theme</mat-label>
-            <mat-select formControlName="theme">
-              @for (t of themes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-        </form>
+        <mat-form-field appearance="outline" class="wide-field">
+          <mat-label>Footer HTML</mat-label>
+          <textarea matInput [formControl]="form.controls.footerHtml" rows="4" placeholder="<p>IQM*: Iqamah · Jumu'ah khutbah at 1:00</p>"></textarea>
+        </mat-form-field>
       </mat-card-content>
-      <mat-card-actions align="end">
-        <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">Save</button>
-      </mat-card-actions>
     </mat-card>
   }
 </div>

@@ -12,7 +12,9 @@ namespace DeenTime.Core.Entities
         public Guid OrganizationId { get; set; }
         public int Year { get; set; }       // Gregorian year
         public int Month { get; set; }      // 1..12 Gregorian
-        public int HijriDayOnFirst { get; set; } // e.g., 5 means “5-29-1446” at month start
+        public int HijriDayOnFirst { get; set; }
+        public int HijriMonthOnFirst { get; set; }
+        public int HijriYearOnFirst { get; set; }
         public bool Locked { get; set; }          // prevent regen from overwriting manual fixes
         public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     }

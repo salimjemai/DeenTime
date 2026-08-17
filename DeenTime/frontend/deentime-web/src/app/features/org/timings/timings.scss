@@ -1,5 +1,24 @@
-.page { max-width: 900px; }
-.page-title { margin-bottom: 16px; color: #1b5e20; font-size: 1.5rem; }
+.page { max-width: 1120px; margin: 0 auto; }
+.page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.page-title { margin: 4px 0 6px; color: #173c22; font-size: clamp(1.45rem, 2.2vw, 1.8rem); letter-spacing: -0.025em; }
+.eyebrow { color: #47805a; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; }
+.page-subtitle { margin: 0; color: #69766d; font-size: 0.9rem; }
+
+.next-prayer-card {
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 18px;
+  border: 1px solid #d4e5d5;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #eef8ed, #ffffff);
+  color: #173c22;
+
+  .next-label { color: #4c8a5b; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; }
+  strong { font-size: 1.05rem; }
+  span:last-child { color: #4b6952; font-size: 0.9rem; }
+}
 
 .toolbar {
   display: flex;
@@ -26,6 +45,8 @@
   gap: 8px;
   color: #b71c1c;
   padding: 16px;
+
+  button { margin-left: auto; }
 }
 
 .prayer-grid {
@@ -37,8 +58,30 @@
 .prayer-card {
   text-align: center;
   padding: 8px;
+  border: 1px solid #e2e9e1;
+  box-shadow: 0 8px 24px rgba(24, 62, 34, 0.05);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+
+  &:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(24, 62, 34, 0.1); }
 
   .prayer-icon { font-size: 2rem; height: 2rem; width: 2rem; color: #2e7d32; margin-bottom: 8px; }
   .prayer-label { font-weight: 600; color: #555; margin-bottom: 4px; }
   .prayer-time { font-size: 1.4rem; font-weight: 700; color: #1b5e20; }
+}
+
+.schedule-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0 0;
+  color: #77847a;
+  font-size: 0.8rem;
+
+  mat-icon { width: 16px; height: 16px; font-size: 16px; }
+}
+
+@media (max-width: 700px) {
+  .page-heading { flex-direction: column; }
+  .next-prayer-card { width: 100%; }
+  .toolbar { margin-bottom: 18px; }
 }

@@ -1,8 +1,139 @@
 <div class="page">
-  <h2 class="page-title">Publish</h2>
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">SHARE WITH YOUR COMMUNITY</div>
+      <h2 class="page-title">Publish your schedule</h2>
+      <p class="page-subtitle">Make prayer times available on your website, screens, and printable handouts.</p>
+    </div>
+  </div>
+
+  <mat-card class="section-card share-card">
+    <mat-card-header>
+      <mat-card-title>Public displays</mat-card-title>
+      <mat-card-subtitle>These links are safe to share publicly and update with your organization’s live timings.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (embedCode(); as code) {
+        <div class="display-links">
+          <a class="display-link" [href]="absolute(code.widgetUrl)" target="_blank">
+            <span class="link-icon"><mat-icon>web</mat-icon></span><span><strong>Website widget</strong><small>{{ absolute(code.widgetUrl) }}</small></span><mat-icon>open_in_new</mat-icon>
+          </a>
+          <a class="display-link" [href]="absolute(code.compactWidgetUrl)" target="_blank">
+            <span class="link-icon compact"><mat-icon>view_agenda</mat-icon></span><span><strong>Compact widget</strong><small>{{ absolute(code.compactWidgetUrl) }}</small></span><mat-icon>open_in_new</mat-icon>
+          </a>
+          <a class="display-link" [href]="absolute(code.tvUrl)" target="_blank">
+            <span class="link-icon tv"><mat-icon>tv</mat-icon></span><span><strong>TV display</strong><small>{{ absolute(code.tvUrl) }}</small></span><mat-icon>open_in_new</mat-icon>
+          </a>
+        </div>
+        <div class="code-row">
+          <div><span class="code-label">Embed this widget</span><code>{{ code.iframe }}</code></div>
+          <button mat-stroked-button (click)="copy(code.iframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+        </div>
+        <div class="code-row compact-code">
+          <div><span class="code-label">Embed compact widget</span><code>{{ code.compactIframe }}</code></div>
+          <button mat-stroked-button (click)="copy(code.compactIframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+        </div>
+      } @else {
+        <div class="center"><mat-spinner diameter="28" /></div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card preview-card">
+    <mat-card-header>
+      <mat-card-title>Live display previews</mat-card-title>
+      <mat-card-subtitle>Verify prayer starts, Iqama times, and all four Jumu’ah services before sharing.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="preview-toolbar">
+        <div class="preview-tabs" role="tablist" aria-label="Display preview">
+          <button mat-button [class.active]="previewMode() === 'tv'" (click)="previewMode.set('tv')"><mat-icon>tv</mat-icon> TV display</button>
+          <button mat-button [class.active]="previewMode() === 'widget'" (click)="previewMode.set('widget')"><mat-icon>web</mat-icon> Website widget</button>
+          <button mat-button [class.active]="previewMode() === 'compact'" (click)="previewMode.set('compact')"><mat-icon>view_agenda</mat-icon> Compact</button>
+        </div>
+        <a mat-stroked-button [href]="previewHref()" target="_blank"><mat-icon>open_in_new</mat-icon> Open full view</a>
+      </div>
+      <div class="preview-note"><span></span> Live data from today’s schedule</div>
+      <div class="preview-frame-shell" [class.widget-preview]="previewMode() !== 'tv'" [class.compact-preview]="previewMode() === 'compact'">
+        @if (previewUrl(); as source) {
+          <iframe [src]="source" [title]="previewMode() + ' prayer display preview'"></iframe>
+        } @else {
+          <div class="center"><mat-spinner diameter="32" /></div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card tv-settings">
+    <mat-card-header>
+      <mat-card-title>TV display settings</mat-card-title>
+      <mat-card-subtitle>Configure the large-screen view used in your prayer space.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (tvLoading()) {
+        <div class="center"><mat-spinner diameter="28" /></div>
+      } @else {
+        <div class="settings-grid">
+          <mat-checkbox [(ngModel)]="showSeconds">Show seconds on clock</mat-checkbox>
+          <mat-checkbox [(ngModel)]="showHijri">Show Hijri date</mat-checkbox>
+          <label class="color-field">Accent color <input type="color" [(ngModel)]="accentColor" /></label>
+          <mat-form-field appearance="outline">
+            <mat-label>Auto-refresh (seconds)</mat-label>
+            <input matInput type="number" min="15" max="3600" [(ngModel)]="autoRefreshSeconds" />
+          </mat-form-field>
+        </div>
+        <div class="settings-actions"><button mat-flat-button color="primary" (click)="saveTvConfig()" [disabled]="savingTv()">{{ savingTv() ? 'Saving…' : 'Save TV settings' }}</button></div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card archive-card">
+    <mat-card-header>
+      <mat-card-title>{{ genYear }} timing library</mat-card-title>
+      <mat-card-subtitle>Letter and Tabloid schedules for every month, plus the dedicated Ramadan calendar.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="archive-toolbar">
+        <mat-form-field appearance="outline">
+          <mat-label>Archive year</mat-label>
+          <input matInput type="number" [(ngModel)]="genYear" (change)="loadArtifacts()" />
+        </mat-form-field>
+        <button mat-flat-button color="primary" (click)="generateYearSet()" [disabled]="generatingYear()">
+          <mat-icon>library_add</mat-icon> {{ generatingYear() ? 'Building yearly set…' : 'Generate missing yearly set' }}
+        </button>
+      </div>
+      <div class="archive-grid archive-head"><span>Period</span><span>Letter</span><span>Tabloid</span></div>
+      @for (month of months; track month.value) {
+        <div class="archive-grid">
+          <strong>{{ month.label }}</strong>
+          @for (size of sizes; track size) {
+            @if (artifactFor(month.value, size); as artifact) {
+              <a mat-stroked-button [href]="artifact.storageUrl" target="_blank"><mat-icon>download</mat-icon> Download</a>
+            } @else {
+              <button mat-stroked-button (click)="generateArchive(month.value, size)" [disabled]="!!generatingKey() || generatingYear()">
+                <mat-icon>add</mat-icon> {{ generatingKey() === month.value + '-' + size ? 'Generating…' : 'Generate' }}
+              </button>
+            }
+          }
+        </div>
+      }
+      <div class="archive-grid ramadan-row">
+        <strong>Ramadan</strong>
+        @for (size of sizes; track size) {
+          @if (artifactFor(0, size); as artifact) {
+            <a mat-stroked-button [href]="artifact.storageUrl" target="_blank"><mat-icon>download</mat-icon> Download</a>
+          } @else {
+            <button mat-stroked-button (click)="generateRamadan(size)" [disabled]="!!generatingKey() || generatingYear()">
+              <mat-icon>dark_mode</mat-icon> {{ generatingKey() === '0-' + size ? 'Generating…' : 'Generate' }}
+            </button>
+          }
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <mat-card class="section-card">
-    <mat-card-header><mat-card-title>Generate PDF Schedule</mat-card-title></mat-card-header>
+    <mat-card-header><mat-card-title>Printable schedules</mat-card-title><mat-card-subtitle>Generate a monthly PDF for boards, handouts, and community announcements.</mat-card-subtitle></mat-card-header>
     <mat-card-content>
       <div class="gen-form">
         <mat-form-field appearance="outline">
@@ -38,7 +169,7 @@
   </mat-card>
 
   <mat-card class="section-card">
-    <mat-card-header><mat-card-title>Past Artifacts</mat-card-title></mat-card-header>
+    <mat-card-header><mat-card-title>Past PDFs</mat-card-title></mat-card-header>
     <mat-card-content>
       @if (loading()) {
         <div class="center"><mat-spinner diameter="32" /></div>
@@ -48,7 +179,7 @@
         <table mat-table [dataSource]="artifacts()" class="full-width">
           <ng-container matColumnDef="period">
             <th mat-header-cell *matHeaderCellDef>Period</th>
-            <td mat-cell *matCellDef="let a">{{ a.year }}-{{ a.month }}</td>
+            <td mat-cell *matCellDef="let a">{{ periodLabel(a) }}</td>
           </ng-container>
           <ng-container matColumnDef="size">
             <th mat-header-cell *matHeaderCellDef>Size</th>

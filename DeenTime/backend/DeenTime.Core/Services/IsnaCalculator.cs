@@ -4,8 +4,8 @@ using DeenTime.Core.Entities;
 namespace DeenTime.Core.Services;
 
 /// <summary>
-/// Computes daily prayer times using the ISNA method (Fajr/Isha at 15° below horizon).
-/// Asr is Shafi'i (shadow factor 1) by default; set JuristicMethodAsr = "Hanafi" for factor 2.
+/// Computes daily prayer times using the organization's selected calculation method.
+/// Asr is Shafi'i/Maliki (shadow factor 1) by default; Hanafi uses factor 2.
 /// </summary>
 public sealed class IsnaCalculator : IPrayerTimeCalculator
 {
@@ -48,9 +48,21 @@ public sealed class IsnaCalculator : IPrayerTimeCalculator
             return ToDeg(Math.Acos(cosH)) / 15.0;
         }
 
-        // Fajr / Isha: ISNA uses 15° below horizon
-        double fajrHours   = noon - HourAngle(-15.0);
-        double ishaHours   = noon + HourAngle(-15.0);
+        var method = c.Method.Replace(" ", string.Empty).Replace("-", string.Empty).ToLowerInvariant();
+        (double fajrAngle, double ishaAngle, int? fixedIshaMinutes) = method switch
+        {
+            "karachi" => (18.0, 18.0, (int?)null),
+            "mwl" or "muslimworldleague" => (18.0, 17.0, null),
+            "ummalqura" => (18.5, 0.0, 90),
+            "egyptian" => (19.5, 17.5, null),
+            "gulf" => (19.5, 0.0, 90),
+            "kuwait" => (18.0, 17.5, null),
+            "qatar" => (18.0, 0.0, 90),
+            "tehran" => (17.7, 14.0, null),
+            "jafari" => (16.0, 14.0, null),
+            _ => (15.0, 15.0, null)
+        };
+        double fajrHours = noon - HourAngle(-fajrAngle);
 
         // Sunrise: sun at -0.8333° (accounts for refraction + solar disk radius)
         double sunriseHours = noon - HourAngle(-0.8333);
@@ -68,6 +80,9 @@ public sealed class IsnaCalculator : IPrayerTimeCalculator
 
         // Maghrib: sunset + configured offset
         double maghribHours = sunsetHours + c.MinutesAfterMaghrib / 60.0;
+        double ishaHours = fixedIshaMinutes.HasValue
+            ? sunsetHours + fixedIshaMinutes.Value / 60.0
+            : noon + HourAngle(-ishaAngle);
 
         // Convert UTC decimal hours to local TimeOnly
         var tz       = TimeZoneInfo.FindSystemTimeZoneById(c.TimezoneId);
@@ -75,7 +90,21 @@ public sealed class IsnaCalculator : IPrayerTimeCalculator
 
         TimeOnly ToLocal(double utcHour)
         {
-            var local = TimeZoneInfo.ConvertTimeFromUtc(midnightUtc.AddHours(utcHour), tz);
+            var utc = midnightUtc.AddHours(utcHour);
+            DateTime local;
+            if (!c.DstObserved)
+            {
+                local = utc.Add(tz.BaseUtcOffset);
+            }
+            else if (c.DstBegins.HasValue && c.DstEnds.HasValue)
+            {
+                var customDst = date >= c.DstBegins.Value && date < c.DstEnds.Value;
+                local = utc.Add(tz.BaseUtcOffset).AddHours(customDst ? 1 : 0);
+            }
+            else
+            {
+                local = TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
+            }
             return new TimeOnly(local.Hour, local.Minute);
         }
 

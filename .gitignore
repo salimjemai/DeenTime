@@ -12,3 +12,7 @@
 /DeenTime/backend/DeenTime.Core/obj/Debug
 /DeenTime/backend/DeenTime.Infrastructure/bin/Debug/net8.0
 /DeenTime/backend/DeenTime.Infrastructure/obj/Debug
+
+# Local tooling and operating-system files
+.DS_Store
+.pnpm-store/

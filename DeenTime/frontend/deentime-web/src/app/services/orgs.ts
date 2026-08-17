@@ -24,7 +24,11 @@ export class OrgsService {
     return this.http.get<PrayerTimingCriteria>(`${this.base}/api/v1/orgs/${id}/criteria`);
   }
 
-  putCriteria(id: string, body: PrayerTimingCriteria) {
+  putCriteria(id: string, body: Partial<PrayerTimingCriteria>) {
     return this.http.put<void>(`${this.base}/api/v1/orgs/${id}/criteria`, body);
+  }
+
+  deleteCriteria(id: string) {
+    return this.http.delete<void>(`${this.base}/api/v1/orgs/${id}/criteria`);
   }
 }

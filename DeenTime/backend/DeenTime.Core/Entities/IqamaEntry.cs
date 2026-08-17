@@ -14,6 +14,7 @@ namespace DeenTime.Core.Entities
         public DateOnly Date { get; set; }                  // each row in your list
         public SalahType Salah { get; set; }
         public TimeOnly Time { get; set; }                  // iqama time shown/printed
+        public int? OffsetMinutes { get; set; }              // optional minutes after calculated prayer start
         public string? Note { get; set; }                   // optional (e.g., “Summer schedule”)
         public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
         public Organization? Organization { get; set; }

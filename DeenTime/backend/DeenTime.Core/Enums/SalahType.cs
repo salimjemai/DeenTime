@@ -14,6 +14,9 @@ namespace DeenTime.Core.Enums
         Maghrib = 4,
         Isha = 5,
         Jumuah = 6,
-        Khutbah = 7
+        Khutbah = 7,
+        Jumuah2nd = 8,
+        Jumuah3rd = 9,
+        Jumuah4th = 10
     }
 }

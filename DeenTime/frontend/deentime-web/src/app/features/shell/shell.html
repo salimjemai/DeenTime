@@ -25,6 +25,50 @@
   </mat-sidenav>
 
   <mat-sidenav-content class="main-content">
+    <header class="content-header">
+      <div>
+        <div class="content-kicker">MOSQUE OPERATIONS · {{ todayLabel }}</div>
+        <h1>{{ orgName() }}</h1>
+        <p>Keep your prayer schedule accurate, consistent, and ready to publish.</p>
+      </div>
+      <div class="header-actions">
+        <a mat-stroked-button class="help-shortcut" [routerLink]="['/org', orgId(), 'help']">
+          <mat-icon>tips_and_updates</mat-icon> Help & tips
+        </a>
+        <div class="account-chip">
+          <span class="status-dot"></span>
+          <span>{{ email() }}</span>
+        </div>
+      </div>
+    </header>
+
+    @if (showWelcome()) {
+      <section class="welcome-guide" aria-label="Welcome to DeenTime">
+        <span class="welcome-icon"><mat-icon>auto_awesome</mat-icon></span>
+        <div>
+          <span class="welcome-kicker">NEW TO DEENTIME?</span>
+          <strong>See how all seven tabs work together.</strong>
+          <p>Follow the visual guide from Profile setup to TV, widgets, PDFs, apps, and community outputs.</p>
+        </div>
+        <div class="welcome-actions">
+          <button mat-flat-button type="button" (click)="openGuide()"><mat-icon>map</mat-icon> Show me around</button>
+          <button mat-button type="button" (click)="dismissWelcome()">Maybe later</button>
+        </div>
+      </section>
+    }
+
+    @if (currentTip(); as tip) {
+      <aside [class]="'pro-tip-strip tone-' + tip.tone" aria-live="polite">
+        <span class="tip-icon"><mat-icon>lightbulb</mat-icon></span>
+        <div class="tip-copy">
+          <strong>Pro tip · {{ tip.label }}</strong>
+          <span>{{ tip.proTip }}</span>
+        </div>
+        <a [routerLink]="['/org', orgId(), 'help']">View guide</a>
+        <button mat-icon-button type="button" aria-label="Dismiss this pro tip" (click)="dismissCurrentTip()"><mat-icon>close</mat-icon></button>
+      </aside>
+    }
+
     <router-outlet />
   </mat-sidenav-content>
 

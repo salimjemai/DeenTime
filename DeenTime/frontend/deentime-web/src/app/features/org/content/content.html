@@ -1,0 +1,218 @@
+<main class="content-library">
+  <section class="library-hero">
+    <div class="hero-copy">
+      <span class="eyebrow"><span></span> CONTENT INFRASTRUCTURE</span>
+      <h2>A living library for every masjid surface.</h2>
+      <p>One dependable source for Qur’an text, recitation, and multilingual Hadith—ready for websites, mobile apps, kiosks, and displays.</p>
+      <div class="hero-badges">
+        <span><mat-icon>verified_user</mat-icon> Server-side credentials</span>
+        <span><mat-icon>cloud_done</mat-icon> Offline-ready cache</span>
+        <span><mat-icon>language</mat-icon> Public JSON APIs</span>
+      </div>
+    </div>
+    <div class="hero-mark" aria-hidden="true">
+      <span>اقْرَأْ</span>
+      <small>Read · Listen · Share</small>
+    </div>
+  </section>
+
+  <section class="metric-grid" aria-label="Content library totals">
+    <article class="metric-card">
+      <span class="metric-icon gold"><mat-icon>menu_book</mat-icon></span>
+      <div><strong>{{ formatNumber(summary()?.quran?.editionCount) }}</strong><span>Qur’an editions</span></div>
+      <small>{{ formatNumber(summary()?.quran?.languageCount) }} languages</small>
+    </article>
+    <article class="metric-card">
+      <span class="metric-icon blue"><mat-icon>headphones</mat-icon></span>
+      <div><strong>{{ formatNumber(summary()?.quran?.audioEditionCount) }}</strong><span>Audio editions</span></div>
+      <small>Recitation manifests</small>
+    </article>
+    <article class="metric-card">
+      <span class="metric-icon plum"><mat-icon>auto_stories</mat-icon></span>
+      <div><strong>{{ formatNumber(summary()?.hadith?.recordCount) }}</strong><span>Hadith records</span></div>
+      <small>{{ formatNumber(summary()?.hadith?.bookCount) }} canonical books</small>
+    </article>
+    <article class="metric-card">
+      <span class="metric-icon teal"><mat-icon>database</mat-icon></span>
+      <div><strong>{{ formatStorage(summary()?.quran?.cachedBytes) }}</strong><span>Local Qur’an cache</span></div>
+      <small>{{ formatNumber(summary()?.quran?.cachedPayloads) }} payloads</small>
+    </article>
+  </section>
+
+  <section class="section-heading">
+    <div><span class="section-kicker">SOURCE CONTROL</span><h3>Provider vault</h3></div>
+    <p>Refresh the compact catalogue, preserve every text edition, or bring the complete text-and-audio corpus in-house.</p>
+  </section>
+
+  <section class="provider-grid">
+    <article class="provider-card quran-provider">
+      <header>
+        <div class="provider-logo">ق</div>
+        <div>
+          <span class="provider-name">AlQuran Cloud · primary server</span>
+          <h4>Qur’an corpus</h4>
+        </div>
+        <span class="status-pill" [class.running]="quranState()?.status === 'running'" [class.failed]="quranState()?.status === 'failed'">
+          <i></i>{{ stateLabel(quranState()) }}
+        </span>
+      </header>
+      <p class="provider-description">All {{ summary()?.quran?.endpointCount ?? 35 }} documented routes are mirrored under DeenTime with persistent cache and stale-data fallback.</p>
+      <div class="provider-facts">
+        <span><b>{{ formatNumber(summary()?.quran?.textEditionCount) }}</b> text</span>
+        <span><b>{{ formatNumber(summary()?.quran?.audioEditionCount) }}</b> audio</span>
+        <span><b>{{ formatNumber(summary()?.quran?.languageCount) }}</b> languages</span>
+      </div>
+      @if (quranState()?.status === 'running') {
+        <div class="sync-progress">
+          <div><span>{{ quranState()?.message }}</span><b>{{ quranProgress() }}%</b></div>
+          <mat-progress-bar mode="determinate" [value]="quranProgress()" />
+        </div>
+      } @else if (quranState()?.message) {
+        <p class="sync-message" [class.error]="quranState()?.status === 'failed'">{{ quranState()?.message }}</p>
+      }
+      <div class="provider-actions">
+        <button mat-stroked-button (click)="syncQuran('catalog')" [disabled]="syncing() === 'quran'">Catalogue</button>
+        <button mat-stroked-button (click)="syncQuran('text')" [disabled]="syncing() === 'quran'">All text</button>
+        <button mat-flat-button class="primary-action" (click)="syncQuran('all')" [disabled]="syncing() === 'quran'">
+          <mat-icon>cloud_download</mat-icon> Text + audio
+        </button>
+      </div>
+    </article>
+
+    <article class="provider-card hadith-provider">
+      <header>
+        <div class="provider-logo"><mat-icon>format_quote</mat-icon></div>
+        <div>
+          <span class="provider-name">HadithAPI · protected import</span>
+          <h4>Hadith collection</h4>
+        </div>
+        <span class="status-pill" [class.running]="hadithState()?.status === 'running'" [class.failed]="hadithState()?.status === 'failed'">
+          <i></i>{{ stateLabel(hadithState()) }}
+        </span>
+      </header>
+      <p class="provider-description">Normalized locally for fast chapter browsing and full-text search across every available Arabic, English, and Urdu field.</p>
+      <div class="provider-facts">
+        <span><b>{{ formatNumber(summary()?.hadith?.bookCount) }}</b> books</span>
+        <span><b>{{ formatNumber(summary()?.hadith?.chapterCount) }}</b> chapters</span>
+        <span><b>{{ formatNumber(summary()?.hadith?.recordCount) }}</b> hadith</span>
+      </div>
+      @if (hadithState()?.status === 'running') {
+        <div class="sync-progress">
+          <div><span>{{ hadithState()?.message }}</span><b>{{ hadithProgress() }}%</b></div>
+          <mat-progress-bar mode="determinate" [value]="hadithProgress()" />
+        </div>
+      } @else if (hadithState()?.message) {
+        <p class="sync-message" [class.error]="hadithState()?.status === 'failed'">{{ hadithState()?.message }}</p>
+      }
+      <div class="provider-actions single-action">
+        <span class="key-state"><mat-icon>{{ summary()?.hadith?.configured ? 'key' : 'key_off' }}</mat-icon>{{ summary()?.hadith?.configured ? 'Credential secured' : 'Credential missing' }}</span>
+        <button mat-flat-button class="hadith-action" (click)="syncHadith()" [disabled]="syncing() === 'hadith' || !summary()?.hadith?.configured">
+          <mat-icon>download_for_offline</mat-icon> Import every book
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <section class="studio-grid">
+    <article class="studio-card verse-studio">
+      <header class="studio-header">
+        <div><span class="section-kicker">QUR’AN STUDIO</span><h3>Text + translation + recitation</h3></div>
+        <button mat-icon-button aria-label="Load another random ayah" (click)="loadRandomAyah()" [disabled]="verseLoading()"><mat-icon>refresh</mat-icon></button>
+      </header>
+      @if (verseLoading()) {
+        <div class="preview-skeleton"><span></span><span></span><span></span></div>
+      } @else if (verse(); as ayah) {
+        <div class="verse-meta">
+          <span>{{ ayah.reference }}</span>
+          <span>Juz {{ ayah.juz }} · Page {{ ayah.page }}</span>
+        </div>
+        <blockquote class="arabic-verse" dir="rtl">{{ ayah.arabic }}</blockquote>
+        <p class="translation">{{ ayah.translation }}</p>
+        <small class="attribution">{{ ayah.translator }}</small>
+        @if (ayah.audioUrl) {
+          <div class="audio-player">
+            <span class="play-emblem"><mat-icon>graphic_eq</mat-icon></span>
+            <div><b>{{ ayah.reciter }}</b><small>Ayah recitation</small></div>
+            <audio controls preload="none" [src]="ayah.audioUrl"></audio>
+          </div>
+        }
+      }
+    </article>
+
+    <article class="studio-card corpus-card">
+      <header class="studio-header">
+        <div><span class="section-kicker">EDITION MAP</span><h3>What is ready</h3></div>
+        <span class="edition-count">{{ editions().length }}</span>
+      </header>
+      <div class="corpus-bars">
+        <div>
+          <span><b>Text</b><small>{{ summary()?.quran?.textEditionCount ?? 0 }} editions</small></span>
+          <i><em [style.width.%]="textPercent()"></em></i>
+        </div>
+        <div>
+          <span><b>Audio</b><small>{{ summary()?.quran?.audioEditionCount ?? 0 }} editions</small></span>
+          <i><em class="audio-bar" [style.width.%]="audioPercent()"></em></i>
+        </div>
+      </div>
+      <div class="language-cloud">
+        @for (language of ['ar','en','ur','fr','es','de','tr','id','bn','fa','ru','sw']; track language) {
+          <span>{{ language.toUpperCase() }}</span>
+        }
+        <span class="more">+{{ additionalLanguages() }} more</span>
+      </div>
+      <div class="corpus-note"><mat-icon>info</mat-icon><p>Audio files remain on their provider CDNs; DeenTime preserves every reciter manifest and URL so masjid apps can stream without duplicating hundreds of gigabytes.</p></div>
+    </article>
+  </section>
+
+  <section class="hadith-browser">
+    <header class="browser-heading">
+      <div><span class="section-kicker">HADITH EXPLORER</span><h3>Search across the local collection</h3><p>Fast, provider-independent search after one complete import.</p></div>
+      <div class="language-switch" aria-label="Hadith language">
+        <button [class.active]="language === 'en'" (click)="language = 'en'; searchHadith()">English</button>
+        <button [class.active]="language === 'ar'" (click)="language = 'ar'; searchHadith()">العربية</button>
+        <button [class.active]="language === 'ur'" (click)="language = 'ur'; searchHadith()">اردو</button>
+      </div>
+    </header>
+    <div class="search-strip">
+      <label class="book-select"><span>Collection</span><select [(ngModel)]="selectedBook" (change)="searchHadith()"><option value="">Every book</option>@for (book of books(); track book.slug) {<option [value]="book.slug">{{ book.name }}</option>}</select></label>
+      <label class="search-box"><mat-icon>search</mat-icon><input [(ngModel)]="hadithSearch" (keyup.enter)="searchHadith()" placeholder="Search text or narrator…" /><button (click)="searchHadith()">Search</button></label>
+      <button mat-stroked-button class="surprise-button" (click)="randomHadith()"><mat-icon>casino</mat-icon> Surprise me</button>
+    </div>
+    <div class="result-summary"><span>{{ formatNumber(hadithTotal()) }} matching records</span><small>All available Arabic · English · Urdu fields preserved</small></div>
+
+    @if (hadithLoading()) {
+      <div class="hadith-loading"><mat-progress-bar mode="indeterminate" /></div>
+    } @else if (hadiths().length === 0) {
+      <div class="empty-state"><span><mat-icon>auto_stories</mat-icon></span><h4>The collection is waiting to be imported.</h4><p>Use “Import every book” above, then search all available Arabic, English, and Urdu records locally.</p></div>
+    } @else {
+      <div class="hadith-results">
+        @for (hadith of hadiths(); track hadith.id) {
+          <article>
+            <header><span>{{ hadith.bookSlug.replaceAll('-', ' ') }}</span><span>No. {{ hadith.hadithNumber }}@if (hadith.chapterNumber) { · Chapter {{ hadith.chapterNumber }}}</span></header>
+            @if (hadithHeading(hadith)) {<h4 [dir]="isRtl() ? 'rtl' : 'ltr'">{{ hadithHeading(hadith) }}</h4>}
+            @if (hadithNarrator(hadith)) {<p class="narrator" [dir]="language === 'ur' ? 'rtl' : 'ltr'">{{ hadithNarrator(hadith) }}</p>}
+            <div class="hadith-copy" [class.rtl]="isRtl()" [dir]="isRtl() ? 'rtl' : 'ltr'" [innerHTML]="hadithText(hadith)"></div>
+            <footer>@if (hadith.status) {<span class="grade">{{ hadith.status }}</span>}<span>Source ID {{ hadith.id }}</span></footer>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="api-console">
+    <div class="console-intro">
+      <span class="section-kicker light">MASJID DEVELOPER API</span>
+      <h3>Build once. Publish everywhere.</h3>
+      <p>These public, rate-limited routes return clean JSON for masjid websites, native apps, signage, classroom tools, and community integrations.</p>
+      <a [href]="apiUrl('/public/content/capabilities')" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon> Open capability manifest</a>
+    </div>
+    <div class="endpoint-list">
+      @for (example of apiExamples; track example.path) {
+        <button (click)="copyApi(example.path)">
+          <span><small>{{ example.label }}</small><code>GET {{ example.path }}</code></span>
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      }
+    </div>
+  </section>
+</main>

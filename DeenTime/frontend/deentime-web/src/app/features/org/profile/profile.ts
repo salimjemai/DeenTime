@@ -33,18 +33,22 @@ export class ProfileComponent implements OnInit {
   loading = signal(false);
   saving  = signal(false);
 
-  orgForm = this.fb.group({
+  orgForm = this.fb.nonNullable.group({
     name:        ['', Validators.required],
     addressLine: [''], city: [''], state: [''], zipCode: [''],
     phone: [''], websiteUrl: [''], email: [''], socialUrl: ['']
   });
 
-  criteriaForm = this.fb.group({
+  criteriaForm = this.fb.nonNullable.group({
+    zipCode:             [''],
     method:             ['ISNA'],
     juristicMethodAsr:  ['Other'],
     latitude:           [0, Validators.required],
     longitude:          [0, Validators.required],
     timezoneId:         ['America/Chicago'],
+    dstObserved:        [true],
+    dstBegins:          [''],
+    dstEnds:            [''],
     minutesAfterZawal:  [1],
     minutesAfterMaghrib:[2],
     khutbahTimeMinutes: [30]
@@ -52,12 +56,44 @@ export class ProfileComponent implements OnInit {
 
   methods = ['ISNA','MWL','Egyptian','Karachi','UmmAlQura','Gulf','Kuwait','Qatar','Tehran','Jafari'];
   juristicMethods = ['Other','Hanafi'];
+  timezones = [
+    { value: 'America/New_York', label: 'Eastern' },
+    { value: 'America/Chicago', label: 'Central' },
+    { value: 'America/Denver', label: 'Mountain' },
+    { value: 'America/Los_Angeles', label: 'Pacific' },
+    { value: 'America/Anchorage', label: 'Alaska' }
+  ];
 
   ngOnInit() {
     this.loading.set(true);
     this.orgs.get(this.orgId).subscribe(org => {
-      this.orgForm.patchValue(org as any);
-      if (org.criteria) this.criteriaForm.patchValue(org.criteria as any);
+      this.orgForm.patchValue({
+        name: org.name,
+        addressLine: org.addressLine ?? '',
+        city: org.city ?? '',
+        state: org.state ?? '',
+        zipCode: org.zipCode ?? '',
+        phone: org.phone ?? '',
+        websiteUrl: org.websiteUrl ?? '',
+        email: org.email ?? '',
+        socialUrl: org.socialUrl ?? ''
+      });
+      if (org.criteria) {
+        this.criteriaForm.patchValue({
+          zipCode: org.criteria.zipCode,
+          method: org.criteria.method,
+          juristicMethodAsr: org.criteria.juristicMethodAsr,
+          latitude: org.criteria.latitude,
+          longitude: org.criteria.longitude,
+          timezoneId: org.criteria.timezoneId,
+          dstObserved: org.criteria.dstObserved,
+          dstBegins: org.criteria.dstBegins ?? '',
+          dstEnds: org.criteria.dstEnds ?? '',
+          minutesAfterZawal: org.criteria.minutesAfterZawal,
+          minutesAfterMaghrib: org.criteria.minutesAfterMaghrib,
+          khutbahTimeMinutes: org.criteria.khutbahTimeMinutes
+        });
+      }
       this.loading.set(false);
     });
   }
@@ -65,7 +101,7 @@ export class ProfileComponent implements OnInit {
   saveOrg() {
     if (this.orgForm.invalid) return;
     this.saving.set(true);
-    this.orgs.update(this.orgId, this.orgForm.value as any).subscribe({
+    this.orgs.update(this.orgId, this.orgForm.getRawValue()).subscribe({
       next: () => { this.saving.set(false); this.snack.open('Saved', '', { duration: 2000 }); },
       error: () => { this.saving.set(false); this.snack.open('Save failed', 'Dismiss', { duration: 3000 }); }
     });
@@ -73,9 +109,32 @@ export class ProfileComponent implements OnInit {
 
   saveCriteria() {
     this.saving.set(true);
-    this.orgs.putCriteria(this.orgId, { organizationId: this.orgId, ...this.criteriaForm.value } as any).subscribe({
+    const raw = this.criteriaForm.getRawValue();
+    this.orgs.putCriteria(this.orgId, {
+      organizationId: this.orgId,
+      ...raw,
+      dstBegins: raw.dstBegins || undefined,
+      dstEnds: raw.dstEnds || undefined
+    }).subscribe({
       next: () => { this.saving.set(false); this.snack.open('Criteria saved', '', { duration: 2000 }); },
       error: () => { this.saving.set(false); this.snack.open('Save failed', 'Dismiss', { duration: 3000 }); }
+    });
+  }
+
+  resetCriteria() {
+    if (!window.confirm('Remove the prayer timing criteria? Public timings will be unavailable until new criteria are saved.')) return;
+    this.saving.set(true);
+    this.orgs.deleteCriteria(this.orgId).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.criteriaForm.reset({
+          zipCode: '', method: 'ISNA', juristicMethodAsr: 'Other', latitude: 0, longitude: 0,
+          timezoneId: 'America/Chicago', dstObserved: true, dstBegins: '', dstEnds: '',
+          minutesAfterZawal: 1, minutesAfterMaghrib: 2, khutbahTimeMinutes: 30
+        });
+        this.snack.open('Prayer criteria removed', '', { duration: 2500 });
+      },
+      error: () => { this.saving.set(false); this.snack.open('Could not remove criteria', 'Dismiss', { duration: 3000 }); }
     });
   }
 }

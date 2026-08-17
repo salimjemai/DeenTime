@@ -1,23 +1,130 @@
 <div class="page">
   <div class="page-header">
-    <h2 class="page-title">Iqama Schedule</h2>
+    <div>
+      <div class="eyebrow">CONGREGATION SCHEDULE</div>
+      <h2 class="page-title">Iqama Schedule</h2>
+      <p class="page-subtitle">Each change stays in effect until a later date replaces it.</p>
+    </div>
     <div class="year-nav">
       <button mat-icon-button (click)="changeYear(-1)"><mat-icon>chevron_left</mat-icon></button>
       <span class="year-label">{{ year }}</span>
       <button mat-icon-button (click)="changeYear(1)"><mat-icon>chevron_right</mat-icon></button>
     </div>
-    <button mat-flat-button color="primary" (click)="addRow()">
-      <mat-icon>add</mat-icon> Add Row
-    </button>
+    <div class="header-actions">
+      <button mat-stroked-button color="primary" (click)="showPatternForm.set(!showPatternForm())">
+        <mat-icon>repeat</mat-icon> Schedule recurring
+      </button>
+      <button mat-flat-button color="primary" (click)="showOneOffForm.set(!showOneOffForm())">
+        <mat-icon>add</mat-icon> Add one-off
+      </button>
+    </div>
   </div>
+
+  <mat-card class="quick-card">
+    <header class="quick-header">
+      <div>
+        <span class="quick-kicker"><mat-icon>bolt</mat-icon> FAST EDIT</span>
+        <h3>Current daily Iqama times</h3>
+        <p>Set the five congregational times for this masjid. TV and widgets use the latest effective schedule automatically.</p>
+      </div>
+      <label class="effective-date">
+        <span>Effective from</span>
+        <input type="date" [(ngModel)]="effectiveDate" (change)="loadCurrentSchedule()" />
+      </label>
+    </header>
+
+    @if (currentLoading()) {
+      <div class="quick-loading"><mat-spinner diameter="34" /><span>Loading the active schedule…</span></div>
+    } @else {
+      <div class="quick-grid">
+        @for (row of quickRows; track row.salah) {
+          <article class="quick-prayer">
+            <div class="quick-prayer-title"><span>{{ row.label.charAt(0) }}</span><div><strong>{{ row.label }}</strong><small>{{ row.detail }}</small></div></div>
+            <label class="mode-field">
+              <span>Schedule type</span>
+              <select [(ngModel)]="row.mode">
+                <option value="fixed">Fixed time</option>
+                <option value="offset">After prayer starts</option>
+              </select>
+            </label>
+            @if (row.mode === 'fixed') {
+              <label class="time-field"><span>Iqama time</span><input type="time" [(ngModel)]="row.time" /></label>
+            } @else {
+              <label class="time-field offset"><span>Minutes after start</span><input type="number" min="0" max="180" [(ngModel)]="row.offsetMinutes" /><b>min</b></label>
+            }
+            <label class="note-field"><span>Optional note</span><input [(ngModel)]="row.note" placeholder="e.g. summer" /></label>
+          </article>
+        }
+      </div>
+    }
+
+    <footer class="quick-footer">
+      <span><mat-icon>domain</mat-icon> Saved only for this organization</span>
+      <button mat-flat-button color="primary" (click)="saveCurrentSchedule()" [disabled]="quickSaving() || currentLoading()">
+        @if (quickSaving()) { <mat-spinner diameter="18" /> } @else { <ng-container><mat-icon>save</mat-icon> Save & publish Iqama times</ng-container> }
+      </button>
+    </footer>
+  </mat-card>
+
+  @if (showOneOffForm()) {
+    <mat-card class="pattern-card one-off-card">
+      <div class="pattern-intro">
+        <div class="pattern-icon"><mat-icon>edit_calendar</mat-icon></div>
+        <div><strong>Schedule one Iqama change</strong><span>Choose the exact prayer and effective date before adding it to this masjid’s history.</span></div>
+      </div>
+      <div class="pattern-form one-off-form">
+        <label>Effective date <input [(ngModel)]="oneOffDate" type="date" /></label>
+        <label>Salah <select [(ngModel)]="oneOffSalah">@for (s of salahs; track s) { <option [ngValue]="s">{{ s }}</option> }</select></label>
+        <label>Fixed time <input [(ngModel)]="oneOffTime" type="time" /></label>
+        <label>Minutes after start <input [(ngModel)]="oneOffOffsetMinutes" type="number" min="0" max="180" placeholder="optional" /></label>
+        <label>Note <input [(ngModel)]="oneOffNote" placeholder="Optional" /></label>
+      </div>
+      <div class="pattern-actions">
+        <button mat-button (click)="showOneOffForm.set(false)">Cancel</button>
+        <button mat-flat-button color="primary" (click)="addRow()" [disabled]="addingOneOff() || !oneOffDate || !oneOffTime">
+          @if (addingOneOff()) { <mat-spinner diameter="18" /> } @else { <ng-container><mat-icon>add_task</mat-icon> Add one-off change</ng-container> }
+        </button>
+      </div>
+    </mat-card>
+  }
+
+  @if (showPatternForm()) {
+    <mat-card class="pattern-card">
+      <div class="pattern-intro">
+        <div class="pattern-icon"><mat-icon>event_repeat</mat-icon></div>
+        <div><strong>Build a recurring pattern</strong><span>Apply one rule to the {{ year }} schedule. Great for monthly Jumu’ah and weekly-style community schedules.</span></div>
+      </div>
+      <div class="pattern-form">
+        <label>Month <select [(ngModel)]="patternMonth">@for (m of months; track m.value) { <option [ngValue]="m.value">{{ m.label }}</option> }</select></label>
+        <label>Occurrence <select [(ngModel)]="patternFrequency">@for (f of frequencies; track f) { <option [ngValue]="f">{{ f }}</option> }</select></label>
+        <label>Weekday <select [(ngModel)]="patternWeekday">@for (d of weekdays; track d.value) { <option [ngValue]="d.value">{{ d.label }}</option> }</select></label>
+        <label>Salah <select [(ngModel)]="patternSalah">@for (s of salahs; track s) { <option [ngValue]="s">{{ s }}</option> }</select></label>
+        <label>Iqama time <input [(ngModel)]="patternTime" type="time" /></label>
+        <label>Minutes after start <input [(ngModel)]="patternOffsetMinutes" type="number" min="0" placeholder="e.g. 10" /></label>
+        <label>Note <input [(ngModel)]="patternNote" placeholder="Optional" /></label>
+      </div>
+      <div class="pattern-actions">
+        <button mat-button (click)="showPatternForm.set(false)">Cancel</button>
+        <button mat-flat-button color="primary" (click)="addPattern()" [disabled]="addingPattern() || !patternTime">
+          @if (addingPattern()) { <mat-spinner diameter="18" /> } @else { <ng-container><mat-icon>add_task</mat-icon> Add pattern</ng-container> }
+        </button>
+      </div>
+    </mat-card>
+  }
 
   @if (loading()) {
     <div class="center"><mat-spinner diameter="48" /></div>
+  } @else if (error()) {
+    <mat-card class="error-card">
+      <mat-icon>warning</mat-icon>
+      <span>{{ error() }}</span>
+      <button mat-stroked-button color="primary" (click)="load()">Try again</button>
+    </mat-card>
   } @else {
     <mat-card>
       <table mat-table [dataSource]="entries()" class="full-width">
         <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <th mat-header-cell *matHeaderCellDef>Effective date</th>
           <td mat-cell *matCellDef="let e">
             @if (editingId() === e.id) {
               <input [(ngModel)]="editBuf.date" type="date" class="inline-input" />
@@ -38,8 +145,13 @@
           <th mat-header-cell *matHeaderCellDef>Iqama Time</th>
           <td mat-cell *matCellDef="let e">
             @if (editingId() === e.id) {
-              <input [(ngModel)]="editBuf.time" type="time" class="inline-input" />
-            } @else { {{ e.time }} }
+              <div class="time-editor">
+                <input [(ngModel)]="editBuf.time" type="time" class="inline-input" />
+                <input [(ngModel)]="editBuf.offsetMinutes" type="number" min="0" class="inline-input offset-input" placeholder="+ min" />
+              </div>
+            } @else {
+              {{ displayEntryTime(e) }}
+            }
           </td>
         </ng-container>
         <ng-container matColumnDef="note">
@@ -54,11 +166,11 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let e">
             @if (editingId() === e.id) {
-              <button mat-icon-button color="primary" (click)="saveEdit(e)"><mat-icon>check</mat-icon></button>
-              <button mat-icon-button (click)="cancelEdit()"><mat-icon>close</mat-icon></button>
+              <button mat-icon-button color="primary" [attr.aria-label]="'Save ' + e.salah" (click)="saveEdit(e)"><mat-icon>check</mat-icon></button>
+              <button mat-icon-button aria-label="Cancel edit" (click)="cancelEdit()"><mat-icon>close</mat-icon></button>
             } @else {
-              <button mat-icon-button (click)="startEdit(e)"><mat-icon>edit</mat-icon></button>
-              <button mat-icon-button color="warn" (click)="delete(e.id)"><mat-icon>delete</mat-icon></button>
+              <button mat-icon-button [attr.aria-label]="'Edit ' + e.salah + ' Iqama time'" (click)="startEdit(e)"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button color="warn" [attr.aria-label]="'Delete ' + e.salah + ' Iqama entry'" (click)="delete(e.id)"><mat-icon>delete</mat-icon></button>
             }
           </td>
         </ng-container>
@@ -66,7 +178,14 @@
         <tr mat-row *matRowDef="let row; columns: columns;"></tr>
       </table>
       @if (entries().length === 0) {
-        <div class="empty">No iqama entries for {{ year }}. Add a row to get started.</div>
+        <div class="empty">
+          <mat-icon>event_available</mat-icon>
+          <strong>No Iqama entries for {{ year }}</strong>
+          <span>Add your first congregational prayer time to make this schedule publishable.</span>
+          <button mat-stroked-button color="primary" (click)="showOneOffForm.set(true)">
+            <mat-icon>add</mat-icon> Add first row
+          </button>
+        </div>
       }
     </mat-card>
   }

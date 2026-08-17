@@ -1,0 +1,80 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { environment } from '../../environments/environment';
+import {
+  HadithBook,
+  HadithRecord,
+  IslamicContentSummary,
+  IslamicContentSyncState,
+  PagedResult,
+  QuranApiResponse,
+  QuranAyah,
+  QuranEdition
+} from '../models';
+
+@Injectable({ providedIn: 'root' })
+export class IslamicContentService {
+  private http = inject(HttpClient);
+  private base = environment.apiUrl;
+
+  summary() {
+    return this.http.get<IslamicContentSummary>(`${this.base}/api/v1/islamic-content/summary`);
+  }
+
+  syncStatus() {
+    return this.http.get<IslamicContentSyncState[]>(`${this.base}/api/v1/islamic-content/status`);
+  }
+
+  quranEditions(filters: { language?: string; format?: string; type?: string } = {}) {
+    let params = new HttpParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params = params.set(key, value);
+    });
+    return this.http.get<{ data: QuranEdition[]; total: number }>(
+      `${this.base}/api/v1/islamic-content/quran/editions`, { params });
+  }
+
+  syncQuran(scope: 'catalog' | 'text' | 'all') {
+    return this.http.post<{ provider: string; scope: string; status: string }>(
+      `${this.base}/api/v1/islamic-content/sync/quran`, { scope });
+  }
+
+  syncHadith() {
+    return this.http.post<{ provider: string; scope: string; status: string }>(
+      `${this.base}/api/v1/islamic-content/sync/hadith`, {});
+  }
+
+  randomAyah() {
+    return this.http.get<QuranApiResponse<QuranAyah[]>>(
+      `${this.base}/public/content/quran/showcase/random`);
+  }
+
+  hadithBooks() {
+    return this.http.get<{ data: HadithBook[]; total: number }>(
+      `${this.base}/public/content/hadith/books`);
+  }
+
+  searchHadiths(filters: {
+    book?: string;
+    search?: string;
+    language?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    let params = new HttpParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
+    });
+    return this.http.get<PagedResult<HadithRecord>>(
+      `${this.base}/public/content/hadith/hadiths`, { params });
+  }
+
+  randomHadith(filters: { book?: string; language?: string } = {}) {
+    let params = new HttpParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params = params.set(key, value);
+    });
+    return this.http.get<{ data: HadithRecord }>(
+      `${this.base}/public/content/hadith/hadiths/random`, { params });
+  }
+}

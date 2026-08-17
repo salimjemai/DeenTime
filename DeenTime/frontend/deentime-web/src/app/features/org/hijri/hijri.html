@@ -1,6 +1,10 @@
 <div class="page">
   <div class="page-header">
-    <h2 class="page-title">Hijri Calendar</h2>
+    <div class="title-block">
+      <div class="eyebrow">CALENDAR ALIGNMENT</div>
+      <h2 class="page-title">Hijri Calendar</h2>
+      <p>Review the Hijri date that falls on the first day of each Gregorian month.</p>
+    </div>
     <div class="year-nav">
       <button mat-icon-button (click)="changeYear(-1)"><mat-icon>chevron_left</mat-icon></button>
       <span class="year-label">{{ year }}</span>
@@ -18,13 +22,13 @@
       <table mat-table [dataSource]="rows()" class="full-width">
         <ng-container matColumnDef="month">
           <th mat-header-cell *matHeaderCellDef>Month</th>
-          <td mat-cell *matCellDef="let r">{{ monthName(r.month) }}</td>
+          <td mat-cell *matCellDef="let r">{{ monthName(r) }}</td>
         </ng-container>
-        <ng-container matColumnDef="hijriDayOnFirst">
-          <th mat-header-cell *matHeaderCellDef>Hijri Day on 1st</th>
+        <ng-container matColumnDef="hijriDateOnFirst">
+          <th mat-header-cell *matHeaderCellDef>Hijri date on the 1st</th>
           <td mat-cell *matCellDef="let r">
-            <input [(ngModel)]="r.hijriDayOnFirst" type="number" min="1" max="30"
-                   class="inline-input" [disabled]="r.locked" />
+            <input [ngModel]="hijriDate(r)" (ngModelChange)="setHijriDate(r, $event)"
+                   class="inline-input date-input" placeholder="day-month-year" [disabled]="r.locked" />
           </td>
         </ng-container>
         <ng-container matColumnDef="locked">

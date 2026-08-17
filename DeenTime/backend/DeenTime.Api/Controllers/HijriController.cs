@@ -3,7 +3,6 @@ using DeenTime.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.OutputCaching;
 using DeenTime.Core.Services;
 
 namespace DeenTime.Api.Controllers
@@ -13,24 +12,41 @@ namespace DeenTime.Api.Controllers
 	[Route("api/v1/[controller]")]
 	public sealed class HijriController : ControllerBase
 	{
-		public record HijriUpsertRequest(Guid OrganizationId, int Year, int Month, int HijriDayOnFirst, bool Locked);
+		public record HijriUpsertRequest(Guid OrganizationId, int Year, int Month, int HijriDayOnFirst, int? HijriMonthOnFirst, int? HijriYearOnFirst, bool Locked);
 		private readonly AppDbContext _db;
 		public HijriController(AppDbContext db) { _db = db; }
 
 		[HttpGet("{orgId:guid}")]
-		[OutputCache(PolicyName = "public-read")]
-		public async Task<IActionResult> Get(Guid orgId, [FromQuery] string from, [FromQuery] string to)
+		public async Task<IActionResult> Get(Guid orgId, [FromQuery] string from, [FromQuery] string to, [FromServices] IHijriService hijri)
 		{
 			if (!DateOnly.TryParse(from + "-01", out var fromDate) || !DateOnly.TryParse(to + "-01", out var toDate))
 				return BadRequest("Invalid YYYY-MM range");
 			var (fy, fm) = (fromDate.Year, fromDate.Month);
 			var (ty, tm) = (toDate.Year, toDate.Month);
-			var all = await _db.HijriMonthMaps.AsNoTracking()
+			var all = await _db.HijriMonthMaps
 				.Where(h => h.OrganizationId == orgId)
 				.Where(h => (h.Year > fy || (h.Year == fy && h.Month >= fm)) && (h.Year < ty || (h.Year == ty && h.Month <= tm)))
 				.OrderBy(h => h.Year).ThenBy(h => h.Month)
 				.ToListAsync();
-			return Ok(all);
+
+			var byMonth = all.ToDictionary(item => (item.Year, item.Month));
+			foreach (var generated in hijri.Generate(orgId, fromDate, toDate))
+			{
+				if (!byMonth.TryGetValue((generated.Year, generated.Month), out var existing))
+				{
+					_db.HijriMonthMaps.Add(generated);
+					all.Add(generated);
+				}
+				else if (!existing.Locked && (existing.HijriMonthOnFirst <= 0 || existing.HijriYearOnFirst <= 1))
+				{
+					existing.HijriDayOnFirst = generated.HijriDayOnFirst;
+					existing.HijriMonthOnFirst = generated.HijriMonthOnFirst;
+					existing.HijriYearOnFirst = generated.HijriYearOnFirst;
+					existing.UpdatedAtUtc = DateTime.UtcNow;
+				}
+			}
+			await _db.SaveChangesAsync();
+			return Ok(all.OrderBy(item => item.Year).ThenBy(item => item.Month));
 		}
 
 		[HttpPost]
@@ -40,7 +56,10 @@ namespace DeenTime.Api.Controllers
 			var entity = new HijriMonthMap
 			{
 				Id = Guid.NewGuid(), OrganizationId = req.OrganizationId,
-				Year = req.Year, Month = req.Month, HijriDayOnFirst = req.HijriDayOnFirst, Locked = req.Locked
+				Year = req.Year, Month = req.Month, HijriDayOnFirst = req.HijriDayOnFirst,
+				HijriMonthOnFirst = req.HijriMonthOnFirst ?? 1,
+				HijriYearOnFirst = req.HijriYearOnFirst ?? 1,
+				Locked = req.Locked
 			};
 			_db.HijriMonthMaps.Add(entity);
 			await _db.SaveChangesAsync();
@@ -57,6 +76,8 @@ namespace DeenTime.Api.Controllers
 			existing.Year = req.Year;
 			existing.Month = req.Month;
 			existing.HijriDayOnFirst = req.HijriDayOnFirst;
+			existing.HijriMonthOnFirst = req.HijriMonthOnFirst ?? existing.HijriMonthOnFirst;
+			existing.HijriYearOnFirst = req.HijriYearOnFirst ?? existing.HijriYearOnFirst;
 			existing.Locked = req.Locked;
 			existing.UpdatedAtUtc = DateTime.UtcNow;
 			await _db.SaveChangesAsync();

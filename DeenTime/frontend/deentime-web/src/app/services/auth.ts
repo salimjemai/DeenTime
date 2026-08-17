@@ -35,7 +35,7 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
-  getPayload(): Record<string, any> | null {
+  getPayload(): Record<string, unknown> | null {
     const token = this.getToken();
     if (!token) return null;
     try {
@@ -46,11 +46,14 @@ export class AuthService {
   }
 
   getOrgId(): string | null {
-    return this.getPayload()?.['orgId'] ?? null;
+    const orgId = this.getPayload()?.['orgId'];
+    return typeof orgId === 'string' ? orgId : null;
   }
 
   getEmail(): string | null {
-    return this.getPayload()?.['email'] ?? null;
+    const email = this.getPayload()?.['email'];
+    if (Array.isArray(email)) return email[0] ?? null;
+    return typeof email === 'string' ? email : null;
   }
 
   private storeToken(token: string) {

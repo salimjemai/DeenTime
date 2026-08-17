@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { TimingsService } from '../../../services/timings';
 import { AuthService } from '../../../services/auth';
 import { PrayerTimesDto } from '../../../models';
@@ -20,7 +21,7 @@ import { PrayerTimesDto } from '../../../models';
     FormsModule,
     MatCardModule, MatTableModule, MatDatepickerModule,
     MatFormFieldModule, MatInputModule, MatNativeDateModule,
-    MatProgressSpinnerModule, MatIconModule
+    MatProgressSpinnerModule, MatIconModule, MatButtonModule
   ],
   templateUrl: './timings.html',
   styleUrl: './timings.scss'
@@ -63,12 +64,48 @@ export class TimingsComponent implements OnInit {
   }
 
   toIso(d: Date) {
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   timeFor(key: string): string {
     const t = this.timings();
-    return t ? (t as any)[key] : '—';
+    return t ? this.formatTime(this.valueFor(t, key)) : '—';
+  }
+
+  private valueFor(t: PrayerTimesDto, key: string): string {
+    return t[key as keyof PrayerTimesDto];
+  }
+
+  formatTime(value: string | undefined): string {
+    if (!value) return '—';
+    const [hours, minutes] = value.split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  nextPrayer(): { label: string; time: string } {
+    const t = this.timings();
+    if (!t) return { label: 'Next prayer', time: '—' };
+
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const upcoming = this.prayers
+      .filter(p => !['sunrise', 'sunset'].includes(p.key))
+      .map(p => {
+        const raw = this.valueFor(t, p.key);
+        const [hours, minutes] = raw.split(':').map(Number);
+        return { label: p.label, raw, total: hours * 60 + minutes };
+      })
+      .find(p => p.total > nowMinutes);
+
+    return upcoming
+      ? { label: upcoming.label, time: this.formatTime(upcoming.raw) }
+      : { label: 'Fajr tomorrow', time: this.formatTime(t.fajr) };
   }
 
   isToday() {

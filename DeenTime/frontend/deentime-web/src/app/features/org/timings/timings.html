@@ -1,5 +1,18 @@
 <div class="page">
-  <h2 class="page-title">Prayer Times</h2>
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">DAILY SCHEDULE</div>
+      <h2 class="page-title">Prayer Times</h2>
+      <p class="page-subtitle">Calculated from your organization’s location and prayer-time criteria.</p>
+    </div>
+    @if (timings()) {
+      <div class="next-prayer-card">
+        <span class="next-label">UP NEXT</span>
+        <strong>{{ nextPrayer().label }}</strong>
+        <span>{{ nextPrayer().time }}</span>
+      </div>
+    }
+  </div>
 
   <div class="toolbar">
     <mat-form-field appearance="outline" class="date-field">
@@ -18,6 +31,7 @@
   } @else if (error()) {
     <mat-card class="error-card">
       <mat-icon>warning</mat-icon> {{ error() }}
+      <button mat-stroked-button color="primary" (click)="load()">Try again</button>
     </mat-card>
   } @else if (timings()) {
     <div class="prayer-grid">
@@ -31,5 +45,6 @@
         </mat-card>
       }
     </div>
+    <p class="schedule-note"><mat-icon>info</mat-icon> Times are shown in your organization’s configured timezone.</p>
   }
 </div>

@@ -91,5 +91,16 @@ namespace DeenTime.Api.Controllers
 			await _db.SaveChangesAsync();
 			return NoContent();
 		}
+
+		[HttpDelete("{id:guid}/criteria")]
+		[Authorize(Roles = "Admin,Editor")]
+		public async Task<IActionResult> DeleteCriteria(Guid id)
+		{
+			var existing = await _db.PrayerTimingCriteria.FirstOrDefaultAsync(c => c.OrganizationId == id);
+			if (existing is null) return NoContent();
+			_db.PrayerTimingCriteria.Remove(existing);
+			await _db.SaveChangesAsync();
+			return NoContent();
+		}
 	}
 }
