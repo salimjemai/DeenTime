@@ -1,0 +1,64 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
+import { PublicDisplay } from '../../models';
+import { PublicDisplayService } from '../../services/public-display';
+import { WidgetComponent } from './widget';
+
+describe('WidgetComponent typography', () => {
+  const display = {
+    organization: { name: 'Test Mosque', slug: 'test' },
+    date: '2026-08-18',
+    timezoneId: 'UTC',
+    timings: {
+      date: '2026-08-18',
+      fajr: '05:00:00',
+      sunrise: '06:00:00',
+      dhuhr: '13:00:00',
+      asr: '17:00:00',
+      maghrib: '20:00:00',
+      sunset: '20:01:00',
+      isha: '21:00:00'
+    },
+    iqama: [],
+    design: {
+      iqamaHeadings: [],
+      tvFontScale: 75,
+      widgetFontScale: 125,
+      compactFontScale: 160,
+      tvFontFamily: 'classic-serif',
+      widgetFontFamily: 'modern-sans',
+      compactFontFamily: 'system'
+    }
+  } as PublicDisplay;
+
+  function create(variant: 'full' | 'compact') {
+    const service = { get: jasmine.createSpy('get').and.returnValue(of(display)) };
+    TestBed.configureTestingModule({
+      imports: [WidgetComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ActivatedRoute, useValue: { snapshot: { params: { slug: 'test' }, data: { variant } } } },
+        { provide: PublicDisplayService, useValue: service }
+      ]
+    });
+    const fixture = TestBed.createComponent(WidgetComponent);
+    fixture.componentInstance.ngOnInit();
+    return { fixture, component: fixture.componentInstance, service };
+  }
+
+  it('uses compact scale and family independently from the full widget', () => {
+    const full = create('full');
+    expect(full.component.fontScale()).toBe(125);
+    expect(full.component.fontFamily()).toBe('modern-sans');
+    expect(full.service.get).toHaveBeenCalledWith('test', 'widget');
+
+    TestBed.resetTestingModule();
+
+    const compact = create('compact');
+    expect(compact.component.fontScale()).toBe(160);
+    expect(compact.component.fontFamily()).toBe('system');
+    expect(compact.service.get).toHaveBeenCalledWith('test', 'compact');
+  });
+});

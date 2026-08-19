@@ -54,10 +54,18 @@ input[type='file'] { display: none; }
 .footer-card { margin-top: 20px; }
 .wide-field { width: 100%; margin-top: 20px; }
 .form-col { display: flex; flex-direction: column; gap: 4px; }
+.typography-settings { margin-top: 8px; padding-top: 15px; border-top: 1px solid #e1ece3; }
+.typography-heading { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; color: #607066; font-size: .72rem; }
+.typography-heading strong { color: #244e30; font-size: .82rem; }
+.typography-row { display: grid; grid-template-columns: 1fr 110px 1.2fr; align-items: center; gap: 8px; }
+.typography-row > strong { color: #36523e; font-size: .75rem; }
+.typography-row mat-form-field { min-width: 0; }
 .center { display: flex; justify-content: center; padding: 48px 0; }
 
 @media (max-width: 760px) {
   .page-header { align-items: flex-start; flex-direction: column; }
   .page-header button { width: 100%; }
   .design-grid { grid-template-columns: 1fr; }
+  .typography-row { grid-template-columns: 1fr 1fr; }
+  .typography-row > strong { grid-column: 1 / -1; }
 }

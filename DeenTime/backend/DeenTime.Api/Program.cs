@@ -16,6 +16,7 @@ using Hangfire.PostgreSql;
 using QuestPDF.Infrastructure;
 using DeenTime.Api.Services.IslamicContent;
 using System.Net;
+using FluentValidation;
 
 
 var b = WebApplication.CreateBuilder(args);
@@ -30,6 +31,8 @@ b.Host.UseSerilog((ctx, services, lc) => lc
     .WriteTo.Console());
 
 b.Services.AddDbContextFactory<AppDbContext>(o => o.UseNpgsql(b.Configuration.GetConnectionString("Default")));
+b.Services.AddSingleton<DatabaseReadiness>();
+b.Services.AddScoped<ApiClientCredentialService>();
 
 b.Services.AddOptions<IslamicContentOptions>()
   .Bind(b.Configuration.GetSection(IslamicContentOptions.SectionName))
@@ -101,6 +104,10 @@ else if (!string.IsNullOrWhiteSpace(signingKey))
     };
   });
 }
+else
+{
+  throw new InvalidOperationException("Auth:SigningKey or Auth:Authority must be configured before the API can start.");
+}
 
 b.Services.AddAuthorization(opts =>
   {
@@ -117,6 +124,7 @@ b.Services.AddControllers()
     o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
   });
 b.Services.AddFluentValidationAutoValidation();
+b.Services.AddValidatorsFromAssemblyContaining<DeenTime.Api.Validators.DesignRequestValidator>();
 
 // ProblemDetails for model validation
 b.Services.Configure<ApiBehaviorOptions>(o =>
@@ -148,6 +156,7 @@ b.Services.AddCors(o => o.AddPolicy("DeenTimeCors", p => p
 b.Services.AddRateLimiter(_ => _.AddFixedWindowLimiter("public", o => {
   o.Window = TimeSpan.FromSeconds(5); o.PermitLimit = 60;
 }));
+b.Services.AddProblemDetails();
 
 // Domain services
 b.Services.AddScoped<IPrayerTimeCalculator, IsnaCalculator>();
@@ -177,6 +186,9 @@ if (!string.IsNullOrWhiteSpace(hfConn))
 
 var app = b.Build();
 
+if (string.IsNullOrWhiteSpace(app.Configuration["IslamicContent:HadithApiKey"]))
+    app.Logger.LogWarning("Hadith provider is not configured. Set IslamicContent__HadithApiKey through a secret store or environment variable; it will never be returned to clients.");
+
 // Seed super user (dev / staging convenience account from appsettings)
 await SeedSuperUserAsync(app);
 
@@ -186,6 +198,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.Use(async (context, next) =>
+{
+  if (context.Request.Path.StartsWithSegments("/tv") ||
+      context.Request.Path.StartsWithSegments("/w") ||
+      context.Request.Path.StartsWithSegments("/w2"))
+  {
+    context.Response.Headers.Remove("X-Frame-Options");
+    context.Response.Headers["Content-Security-Policy"] = "frame-ancestors *";
+  }
+  await next();
+});
 app.UseResponseCompression();
 app.UseCors("DeenTimeCors");
 app.UseRateLimiter();
@@ -202,8 +226,15 @@ if (!string.IsNullOrWhiteSpace(hfConn))
 // Endpoints
 app.MapControllers();
 
-app.MapGet("/health/live", () => Results.Ok("ok"));
-app.MapGet("/health/ready", () => Results.Ok("ready"));
+app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
+app.MapGet("/health/ready", async (DatabaseReadiness readiness, CancellationToken cancellationToken) =>
+{
+    var result = await readiness.CheckAsync(cancellationToken);
+    return result.Ready
+        ? Results.Ok(result)
+        : Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable);
+});
+app.MapGet("/api/version", (IConfiguration configuration) => Results.Ok(BuildInfoProvider.Create(configuration)));
 
 app.Run();
 
@@ -282,8 +313,8 @@ static async Task SeedSuperUserAsync(WebApplication app)
         Id              = Guid.NewGuid(),
         OrganizationId  = org.Id,
         IqamaHeadings   = new[] { "FAJR", "IQM*", "SUNRISE", "DUHUR", "IQM*", "ASR", "IQM*", "SUNSET", "ISHA", "IQM*" },
-        FooterHtml      = $"© {DateTime.UtcNow.Year} {orgName}",
-        Theme           = "light",
+        FooterHtml      = $"© {DateTime.UtcNow.Year} {orgName} · IqamaTime",
+        Theme           = "default",
     });
 
     db.OrgUsers.Add(new DeenTime.Core.Entities.OrgUser
@@ -300,3 +331,5 @@ static async Task SeedSuperUserAsync(WebApplication app)
     await db.SaveChangesAsync();
     app.Logger.LogInformation("Super user seeded: {Email}", email);
 }
+
+public partial class Program { }

@@ -12,7 +12,8 @@ import { DesignService } from '../../../services/design';
 import { AuthService } from '../../../services/auth';
 import { OrgsService } from '../../../services/orgs';
 import { PublicDisplayService } from '../../../services/public-display';
-import { PrayerTimesDto, PublicDisplay } from '../../../models';
+import { FontFamily, PrayerTimesDto, PublicDisplay } from '../../../models';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-design',
@@ -55,10 +56,27 @@ export class DesignComponent implements OnInit {
     headerImageUrl: [''],
     iqamaHeadings:  ['Fajr, IQM*, Sunrise, IQM*, Dhuhr, IQM*, Asr, IQM*, Sunset, IQM*, Isha, IQM*'],
     footerHtml:     [''],
-    theme:          ['default']
+    theme:          ['default'],
+    tvFontScale: [100],
+    widgetFontScale: [100],
+    compactFontScale: [100],
+    tvFontFamily: ['system' as FontFamily],
+    widgetFontFamily: ['system' as FontFamily],
+    compactFontFamily: ['system' as FontFamily]
   });
 
   themes = ['default','dark','classic'];
+  fontScales = Array.from({ length: 18 }, (_, index) => 75 + index * 5);
+  fontFamilies: { value: FontFamily; label: string }[] = [
+    { value: 'system', label: 'System' },
+    { value: 'modern-sans', label: 'Modern sans' },
+    { value: 'classic-serif', label: 'Classic serif' }
+  ];
+  layouts = [
+    { label: 'TV display', scale: 'tvFontScale', family: 'tvFontFamily' },
+    { label: 'Full widget', scale: 'widgetFontScale', family: 'widgetFontFamily' },
+    { label: 'Compact widget', scale: 'compactFontScale', family: 'compactFontFamily' }
+  ];
 
   ngOnInit() {
     this.loading.set(true);
@@ -68,7 +86,13 @@ export class DesignComponent implements OnInit {
           headerImageUrl: d.headerImageUrl ?? '',
           iqamaHeadings: d.iqamaHeadings.join(', '),
           footerHtml: d.footerHtml ?? '',
-          theme: d.theme ?? 'default'
+          theme: d.theme === 'light' ? 'default' : d.theme ?? 'default',
+          tvFontScale: d.tvFontScale ?? 100,
+          widgetFontScale: d.widgetFontScale ?? 100,
+          compactFontScale: d.compactFontScale ?? 100,
+          tvFontFamily: d.tvFontFamily ?? 'system',
+          widgetFontFamily: d.widgetFontFamily ?? 'system',
+          compactFontFamily: d.compactFontFamily ?? 'system'
         });
         this.loading.set(false);
       },
@@ -140,12 +164,16 @@ export class DesignComponent implements OnInit {
       headerImageUrl: value.headerImageUrl || undefined,
       footerHtml: value.footerHtml || undefined,
       theme: value.theme || 'default',
-      iqamaHeadings: (value.iqamaHeadings || '').split(',').map(item => item.trim()).filter(Boolean)
+      iqamaHeadings: (value.iqamaHeadings || '').split(',').map(item => item.trim()).filter(Boolean),
+      tvFontScale: Number(value.tvFontScale) || 100,
+      widgetFontScale: Number(value.widgetFontScale) || 100,
+      compactFontScale: Number(value.compactFontScale) || 100,
+      tvFontFamily: value.tvFontFamily as FontFamily,
+      widgetFontFamily: value.widgetFontFamily as FontFamily,
+      compactFontFamily: value.compactFontFamily as FontFamily
     }).subscribe({
       next: () => {
-        this.updatePreviewDesign(value.headerImageUrl || undefined);
-        this.saving.set(false);
-        this.snack.open('Design updated across every published view', '', { duration: 2600 });
+        this.reloadSavedState('Design updated across every published view');
       },
       error: () => { this.saving.set(false); this.snack.open('Save failed', 'Dismiss', { duration: 3000 }); }
     });
@@ -163,9 +191,7 @@ export class DesignComponent implements OnInit {
     this.svc.uploadHeaderImage(this.orgId, this.selectedFile).subscribe({
       next: result => {
         this.form.controls.headerImageUrl.setValue(result.publicUrl);
-        this.updatePreviewDesign(result.publicUrl);
-        this.uploading.set(false);
-        this.snack.open('Background applied to TV and website widgets', '', { duration: 3200 });
+        this.reloadSavedState('Background applied to TV and website widgets');
       },
       error: () => {
         this.uploading.set(false);
@@ -174,18 +200,37 @@ export class DesignComponent implements OnInit {
     });
   }
 
-  private updatePreviewDesign(imageUrl?: string) {
-    const headings = (this.form.controls.iqamaHeadings.value || '')
-      .split(',').map(item => item.trim()).filter(Boolean);
-    this.display.update(current => current ? {
-      ...current,
-      design: {
-        headerImageUrl: imageUrl,
-        backgroundImageUrl: imageUrl,
-        iqamaHeadings: headings,
-        footerHtml: this.form.controls.footerHtml.value || undefined,
-        theme: this.form.controls.theme.value || 'default'
+  private reloadSavedState(message: string) {
+    const slug = this.orgSlug();
+    if (!slug) {
+      this.uploading.set(false);
+      this.saving.set(false);
+      return;
+    }
+    forkJoin({ design: this.svc.get(this.orgId), display: this.publicDisplay.get(slug) }).subscribe({
+      next: ({ design, display }) => {
+        this.form.patchValue({
+          headerImageUrl: design.headerImageUrl ?? '',
+          iqamaHeadings: design.iqamaHeadings.join(', '),
+          footerHtml: design.footerHtml ?? '',
+          theme: design.theme === 'light' ? 'default' : design.theme ?? 'default',
+          tvFontScale: design.tvFontScale ?? 100,
+          widgetFontScale: design.widgetFontScale ?? 100,
+          compactFontScale: design.compactFontScale ?? 100,
+          tvFontFamily: design.tvFontFamily ?? 'system',
+          widgetFontFamily: design.widgetFontFamily ?? 'system',
+          compactFontFamily: design.compactFontFamily ?? 'system'
+        });
+        this.display.set(display);
+        this.uploading.set(false);
+        this.saving.set(false);
+        this.snack.open(message, '', { duration: 2600 });
+      },
+      error: () => {
+        this.uploading.set(false);
+        this.saving.set(false);
+        this.snack.open('Saved, but the public preview could not be refreshed.', 'Retry', { duration: 4000 });
       }
-    } : current);
+    });
   }
 }

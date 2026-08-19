@@ -8,6 +8,7 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DeenTime.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DeenTime.Api.Controllers
 {
@@ -15,6 +16,15 @@ namespace DeenTime.Api.Controllers
 	[Route("api/v1/[controller]")]
 	public sealed class AuthController : ControllerBase
 	{
+		public sealed record SessionResponse(
+			string UserId,
+			string? Email,
+			string? DisplayName,
+			Guid OrganizationId,
+			string OrganizationSlug,
+			string OrganizationName,
+			string[] Roles);
+
 		[HttpPost("register")]
 		public async Task<IActionResult> Register([FromBody] RegisterRequest req, [FromServices] AppDbContext db, [FromServices] IConfiguration cfg, [FromServices] IPasswordHasher hasher)
 		{
@@ -41,10 +51,48 @@ namespace DeenTime.Api.Controllers
 			var email = req.Email.Trim().ToLowerInvariant();
 			var user = await db.AppUsers.FirstOrDefaultAsync(u => u.Email == email);
 			if (user is null || !hasher.Verify(req.Password, user.PasswordHash, user.PasswordSalt)) return Unauthorized();
-			var orgId = await db.OrgUsers.Where(x => x.Subject == user.Id).Select(x => x.OrganizationId).FirstOrDefaultAsync();
-			var roles = await db.OrgUsers.Where(x => x.Subject == user.Id && x.OrganizationId == orgId).Select(x => x.Roles).FirstOrDefaultAsync() ?? Array.Empty<string>();
+			var membership = await db.OrgUsers.Include(x => x.Organization)
+				.FirstOrDefaultAsync(x => x.Subject == user.Id);
+			if (membership?.Organization is null) return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Organization unavailable", detail: "This account is not assigned to an active organization.");
+			var orgId = membership.OrganizationId;
+			var roles = membership.Roles ?? Array.Empty<string>();
 			var token = IssueJwt(cfg, user, orgId, roles);
 			return Ok(new { token });
+		}
+
+		[Authorize]
+		[HttpGet("session")]
+		public async Task<IActionResult> Session([FromServices] AppDbContext db, CancellationToken cancellationToken)
+		{
+			var subject = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+				?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+				?? User.FindFirstValue("sub");
+			var issuer = User.FindFirstValue(JwtRegisteredClaimNames.Iss)
+				?? User.FindFirstValue("iss");
+			if (string.IsNullOrWhiteSpace(subject)) return Unauthorized();
+
+			if (!Guid.TryParse(User.FindFirstValue("orgId"), out var organizationId))
+				return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Organization unavailable", detail: "The session does not contain an active organization.");
+
+			var membershipQuery = db.OrgUsers.Include(x => x.Organization)
+				.Where(x => x.Subject == subject && x.OrganizationId == organizationId);
+			if (!string.IsNullOrWhiteSpace(issuer))
+				membershipQuery = membershipQuery.Where(x => x.Issuer == issuer);
+
+			var membership = await membershipQuery.FirstOrDefaultAsync(cancellationToken);
+			if (membership?.Organization is null)
+				return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Organization unavailable", detail: "Your session no longer has access to this organization.");
+
+			membership.LastSeenUtc = DateTime.UtcNow;
+			await db.SaveChangesAsync(cancellationToken);
+			return Ok(new SessionResponse(
+				subject,
+				membership.Email,
+				membership.DisplayName,
+				membership.Organization.Id,
+				membership.Organization.Slug,
+				membership.Organization.Name,
+				membership.Roles ?? Array.Empty<string>()));
 		}
 
 		[HttpPost("forgot")]

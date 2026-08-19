@@ -12,6 +12,20 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+// Public displays are designed to be embedded by a masjid's website or kiosk.
+// Keep this deployment-configurable while avoiding the legacy X-Frame-Options
+// header, which cannot express an allow-list and would block third-party embeds.
+app.use((req, res, next) => {
+  if (/^\/(?:tv|w|w2)(?:\/|$)/.test(req.path)) {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader(
+      'Content-Security-Policy',
+      `frame-ancestors ${process.env['DEENTIME_FRAME_ANCESTORS'] || '*'}`,
+    );
+  }
+  next();
+});
+
 /**
  * Example Express Rest API endpoints can be defined here.
  * Uncomment and define endpoints as necessary.

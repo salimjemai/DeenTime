@@ -2,6 +2,22 @@
 export interface LoginRequest  { email: string; password: string; }
 export interface RegisterRequest { email: string; password: string; organizationName?: string; }
 export interface AuthResponse  { token: string; }
+export interface AuthSession {
+  userId: string;
+  email?: string;
+  displayName?: string;
+  organizationId: string;
+  organizationSlug: string;
+  organizationName: string;
+  roles: string[];
+}
+
+export interface ApiVersion {
+  commitSha: string;
+  buildTimeUtc: string;
+  schemaVersion: string;
+  apiVersion: string;
+}
 
 // ── Organization ──────────────────────────────────────────────────────────────
 export interface Organization {
@@ -30,6 +46,19 @@ export interface OrganizationUpdateRequest {
   websiteUrl?: string;
   email?: string;
   socialUrl?: string;
+}
+
+export interface OrganizationReadiness {
+  readyToPublish: boolean;
+  checks: {
+    criteria: boolean;
+    dailyIqama: Record<string, boolean>;
+    jumuah: boolean;
+    design: boolean;
+    publicPreview: boolean;
+  };
+  jumuahCount: number;
+  effectiveDate: string;
 }
 
 // ── Prayer Timing Criteria ────────────────────────────────────────────────────
@@ -94,14 +123,28 @@ export interface DesignSettings {
   iqamaHeadings: string[];
   footerHtml?: string;
   theme?: string;
+  tvFontScale: number;
+  widgetFontScale: number;
+  compactFontScale: number;
+  tvFontFamily: FontFamily;
+  widgetFontFamily: FontFamily;
+  compactFontFamily: FontFamily;
   updatedAtUtc: string;
 }
+
+export type FontFamily = 'system' | 'modern-sans' | 'classic-serif';
 
 export interface DesignRequest {
   headerImageUrl?: string;
   iqamaHeadings: string[];
   footerHtml?: string;
   theme?: string;
+  tvFontScale?: number;
+  widgetFontScale?: number;
+  compactFontScale?: number;
+  tvFontFamily?: FontFamily;
+  widgetFontFamily?: FontFamily;
+  compactFontFamily?: FontFamily;
 }
 
 // ── Hijri ─────────────────────────────────────────────────────────────────────
@@ -169,6 +212,13 @@ export interface PublicDisplay {
     iqamaHeadings: string[];
     footerHtml?: string;
     theme?: string;
+    tvFontScale: number;
+    widgetFontScale: number;
+    compactFontScale: number;
+    tvFontFamily: FontFamily;
+    widgetFontFamily: FontFamily;
+    compactFontFamily: FontFamily;
+    locale?: string;
   };
   hijri?: { day: number; month: number; year: number; monthName: string; formatted: string };
   tvConfig?: {

@@ -21,7 +21,7 @@ export const HELP_TABS: readonly HelpTab[] = [
     label: 'Profile',
     icon: 'domain',
     phase: 'SET UP',
-    headline: 'Tell DeenTime about your masjid',
+    headline: 'Tell IqamaTime about your masjid',
     summary: 'Save the mosque identity, location, timezone, contacts, and prayer calculation method.',
     proTip: 'Complete Profile first. Prayer Times depends on its location, timezone, and calculation settings.',
     outcome: 'A trustworthy foundation for every calculation and public view.',

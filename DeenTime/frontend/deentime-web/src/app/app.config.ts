@@ -12,7 +12,10 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideClientHydration(withEventReplay()),
+    // `ng serve` uses the CSR development build and does not serialize SSR state.
+    // Enabling hydration there produces NG0505 on every route. Production keeps
+    // hydration for the server-rendered configuration.
+    ...(isDevMode() ? [] : [provideClientHydration(withEventReplay())]),
     provideServiceWorker('ngsw-worker.js', {
             enabled: !isDevMode(),
             registrationStrategy: 'registerWhenStable:30000'

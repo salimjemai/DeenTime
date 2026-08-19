@@ -13,7 +13,13 @@ namespace DeenTime.Core.Entities
         public string? HeaderImageUrl { get; set; }    // blob/CDN path
         public string[] IqamaHeadings { get; set; } = Array.Empty<string>(); // e.g., ["Fajr","IQM*","Sunrise",...]
         public string? FooterHtml { get; set; }        // rich text for publish PDFs & widgets
-        public string Theme { get; set; } = "light";   // allow dark/brand themes
+        public string Theme { get; set; } = "default";
+        public int TvFontScale { get; set; } = 100;
+        public int WidgetFontScale { get; set; } = 100;
+        public int CompactFontScale { get; set; } = 100;
+        public string TvFontFamily { get; set; } = "system";
+        public string WidgetFontFamily { get; set; } = "system";
+        public string CompactFontFamily { get; set; } = "system";
         public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
         public Organization? Organization { get; set; }
     }

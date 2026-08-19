@@ -7,6 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "e2e": "playwright test",
+    "copy:check": "node ../../scripts/check-public-copy.mjs",
     "serve:ssr:deentime-web": "node dist/deentime-web/server/server.mjs",
     "lint": "ng lint"
   },
@@ -41,6 +43,7 @@
     "@angular/build": "^20.1.0",
     "@angular/cli": "^20.1.0",
     "@angular/compiler-cli": "^20.1.0",
+    "@playwright/test": "^1.55.0",
     "@types/express": "^5.0.1",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^20.17.19",

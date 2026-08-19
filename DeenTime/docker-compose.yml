@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${DEENTIME_DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,17 +24,21 @@ services:
       dockerfile: backend/DeenTime.Api/Dockerfile
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${DEENTIME_API_PORT:-8080}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Host=db;Port=5432;Database=deentime;Username=postgres;Password=postgres"
       Auth__Issuer: deentime-local
       Auth__Audience: deentime-api
-      Auth__SigningKey: "dev-local-signing-key-change-before-production-32ch"
+      Auth__SigningKey: "${DEENTIME_AUTH_SIGNING_KEY:?Set DEENTIME_AUTH_SIGNING_KEY or use scripts/start-local.sh}"
+      IslamicContent__HadithApiKey: "${DEENTIME_HADITH_API_KEY:-}"
       Cors__AllowedOrigins__0: "http://localhost:4200"
+      Cors__AllowedOrigins__1: "http://127.0.0.1:4200"
+      Cors__AllowedOrigins__2: "http://127.0.0.1:14200"
+      Frontend__PublicBaseUrl: "${DEENTIME_PUBLIC_BASE_URL:-http://127.0.0.1:4200}"
       SuperUser__Email: "admin@deentime.dev"
-      SuperUser__Password: "Admin@1234"
-      SuperUser__OrgName: "DeenTime Demo Mosque"
+      SuperUser__Password: "${DEENTIME_SUPERUSER_PASSWORD:?Set DEENTIME_SUPERUSER_PASSWORD or use scripts/start-local.sh}"
+      SuperUser__OrgName: "IqamaTime Demo Mosque"
       SuperUser__AddressLine: "14300 Rountree Ranch Lane"
       SuperUser__City: "Austin"
       SuperUser__State: "TX"
@@ -53,6 +57,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   pgdata:

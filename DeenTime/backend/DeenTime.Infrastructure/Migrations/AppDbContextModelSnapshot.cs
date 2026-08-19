@@ -22,6 +22,77 @@ namespace DeenTime.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DeenTime.Core.Entities.ApiClient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("KeyPrefix")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastUsedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RequestsPerMinute")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<string[]>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KeyPrefix")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ApiClients");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.ApiClientUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApiClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UsedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApiClientId", "UsedAtUtc");
+
+                    b.ToTable("ApiClientUsage");
+                });
+
             modelBuilder.Entity("DeenTime.Core.Entities.AppUser", b =>
                 {
                     b.Property<string>("Id")
@@ -55,6 +126,15 @@ namespace DeenTime.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CompactFontFamily")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasDefaultValue("system");
+
+                    b.Property<int>("CompactFontScale")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100);
+
                     b.Property<string>("FooterHtml")
                         .HasColumnType("text");
 
@@ -72,8 +152,26 @@ namespace DeenTime.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("TvFontFamily")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasDefaultValue("system");
+
+                    b.Property<int>("TvFontScale")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100);
+
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WidgetFontFamily")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasDefaultValue("system");
+
+                    b.Property<int>("WidgetFontScale")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100);
 
                     b.HasKey("Id");
 
@@ -649,6 +747,28 @@ namespace DeenTime.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("TvDisplayConfigs");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.ApiClient", b =>
+                {
+                    b.HasOne("DeenTime.Core.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.ApiClientUsage", b =>
+                {
+                    b.HasOne("DeenTime.Core.Entities.ApiClient", "ApiClient")
+                        .WithMany()
+                        .HasForeignKey("ApiClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApiClient");
                 });
 
             modelBuilder.Entity("DeenTime.Core.Entities.DesignSettings", b =>

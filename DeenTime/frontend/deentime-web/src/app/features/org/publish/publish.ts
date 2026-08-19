@@ -14,6 +14,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PublishService } from '../../../services/publish';
 import { AuthService } from '../../../services/auth';
 import { PublishArtifact, PdfSize, PdfOrientation, TvDisplayConfig } from '../../../models';
+import { OrganizationReadiness } from '../../../models';
+import { OrgsService } from '../../../services/orgs';
+import { apiErrorMessage } from '../../../services/api-error';
 import { concatMap, finalize, from, toArray } from 'rxjs';
 
 @Component({
@@ -32,6 +35,7 @@ export class PublishComponent implements OnInit {
   private auth  = inject(AuthService);
   private snack = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
+  private orgs = inject(OrgsService);
 
   orgId      = this.auth.getOrgId() ?? '';
   generating = signal(false);
@@ -44,6 +48,8 @@ export class PublishComponent implements OnInit {
   generatingYear = signal(false);
   previewMode = signal<'tv' | 'widget' | 'compact'>('tv');
   previewSources = signal<Record<'tv' | 'widget' | 'compact', SafeResourceUrl> | null>(null);
+  readiness = signal<OrganizationReadiness | null>(null);
+  readinessError = signal('');
 
   showSeconds = true;
   showHijri = true;
@@ -62,13 +68,17 @@ export class PublishComponent implements OnInit {
 
   ngOnInit() {
     this.loadArtifacts();
+    this.orgs.readiness(this.orgId).subscribe({
+      next: value => this.readiness.set(value),
+      error: error => this.readinessError.set(apiErrorMessage(error, 'Could not load publishing readiness.'))
+    });
     this.svc.getEmbedCode(this.orgId).subscribe({
       next: code => {
         this.embedCode.set(code);
         this.previewSources.set({
-          tv: this.sanitizer.bypassSecurityTrustResourceUrl(this.absolute(code.tvUrl)),
-          widget: this.sanitizer.bypassSecurityTrustResourceUrl(this.absolute(code.widgetUrl)),
-          compact: this.sanitizer.bypassSecurityTrustResourceUrl(this.absolute(code.compactWidgetUrl))
+          tv: this.sanitizer.bypassSecurityTrustResourceUrl(code.tvUrl),
+          widget: this.sanitizer.bypassSecurityTrustResourceUrl(code.widgetUrl),
+          compact: this.sanitizer.bypassSecurityTrustResourceUrl(code.compactWidgetUrl)
         });
       }
     });
@@ -171,10 +181,8 @@ export class PublishComponent implements OnInit {
   previewHref() {
     const code = this.embedCode();
     if (!code) return '#';
-    return this.absolute(this.previewMode() === 'tv' ? code.tvUrl : this.previewMode() === 'compact' ? code.compactWidgetUrl : code.widgetUrl);
+    return this.previewMode() === 'tv' ? code.tvUrl : this.previewMode() === 'compact' ? code.compactWidgetUrl : code.widgetUrl;
   }
-
-  absolute(path: string) { return /^https?:\/\//i.test(path) ? path : new URL(path, window.location.origin).toString(); }
 
   copy(value: string) {
     navigator.clipboard?.writeText(value).then(

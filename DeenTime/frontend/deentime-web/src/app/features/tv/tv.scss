@@ -7,6 +7,7 @@
   background: #071426;
   color: #f8fbff;
   font-family: Inter, 'Segoe UI', sans-serif;
+  font-size: calc(1rem * var(--font-scale, 1));
   --accent: #42c6d9;
 }
 .ambient-image, .ambient-glow { position: absolute; inset: 0; pointer-events: none; }
@@ -107,7 +108,10 @@
 .tv-page.classic { background: #1e150b; }
 .tv-page.classic .ambient-glow { background: radial-gradient(circle at 60% 22%, rgba(177,128,50,.28), transparent 38%), linear-gradient(115deg, rgba(30,19,8,.92), rgba(18,12,6,.8)); }
 .tv-page.classic .prayer-card, .tv-page.classic .friday-panel { border-color: rgba(226,190,118,.2); }
-.tv-page.light { background: #102239; }
+.tv-page.default { background: #102239; }
+.tv-page.font-system { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.tv-page.font-modern-sans { font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; }
+.tv-page.font-classic-serif { font-family: Georgia, 'Times New Roman', serif; }
 
 @media (max-height: 650px) and (min-width: 701px) {
   .tv-shell {

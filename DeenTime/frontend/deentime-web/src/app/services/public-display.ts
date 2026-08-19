@@ -8,7 +8,8 @@ export class PublicDisplayService {
   private http = inject(HttpClient);
   private base = environment.apiUrl;
 
-  get(slug: string) {
-    return this.http.get<PublicDisplay>(`${this.base}/public/display/${slug}`);
+  get(slug: string, layout?: 'tv' | 'widget' | 'compact') {
+    const params: Record<string, string> = layout ? { layout } : {};
+    return this.http.get<PublicDisplay>(`${this.base}/public/display/${slug}`, { params });
   }
 }

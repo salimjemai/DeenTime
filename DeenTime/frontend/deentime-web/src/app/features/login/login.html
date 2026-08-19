@@ -2,10 +2,17 @@
   <mat-card class="login-card">
     <mat-card-header>
       <mat-card-title>{{ isRegister() ? 'Create Account' : 'Sign In' }}</mat-card-title>
-      <mat-card-subtitle>DeenTime</mat-card-subtitle>
+      <mat-card-subtitle>IqamaTime</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
+      @if (reason === 'organization-unavailable') {
+        <p class="login-notice">Your session no longer has access to that organization. Sign in again or ask an administrator to restore access.</p>
+      } @else if (reason === 'session-expired') {
+        <p class="login-notice">Your session expired. Sign in again to continue.</p>
+      } @else if (reason === 'forbidden') {
+        <p class="login-notice">This area requires an administrator account.</p>
+      }
       <form [formGroup]="form" (ngSubmit)="submit()">
 
         <mat-form-field appearance="outline" class="full-width">

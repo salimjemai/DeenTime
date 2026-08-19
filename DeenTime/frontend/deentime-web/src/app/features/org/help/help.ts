@@ -15,7 +15,7 @@ export class HelpComponent implements OnInit {
   private route = inject(ActivatedRoute);
   readonly tips = inject(HelpTipsService);
 
-  readonly orgId = this.route.snapshot.params['slug'] as string;
+  readonly orgId = this.route.snapshot.params['orgId'] as string;
   readonly tabs = HELP_TABS;
   readonly outputs = [
     { icon: 'tv', label: 'TV display', detail: 'Live prayer and Iqama board' },

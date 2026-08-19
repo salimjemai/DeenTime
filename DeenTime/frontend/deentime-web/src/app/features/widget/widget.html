@@ -3,6 +3,11 @@
   [class.compact]="variant === 'compact'"
   [class.dark]="display()?.design?.theme === 'dark'"
   [class.classic]="display()?.design?.theme === 'classic'"
+  [class.default]="!display()?.design?.theme || display()?.design?.theme === 'default' || display()?.design?.theme === 'light'"
+  [class.font-system]="fontFamily() === 'system'"
+  [class.font-modern-sans]="fontFamily() === 'modern-sans'"
+  [class.font-classic-serif]="fontFamily() === 'classic-serif'"
+  [style.--font-scale]="fontScale() / 100"
   [class.has-background]="!!backgroundImage()"
   [style.--accent]="accentColor()"
   [style.--background-image]="backgroundImage()">
@@ -28,7 +33,7 @@
       <div class="empty-state"><mat-icon>schedule</mat-icon><span>Prayer times are not available for this organization.</span></div>
     } @else {
       <section class="daily-schedule">
-        <div class="column-head"><span>Prayer</span><span>Start</span><span>Iqama</span></div>
+        <div class="column-head"><span>Prayer</span><span>Adhan</span><span>Iqama</span></div>
         @for (prayer of prayers; track prayer.key) {
           <div class="prayer-row" [class.sunrise]="!prayer.salah">
             <span class="prayer-name"><strong>{{ prayer.label }}</strong><small>{{ prayer.detail }}</small></span>
@@ -60,7 +65,7 @@
       }
       <footer class="widget-footer">
         @if (display()?.design?.footerHtml; as footer) { <div [innerHTML]="footer"></div> }
-        <span>Powered by DeenTime</span>
+        <span>Powered by IqamaTime</span>
       </footer>
     }
   </div>

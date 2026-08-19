@@ -14,7 +14,6 @@ namespace DeenTime.Api.Controllers
 	[Route("api/v1/[controller]")]
 	public sealed class DesignController : ControllerBase
 	{
-		public record DesignRequest(string? HeaderImageUrl, string[] IqamaHeadings, string? FooterHtml, string Theme);
 		private readonly AppDbContext _db;
 		public DesignController(AppDbContext db) { _db = db; }
 
@@ -40,16 +39,28 @@ namespace DeenTime.Api.Controllers
 					HeaderImageUrl = req.HeaderImageUrl,
 					IqamaHeadings = req.IqamaHeadings ?? [],
 					FooterHtml = req.FooterHtml,
-					Theme = req.Theme
+					Theme = NormalizeTheme(req.Theme),
+					TvFontScale = req.TvFontScale ?? 100,
+					WidgetFontScale = req.WidgetFontScale ?? 100,
+					CompactFontScale = req.CompactFontScale ?? 100,
+					TvFontFamily = req.TvFontFamily ?? "system",
+					WidgetFontFamily = req.WidgetFontFamily ?? "system",
+					CompactFontFamily = req.CompactFontFamily ?? "system"
 				};
 				_db.DesignSettings.Add(design);
 			}
 			else
 			{
-				design.HeaderImageUrl = req.HeaderImageUrl;
+				design.HeaderImageUrl = req.HeaderImageUrl ?? design.HeaderImageUrl;
 				design.IqamaHeadings = req.IqamaHeadings ?? [];
 				design.FooterHtml = req.FooterHtml;
-				design.Theme = req.Theme;
+				design.Theme = NormalizeTheme(req.Theme ?? design.Theme);
+				design.TvFontScale = req.TvFontScale ?? design.TvFontScale;
+				design.WidgetFontScale = req.WidgetFontScale ?? design.WidgetFontScale;
+				design.CompactFontScale = req.CompactFontScale ?? design.CompactFontScale;
+				design.TvFontFamily = req.TvFontFamily ?? design.TvFontFamily;
+				design.WidgetFontFamily = req.WidgetFontFamily ?? design.WidgetFontFamily;
+				design.CompactFontFamily = req.CompactFontFamily ?? design.CompactFontFamily;
 				design.UpdatedAtUtc = DateTime.UtcNow;
 			}
 			await _db.SaveChangesAsync();
@@ -102,5 +113,10 @@ namespace DeenTime.Api.Controllers
 				appliedTo = new[] { "tv", "widget", "compactWidget", "schedulePreview" }
 			});
 		}
+
+		private static string NormalizeTheme(string? theme) =>
+			string.Equals(theme, "light", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(theme)
+				? "default"
+				: theme!.ToLowerInvariant();
 	}
 }

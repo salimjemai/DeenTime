@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { HijriService } from '../../../services/hijri';
 import { AuthService } from '../../../services/auth';
 import { HijriMonthMap } from '../../../models';
+import { apiErrorMessage } from '../../../services/api-error';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -35,6 +36,7 @@ export class HijriComponent implements OnInit {
   year    = new Date().getFullYear();
   loading = signal(false);
   rows    = signal<HijriMonthMap[]>([]);
+  error   = signal('');
   columns = ['month','hijriDateOnFirst','locked','actions'];
 
   monthName(row: HijriMonthMap) { return `${MONTHS[row.month - 1] ?? row.month} ${row.year}`; }
@@ -43,11 +45,12 @@ export class HijriComponent implements OnInit {
 
   load() {
     this.loading.set(true);
+    this.error.set('');
     const from = `${this.year - 1}-12`;
     const to   = `${this.year + 1}-03`;
     this.svc.list(this.orgId, from, to).subscribe({
       next: r => { this.rows.set(r); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      error: error => { this.error.set(apiErrorMessage(error, 'Could not load the Hijri calendar.')); this.loading.set(false); }
     });
   }
 

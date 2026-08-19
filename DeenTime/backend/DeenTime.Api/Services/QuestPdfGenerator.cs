@@ -61,7 +61,9 @@ public sealed class QuestPdfGenerator(AppDbContext db, IPrayerTimeCalculator cal
         var baseSize = size == PdfSize.Letter ? PageSizes.Letter : new PageSize(792, 1224);
         var pageSize = orientation == PdfOrientation.Landscape ? new PageSize(baseSize.Height, baseSize.Width) : baseSize;
         string[] defaults = ["FAJR", "IQM*", "SUNRISE", "DUHUR", "IQM*", "ASR", "IQM*", "SUNSET", "ISHA", "IQM*"];
-        var configured = org.Design?.IqamaHeadings is { Length: 10 } custom ? custom : defaults;
+        var configured = (org.Design?.IqamaHeadings is { Length: 10 } custom ? custom : defaults)
+            .Select(NormalizeHeading)
+            .ToArray();
         string[] headers = ["DATE", "DAY", "HIJRI", .. configured];
         var headerBg = Colors.BlueGrey.Darken3;
         var altRowBg = Colors.Grey.Lighten4;
@@ -76,7 +78,7 @@ public sealed class QuestPdfGenerator(AppDbContext db, IPrayerTimeCalculator cal
                 page.Margin(20);
                 page.Header().Column(col =>
                 {
-                    col.Item().AlignCenter().Text("Prayer Timings").FontSize(22).Bold();
+                    col.Item().AlignCenter().Text("Adhan & Iqama Timings").FontSize(22).Bold();
                     col.Item().AlignCenter().Text($"({periodTitle})").FontSize(12);
                     col.Item().AlignCenter().Text(org.Name).FontSize(16).Bold();
                     var address = string.Join(" ", new[] { org.AddressLine, org.City, org.State, org.ZipCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -170,4 +172,7 @@ public sealed class QuestPdfGenerator(AppDbContext db, IPrayerTimeCalculator cal
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;
         return WebUtility.HtmlDecode(Regex.Replace(value, "<[^>]+>", " ")).Trim();
     }
+
+    private static string NormalizeHeading(string heading) =>
+        Regex.Replace(heading ?? string.Empty, "^STARTS?$", "ADHAN", RegexOptions.IgnoreCase);
 }

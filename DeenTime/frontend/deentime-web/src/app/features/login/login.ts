@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -25,11 +26,13 @@ export class LoginComponent {
   private fb      = inject(FormBuilder);
   private auth    = inject(AuthService);
   private router  = inject(Router);
+  private route   = inject(ActivatedRoute);
   private snack   = inject(MatSnackBar);
 
   isRegister  = signal(false);
   loading     = signal(false);
   devSuperUser = environment.devSuperUser;
+  reason = this.route.snapshot.queryParamMap.get('reason');
 
   form = this.fb.group({
     email:            ['', [Validators.required, Validators.email]],

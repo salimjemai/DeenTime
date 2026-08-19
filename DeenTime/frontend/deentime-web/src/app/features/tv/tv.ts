@@ -49,7 +49,7 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   private loadTimings() {
-    this.displayService.get(this.slug).subscribe({
+    this.displayService.get(this.slug, 'tv').subscribe({
       next: display => {
         this.display.set(display);
         this.timings.set(display.timings);

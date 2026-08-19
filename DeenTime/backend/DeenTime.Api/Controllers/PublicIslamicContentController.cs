@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Nodes;
+using DeenTime.Api.Services;
 
 namespace DeenTime.Api.Controllers;
 
@@ -13,11 +14,16 @@ namespace DeenTime.Api.Controllers;
 [Route("public/content")]
 public sealed class PublicIslamicContentController(
     QuranProviderClient quranClient,
-    IDbContextFactory<AppDbContext> dbFactory) : ControllerBase
+    IDbContextFactory<AppDbContext> dbFactory,
+    ApiClientCredentialService credentials) : ControllerBase
 {
     [HttpGet("capabilities")]
-    public IActionResult Capabilities() => Ok(new
+    public async Task<IActionResult> Capabilities(CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
+        return Ok(new
+        {
         apiVersion = "v1",
         quran = new
         {
@@ -42,11 +48,14 @@ public sealed class PublicIslamicContentController(
                 "GET /hadiths/random"
             }
         }
-    });
+        });
+    }
 
     [HttpGet("quran/showcase/random")]
     public async Task<IActionResult> CachedRandomAyah(CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         string[] identifiers = ["quran-uthmani", "en.sahih", "ar.alafasy"];
         var keys = identifiers.Select(identifier => $"/quran/{identifier}").ToArray();
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -92,6 +101,8 @@ public sealed class PublicIslamicContentController(
     [Produces("application/json")]
     public async Task<IActionResult> Quran(string path, CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         try
         {
             var query = Request.Query.SelectMany(pair => pair.Value
@@ -123,6 +134,8 @@ public sealed class PublicIslamicContentController(
     [HttpGet("hadith/books")]
     public async Task<IActionResult> Books(CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var books = await db.HadithBooks.AsNoTracking()
             .OrderBy(book => book.ProviderId)
@@ -146,6 +159,8 @@ public sealed class PublicIslamicContentController(
     [HttpGet("hadith/books/{bookSlug}/chapters")]
     public async Task<IActionResult> Chapters(string bookSlug, CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var bookExists = await db.HadithBooks.AsNoTracking()
             .AnyAsync(book => book.BookSlug == bookSlug, cancellationToken);
@@ -178,6 +193,8 @@ public sealed class PublicIslamicContentController(
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
         if (search?.Length > 200) return BadRequest(new { error = "Search is limited to 200 characters." });
@@ -204,6 +221,8 @@ public sealed class PublicIslamicContentController(
         [FromQuery] string? language,
         CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         if (!IsSupportedLanguage(language)) return BadRequest(new { error = "Language must be ar, en, or ur." });
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -220,6 +239,8 @@ public sealed class PublicIslamicContentController(
     [HttpGet("hadith/hadiths/{providerId:int}")]
     public async Task<IActionResult> Hadith(int providerId, CancellationToken cancellationToken)
     {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var record = await ProjectHadiths(db.HadithRecords.AsNoTracking()
                 .Where(item => item.ProviderId == providerId)
@@ -284,6 +305,16 @@ public sealed class PublicIslamicContentController(
 
     private static bool IsSupportedLanguage(string? language) =>
         string.IsNullOrWhiteSpace(language) || HadithProviderClient.Languages.Contains(language, StringComparer.OrdinalIgnoreCase);
+
+    private async Task<IActionResult?> ValidateClientAsync(CancellationToken cancellationToken)
+    {
+        var key = Request.Headers["X-DeenTime-Client-Key"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(key)) return null;
+        var validation = await credentials.ValidateAsync(key, "content:read", Request.Path, cancellationToken);
+        return validation.IsValid
+            ? null
+            : Unauthorized(new { error = validation.Error ?? "The API client key is not authorized." });
+    }
 
     private static JsonObject? FindAyah(string json, int number)
     {

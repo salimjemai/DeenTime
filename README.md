@@ -1,10 +1,29 @@
-# DeenTime
+# IqamaTime
+
+## Deterministic local startup
+
+From the repository root, run:
+
+```bash
+./DeenTime/scripts/start-local.sh
+```
+
+The launcher checks the exact owners of ports 5432 and 8080, rebuilds the current API image, waits for PostgreSQL-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
+
+Optional secrets are supplied through the environment or an untracked local `.env` file. Copy `DeenTime/.env.example` as a reference. Set `DEENTIME_HADITH_API_KEY` only in a secret store or shell environment; the upstream provider key is never sent to browsers or committed.
+
+Runtime checks:
+
+- API liveness: `http://127.0.0.1:8080/health/live`
+- API readiness: `http://127.0.0.1:8080/health/ready`
+- API build/schema metadata: `http://127.0.0.1:8080/api/version`
+- Angular: `http://127.0.0.1:4200`
 
 A .NET 9 + Angular 20 platform for mosque organizations to compute daily prayer times, manage iqama schedules, maintain Hijri month maps, design publishable PDFs, and serve public TV/widget views.
 
 ## Legacy IqamaTime migration coverage
 
-| Legacy area | DeenTime coverage | Modern improvement |
+| Legacy area | IqamaTime coverage | Modern improvement |
 |-------------|-------------------|--------------------|
 | Profile | Organization identity, address, contact details and calculation criteria | One organization-scoped admin workspace with live validation |
 | Iqama | Effective-date schedules for Fajr, Dhuhr, Asr, Maghrib, Isha and up to four Jumu'ah services | Fast five-prayer editor, fixed or prayer-relative times, recurring rules and history |
@@ -14,7 +33,7 @@ A .NET 9 + Angular 20 platform for mosque organizations to compute daily prayer 
 | Publish | TV link, two website widgets and downloadable monthly timetable | Responsive TV, modern widgets, embed code, monthly/Ramadan PDFs and output controls |
 | Legacy URLs | `/clock`, `iqama-widget.php`, `iqama-widget2.php` | Compatibility redirects preserve existing masjid integrations |
 
-DeenTime also adds the Quran/Hadith content library and rate-limited public JSON APIs without removing the migrated scheduling workflows.
+IqamaTime also adds the Quran/Hadith content library and rate-limited public JSON APIs without removing the migrated scheduling workflows.
 
 ---
 
@@ -169,6 +188,7 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 | GET | `/public/display/{slug}` |
 | GET | `/public/widget/{slug}` _(redirects to `/w/{slug}`)_ |
 | GET | `/public/tv/{slug}` _(redirects to `/tv/{slug}`)_ |
+| GET | `/public/organizations/{slug}/displays` _(absolute public display URLs and iframe snippets)_ |
 | GET | `/clock?masjid={slug}` _(legacy-compatible redirect)_ |
 | GET | `/iqama-widget.php?...` and `/iqama-widget2.php?...` _(legacy-compatible redirects)_ |
 
@@ -187,7 +207,7 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 | `Organization` | Id, Slug (unique), Name, Address, Criteria, Design |
 | `PrayerTimingCriteria` | Method, JuristicMethodAsr, Lat/Lng, TimezoneId, MinutesAfterZawal/Maghrib |
 | `IqamaEntry` | OrganizationId, effective Date, Salah, Time or prayer-relative OffsetMinutes, Note |
-| `DesignSettings` | OrganizationId, HeaderImageUrl, IqamaHeadings[], FooterHtml, Theme |
+| `DesignSettings` | OrganizationId, HeaderImageUrl, IqamaHeadings[], FooterHtml, Theme, per-layout font scales/families |
 | `HijriMonthMap` | OrganizationId, Gregorian Year/Month, full Hijri date on the first, Locked |
 | `PublishArtifact` | OrganizationId, Year, Month, Size, Orientation, StorageUrl |
 | `TvDisplayConfig` | OrganizationId, ShowSeconds, ShowHijri, AccentColor, AutoRefreshSeconds |

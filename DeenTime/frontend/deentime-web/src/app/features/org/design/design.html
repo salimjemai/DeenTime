@@ -59,6 +59,26 @@
                 @for (t of themes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
               </mat-select>
             </mat-form-field>
+            <section class="typography-settings" aria-label="Per-layout typography">
+              <div class="typography-heading"><strong>Typography per layout</strong><span>Choose a safe font and scale independently for TV, full widget, and compact widget.</span></div>
+              @for (layout of layouts; track layout.scale) {
+                <div class="typography-row">
+                  <strong>{{ layout.label }}</strong>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Scale</mat-label>
+                    <mat-select [formControlName]="layout.scale">
+                      @for (scale of fontScales; track scale) { <mat-option [value]="scale">{{ scale }}%</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Font family</mat-label>
+                    <mat-select [formControlName]="layout.family">
+                      @for (font of fontFamilies; track font.value) { <mat-option [value]="font.value">{{ font.label }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              }
+            </section>
           </form>
         </mat-card-content>
       </mat-card>
@@ -76,7 +96,7 @@
               <a mat-stroked-button [href]="'/w2/' + orgSlug()" target="_blank"><mat-icon>view_compact</mat-icon> Compact</a>
             </div>
           }
-          <div class="preview-shell" [class.dark]="form.controls.theme.value === 'dark'" [class.classic]="form.controls.theme.value === 'classic'">
+          <div class="preview-shell" [class.dark]="form.controls.theme.value === 'dark'" [class.classic]="form.controls.theme.value === 'classic'" [class.default]="form.controls.theme.value === 'default'">
             @if (form.controls.headerImageUrl.value) {
               <img class="preview-banner" [src]="form.controls.headerImageUrl.value" alt="" />
             }
@@ -90,7 +110,7 @@
                 <span>{{ dateLabel() }}</span>
                 @if (display()!.hijri; as hijri) { <span>{{ hijri.formatted }}</span> }
               </div>
-              <div class="preview-columns"><span>Prayer</span><span>Adhan / Start</span><span>Iqama</span></div>
+              <div class="preview-columns"><span>Prayer</span><span>Adhan</span><span>Iqama</span></div>
               <div class="preview-rows">
                 @for (prayer of prayers; track prayer.key) {
                   <div>

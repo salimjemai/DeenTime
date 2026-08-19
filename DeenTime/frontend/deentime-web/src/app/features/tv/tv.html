@@ -1,7 +1,11 @@
 <main
   class="tv-page"
   [class.classic]="display()?.design?.theme === 'classic'"
-  [class.light]="display()?.design?.theme === 'light'"
+  [class.default]="!display()?.design?.theme || display()?.design?.theme === 'default' || display()?.design?.theme === 'light'"
+  [class.font-system]="display()?.design?.tvFontFamily === 'system'"
+  [class.font-modern-sans]="display()?.design?.tvFontFamily === 'modern-sans'"
+  [class.font-classic-serif]="display()?.design?.tvFontFamily === 'classic-serif'"
+  [style.--font-scale]="(display()?.design?.tvFontScale ?? 100) / 100"
   [style.--accent]="accentColor()">
   <div class="ambient-image" [style.background-image]="heroBackground()"></div>
   <div class="ambient-glow"></div>
@@ -62,7 +66,7 @@
             <div class="prayer-heading"><strong>{{ prayer.label }}</strong><span>{{ prayer.detail }}</span></div>
             @if (prayer.salah) {
               <div class="primary-time"><small>IQAMA</small><strong>{{ iqamaFor(prayer.salah) }}</strong></div>
-              <div class="start-time"><span>Starts</span><b>{{ timeFor(prayer.key) }}</b></div>
+              <div class="start-time"><span>Adhan</span><b>{{ timeFor(prayer.key) }}</b></div>
             } @else {
               <div class="primary-time"><small>SHURUQ</small><strong>{{ timeFor(prayer.key) }}</strong></div>
               <div class="start-time"><span>Sunrise</span><b>—</b></div>
@@ -72,7 +76,7 @@
       </section>
 
       <footer class="tv-footer">
-        <span>Prayer start and congregational Iqama times update automatically.</span>
+        <span>Adhan and congregational Iqama times update automatically · IqamaTime</span>
         @if (display()?.design?.footerHtml; as footer) { <div [innerHTML]="footer"></div> }
       </footer>
     </div>

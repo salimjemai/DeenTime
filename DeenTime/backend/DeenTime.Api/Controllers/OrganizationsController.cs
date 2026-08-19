@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DeenTime.Api.Responses.Pagination;
 using DeenTime.Api.Requests.Organizations;
+using DeenTime.Core.Enums;
+using DeenTime.Api.Authorization;
 
 namespace DeenTime.Api.Controllers
 {
@@ -101,6 +103,44 @@ namespace DeenTime.Api.Controllers
 			_db.PrayerTimingCriteria.Remove(existing);
 			await _db.SaveChangesAsync();
 			return NoContent();
+		}
+
+		[HttpGet("{id:guid}/readiness")]
+		public async Task<IActionResult> Readiness(Guid id, CancellationToken cancellationToken)
+		{
+			if (!User.CanAccessOrganization(id)) return Forbid();
+			var organization = await _db.Organizations.AsNoTracking()
+				.Include(item => item.Criteria)
+				.Include(item => item.Design)
+				.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+			if (organization is null) return NotFound();
+
+			var today = DateOnly.FromDateTime(DateTime.UtcNow);
+			var active = await _db.IqamaEntries.AsNoTracking()
+				.Where(item => item.OrganizationId == id && item.Date <= today)
+				.GroupBy(item => item.Salah)
+				.Select(group => group.OrderByDescending(item => item.Date).ThenByDescending(item => item.UpdatedAtUtc).First())
+				.ToArrayAsync(cancellationToken);
+			var daily = new[] { SalahType.Fajr, SalahType.Dhuhr, SalahType.Asr, SalahType.Maghrib, SalahType.Isha };
+			var dailyChecks = daily.ToDictionary(
+				prayer => prayer.ToString(),
+				prayer => active.Any(item => item.Salah == prayer));
+			var jumuahCount = active.Count(item => item.Salah is SalahType.Jumuah or SalahType.Jumuah2nd or SalahType.Jumuah3rd or SalahType.Jumuah4th);
+			var checks = new
+			{
+				criteria = organization.Criteria is not null,
+				dailyIqama = dailyChecks,
+				jumuah = jumuahCount > 0,
+				design = organization.Design is not null && !string.IsNullOrWhiteSpace(organization.Design.HeaderImageUrl),
+				publicPreview = organization.Criteria is not null
+			};
+			return Ok(new
+			{
+				readyToPublish = checks.criteria && checks.dailyIqama.Values.All(value => value) && checks.jumuah && checks.design,
+				checks,
+				jumuahCount,
+				effectiveDate = today
+			});
 		}
 	}
 }

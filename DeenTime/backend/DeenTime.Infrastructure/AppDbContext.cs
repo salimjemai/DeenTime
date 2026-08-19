@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<HadithBook> HadithBooks => Set<HadithBook>();
     public DbSet<HadithChapter> HadithChapters => Set<HadithChapter>();
     public DbSet<HadithRecord> HadithRecords => Set<HadithRecord>();
+    public DbSet<ApiClient> ApiClients => Set<ApiClient>();
+    public DbSet<ApiClientUsage> ApiClientUsage => Set<ApiClientUsage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -53,6 +55,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             .HasForeignKey(ou => ou.OrganizationId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        b.Entity<Organization>()
+            .HasMany<ApiClient>()
+            .WithOne(client => client.Organization)
+            .HasForeignKey(client => client.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<ApiClient>().HasIndex(client => new { client.OrganizationId, client.Name }).IsUnique();
+        b.Entity<ApiClient>().HasIndex(client => client.KeyPrefix).IsUnique();
+        b.Entity<ApiClient>().Property(client => client.Scopes).HasColumnType("text[]");
+        b.Entity<ApiClientUsage>().HasIndex(usage => new { usage.ApiClientId, usage.UsedAtUtc });
+        b.Entity<ApiClientUsage>().HasOne(usage => usage.ApiClient)
+            .WithMany()
+            .HasForeignKey(usage => usage.ApiClientId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         b.Entity<OrgUser>()
             .HasIndex(x => new { x.OrganizationId, x.Issuer, x.Subject })
             .IsUnique();
@@ -64,6 +81,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         b.Entity<Organization>().HasIndex(o => o.Slug).IsUnique();
         b.Entity<IqamaEntry>().HasIndex(i => new { i.OrganizationId, i.Date, i.Salah }).IsUnique();
         b.Entity<DesignSettings>().HasIndex(d => new { d.OrganizationId }).IsUnique();
+        b.Entity<DesignSettings>().Property(d => d.TvFontScale).HasDefaultValue(100);
+        b.Entity<DesignSettings>().Property(d => d.WidgetFontScale).HasDefaultValue(100);
+        b.Entity<DesignSettings>().Property(d => d.CompactFontScale).HasDefaultValue(100);
+        b.Entity<DesignSettings>().Property(d => d.TvFontFamily).HasDefaultValue("system");
+        b.Entity<DesignSettings>().Property(d => d.WidgetFontFamily).HasDefaultValue("system");
+        b.Entity<DesignSettings>().Property(d => d.CompactFontFamily).HasDefaultValue("system");
         b.Entity<TvDisplayConfig>().HasIndex(t => new { t.OrganizationId }).IsUnique();
         b.Entity<HijriMonthMap>().HasIndex(h => new { h.OrganizationId, h.Year, h.Month }).IsUnique();
         b.Entity<PublishArtifact>().HasIndex(p => new { p.OrganizationId, p.Year, p.Month });

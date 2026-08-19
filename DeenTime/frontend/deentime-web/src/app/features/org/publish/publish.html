@@ -7,6 +7,27 @@
     </div>
   </div>
 
+  @if (readiness(); as status) {
+    <mat-card class="section-card readiness-card" [class.ready]="status.readyToPublish">
+      <mat-card-header>
+        <mat-card-title>{{ status.readyToPublish ? 'Ready to publish' : 'Complete your publishing checklist' }}</mat-card-title>
+        <mat-card-subtitle>Public views can load with partial data, but completing these items keeps the community-facing schedule trustworthy.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="readiness-grid">
+          <span [class.done]="status.checks.criteria"><mat-icon>{{ status.checks.criteria ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Prayer criteria</span>
+          @for (item of ['Fajr','Dhuhr','Asr','Maghrib','Isha']; track item) {
+            <span [class.done]="status.checks.dailyIqama[item]"><mat-icon>{{ status.checks.dailyIqama[item] ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> {{ item }} Iqama</span>
+          }
+          <span [class.done]="status.checks.jumuah"><mat-icon>{{ status.checks.jumuah ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Jumu’ah service</span>
+          <span [class.done]="status.checks.design"><mat-icon>{{ status.checks.design ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Design image</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else if (readinessError()) {
+    <mat-card class="error-card"><mat-icon>warning</mat-icon><span>{{ readinessError() }}</span><button mat-stroked-button (click)="ngOnInit()">Try again</button></mat-card>
+  }
+
   <mat-card class="section-card share-card">
     <mat-card-header>
       <mat-card-title>Public displays</mat-card-title>
@@ -15,14 +36,14 @@
     <mat-card-content>
       @if (embedCode(); as code) {
         <div class="display-links">
-          <a class="display-link" [href]="absolute(code.widgetUrl)" target="_blank">
-            <span class="link-icon"><mat-icon>web</mat-icon></span><span><strong>Website widget</strong><small>{{ absolute(code.widgetUrl) }}</small></span><mat-icon>open_in_new</mat-icon>
+          <a class="display-link" [href]="code.widgetUrl" target="_blank">
+            <span class="link-icon"><mat-icon>web</mat-icon></span><span><strong>Website widget</strong><small>{{ code.widgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
           </a>
-          <a class="display-link" [href]="absolute(code.compactWidgetUrl)" target="_blank">
-            <span class="link-icon compact"><mat-icon>view_agenda</mat-icon></span><span><strong>Compact widget</strong><small>{{ absolute(code.compactWidgetUrl) }}</small></span><mat-icon>open_in_new</mat-icon>
+          <a class="display-link" [href]="code.compactWidgetUrl" target="_blank">
+            <span class="link-icon compact"><mat-icon>view_agenda</mat-icon></span><span><strong>Compact widget</strong><small>{{ code.compactWidgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
           </a>
-          <a class="display-link" [href]="absolute(code.tvUrl)" target="_blank">
-            <span class="link-icon tv"><mat-icon>tv</mat-icon></span><span><strong>TV display</strong><small>{{ absolute(code.tvUrl) }}</small></span><mat-icon>open_in_new</mat-icon>
+          <a class="display-link" [href]="code.tvUrl" target="_blank">
+            <span class="link-icon tv"><mat-icon>tv</mat-icon></span><span><strong>TV display</strong><small>{{ code.tvUrl }}</small></span><mat-icon>open_in_new</mat-icon>
           </a>
         </div>
         <div class="code-row">
@@ -42,7 +63,7 @@
   <mat-card class="section-card preview-card">
     <mat-card-header>
       <mat-card-title>Live display previews</mat-card-title>
-      <mat-card-subtitle>Verify prayer starts, Iqama times, and all four Jumu’ah services before sharing.</mat-card-subtitle>
+      <mat-card-subtitle>Verify Adhan, Iqama times, and all four Jumu’ah services before sharing.</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <div class="preview-toolbar">

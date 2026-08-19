@@ -24,6 +24,7 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libfontconfig1 \
+        curl \
         fonts-liberation \
         fonts-dejavu-core && \
     rm -rf /var/lib/apt/lists/*

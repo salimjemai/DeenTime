@@ -15,8 +15,12 @@
     </button>
   </div>
 
+  <p class="schedule-note"><mat-icon>info</mat-icon> Showing the December {{ year - 1 }} through March {{ year + 1 }} buffer so Hijri month boundaries remain visible around the selected Gregorian year.</p>
+
   @if (loading()) {
     <div class="center"><mat-spinner diameter="48" /></div>
+  } @else if (error()) {
+    <mat-card class="error-card"><mat-icon>warning</mat-icon><span>{{ error() }}</span><button mat-stroked-button color="primary" (click)="load()">Try again</button></mat-card>
   } @else {
     <mat-card>
       <table mat-table [dataSource]="rows()" class="full-width">

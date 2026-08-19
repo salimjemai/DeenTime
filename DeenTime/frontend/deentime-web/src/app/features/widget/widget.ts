@@ -33,7 +33,7 @@ export class WidgetComponent implements OnInit {
   ];
 
   ngOnInit() {
-    this.displayService.get(this.slug).subscribe({
+    this.displayService.get(this.slug, this.variant === 'compact' ? 'compact' : 'widget').subscribe({
       next: display => {
         this.display.set(display);
         this.timings.set(display.timings);
@@ -66,6 +66,16 @@ export class WidgetComponent implements OnInit {
   }
 
   accentColor() { return this.display()?.tvConfig?.accentColor || '#3d8b63'; }
+
+  fontScale() {
+    const design = this.display()?.design;
+    return this.variant === 'compact' ? design?.compactFontScale ?? 100 : design?.widgetFontScale ?? 100;
+  }
+
+  fontFamily() {
+    const design = this.display()?.design;
+    return this.variant === 'compact' ? design?.compactFontFamily ?? 'system' : design?.widgetFontFamily ?? 'system';
+  }
 
   backgroundImage() {
     const image = this.display()?.design?.backgroundImageUrl ?? this.display()?.design?.headerImageUrl;

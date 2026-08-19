@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { TimingsService } from '../../../services/timings';
 import { AuthService } from '../../../services/auth';
 import { PrayerTimesDto } from '../../../models';
+import { apiErrorMessage } from '../../../services/api-error';
 
 @Component({
   selector: 'app-timings',
@@ -31,7 +32,7 @@ export class TimingsComponent implements OnInit {
   private auth  = inject(AuthService);
   private route = inject(ActivatedRoute);
 
-  orgId   = this.auth.getOrgId() ?? this.route.snapshot.params['slug'];
+  orgId   = this.auth.getOrgId() ?? this.route.snapshot.params['orgId'];
   loading = signal(false);
   timings = signal<PrayerTimesDto | null>(null);
   error   = signal('');
@@ -42,7 +43,7 @@ export class TimingsComponent implements OnInit {
     { key: 'sunrise', label: 'Sunrise', icon: 'wb_sunny' },
     { key: 'dhuhr',   label: 'Dhuhr',   icon: 'wb_sunny' },
     { key: 'asr',     label: 'Asr',     icon: 'light_mode' },
-    { key: 'maghrib', label: 'Maghrib', icon: 'wb_twighlight' },
+    { key: 'maghrib', label: 'Maghrib', icon: 'wb_twilight' },
     { key: 'sunset',  label: 'Sunset',  icon: 'wb_twilight' },
     { key: 'isha',    label: 'Isha',    icon: 'nights_stay' },
   ];
@@ -55,7 +56,7 @@ export class TimingsComponent implements OnInit {
     const date = this.toIso(this.selectedDate);
     this.svc.getForDate(this.orgId, date).subscribe({
       next: t => { this.timings.set(t); this.loading.set(false); },
-      error: () => { this.error.set('Could not load prayer times. Check criteria are set.'); this.loading.set(false); }
+      error: error => { this.error.set(apiErrorMessage(error, 'Could not load prayer times.')); this.loading.set(false); }
     });
   }
 

@@ -13,6 +13,7 @@ import { forkJoin } from 'rxjs';
 import { IqamaService } from '../../../services/iqama';
 import { AuthService } from '../../../services/auth';
 import { IqamaEntry, IqamaScheduleUpsertRequest, IqamaUpsertRequest, SalahType } from '../../../models';
+import { apiErrorMessage } from '../../../services/api-error';
 
 interface QuickIqamaRow {
   salah: SalahType;
@@ -107,9 +108,9 @@ export class IqamaComponent implements OnInit {
         });
         this.currentLoading.set(false);
       },
-      error: () => {
+      error: error => {
         this.currentLoading.set(false);
-        this.snack.open('Could not load the active Iqama times', 'Dismiss', { duration: 3000 });
+        this.snack.open(apiErrorMessage(error, 'Could not load the active Iqama times'), 'Dismiss', { duration: 4000 });
       }
     });
   }
@@ -147,8 +148,8 @@ export class IqamaComponent implements OnInit {
     this.error.set('');
     this.svc.list(this.orgId, this.year).subscribe({
       next: e => { this.entries.set(e); this.loading.set(false); },
-      error: () => {
-        this.error.set('Could not load the Iqama schedule.');
+      error: error => {
+        this.error.set(apiErrorMessage(error, 'Could not load the Iqama schedule.'));
         this.loading.set(false);
       }
     });
