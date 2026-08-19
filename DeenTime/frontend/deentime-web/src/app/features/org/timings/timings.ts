@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -13,7 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { TimingsService } from '../../../services/timings';
 import { AuthService } from '../../../services/auth';
 import { PrayerTimesDto } from '../../../models';
-import { apiErrorMessage } from '../../../services/api-error';
+import { describeApiError } from '../../../services/api-error';
 
 @Component({
   selector: 'app-timings',
@@ -22,7 +22,7 @@ import { apiErrorMessage } from '../../../services/api-error';
     FormsModule,
     MatCardModule, MatTableModule, MatDatepickerModule,
     MatFormFieldModule, MatInputModule, MatNativeDateModule,
-    MatProgressSpinnerModule, MatIconModule, MatButtonModule
+    MatProgressSpinnerModule, MatIconModule, MatButtonModule, RouterLink
   ],
   templateUrl: './timings.html',
   styleUrl: './timings.scss'
@@ -36,6 +36,7 @@ export class TimingsComponent implements OnInit {
   loading = signal(false);
   timings = signal<PrayerTimesDto | null>(null);
   error   = signal('');
+  needsCriteria = signal(false);
   selectedDate = new Date();
 
   prayers = [
@@ -53,10 +54,17 @@ export class TimingsComponent implements OnInit {
   load() {
     this.loading.set(true);
     this.error.set('');
+    this.needsCriteria.set(false);
     const date = this.toIso(this.selectedDate);
     this.svc.getForDate(this.orgId, date).subscribe({
       next: t => { this.timings.set(t); this.loading.set(false); },
-      error: error => { this.error.set(apiErrorMessage(error, 'Could not load prayer times.')); this.loading.set(false); }
+      error: error => {
+        const state = describeApiError(error, 'Could not load prayer times.');
+        this.timings.set(null);
+        this.needsCriteria.set(state.kind === 'not-found');
+        if (state.kind !== 'not-found') this.error.set(state.message);
+        this.loading.set(false);
+      }
     });
   }
 

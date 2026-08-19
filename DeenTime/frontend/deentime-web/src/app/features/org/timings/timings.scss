@@ -49,6 +49,38 @@
   button { margin-left: auto; }
 }
 
+.setup-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid #d6e5d8;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(221, 181, 90, .18), transparent 30%),
+    linear-gradient(135deg, #f2f9f3, #fff);
+  box-shadow: 0 14px 34px rgba(24, 62, 34, .07);
+}
+
+.setup-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: #2f7653;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(47, 118, 83, .2);
+
+  mat-icon { width: 27px; height: 27px; font-size: 27px; }
+}
+
+.setup-kicker { color: #9a7122; font-size: .65rem; font-weight: 900; letter-spacing: .12em; }
+.setup-card h3 { margin: 5px 0 6px; color: #1d442b; font-family: Georgia, 'Times New Roman', serif; font-size: 1.25rem; }
+.setup-card p { max-width: 690px; margin: 0; color: #66766b; font-size: .82rem; line-height: 1.55; }
+.setup-card a { white-space: nowrap; background: #2f7653 !important; color: #fff !important; }
+
 .prayer-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -84,4 +116,6 @@
   .page-heading { flex-direction: column; }
   .next-prayer-card { width: 100%; }
   .toolbar { margin-bottom: 18px; }
+  .setup-card { grid-template-columns: auto 1fr; padding: 19px; }
+  .setup-card a { grid-column: 1 / -1; }
 }

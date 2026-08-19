@@ -28,6 +28,16 @@
 
   @if (loading()) {
     <div class="center"><mat-spinner diameter="48" /></div>
+  } @else if (needsCriteria()) {
+    <mat-card class="setup-card">
+      <span class="setup-icon"><mat-icon>location_on</mat-icon></span>
+      <div>
+        <span class="setup-kicker">ONE-TIME SETUP</span>
+        <h3>Tell IqamaTime where your mosque is.</h3>
+        <p>Prayer times need a location, timezone, calculation method, and Asr method. Add them once, then this schedule and every public display will update automatically.</p>
+      </div>
+      <a mat-flat-button [routerLink]="['/org', orgId, 'profile']"><mat-icon>tune</mat-icon> Set up prayer times</a>
+    </mat-card>
   } @else if (error()) {
     <mat-card class="error-card">
       <mat-icon>warning</mat-icon> {{ error() }}

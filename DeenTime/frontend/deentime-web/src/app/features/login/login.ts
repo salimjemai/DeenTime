@@ -54,17 +54,18 @@ export class LoginComponent {
   submit() {
     if (this.form.invalid) return;
     this.loading.set(true);
+    const registering = this.isRegister();
 
     const { email, password, organizationName } = this.form.value;
 
-    const call = this.isRegister()
+    const call = registering
       ? this.auth.register({ email: email!, password: password!, organizationName: organizationName || undefined })
       : this.auth.login({ email: email!, password: password! });
 
     call.subscribe({
       next: () => {
         const orgId = this.auth.getOrgId();
-        this.router.navigate(['/org', orgId, 'timings']);
+        this.router.navigate(['/org', orgId, registering ? 'profile' : 'timings']);
       },
       error: (err) => {
         this.loading.set(false);

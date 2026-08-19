@@ -1,5 +1,13 @@
 @use '@angular/material' as mat;
 
+@font-face {
+  font-family: 'IqamaTime Material Symbols';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
+}
+
 html {
   @include mat.theme((
     color: (
@@ -19,9 +27,9 @@ html, body {
   background: #f5f5f5;
 }
 
-/* Vendored fallback glyphs keep builds and first paint independent of Google Fonts. */
+/* Self-hosted so navigation and controls never depend on Google Fonts at runtime. */
 .material-icons, .material-symbols-outlined {
-  font-family: 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif;
+  font-family: 'IqamaTime Material Symbols';
   font-weight: normal;
   font-style: normal;
   font-size: 24px;
@@ -32,6 +40,7 @@ html, body {
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
+  font-feature-settings: 'liga';
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }

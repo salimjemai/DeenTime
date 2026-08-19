@@ -25,6 +25,30 @@ async function signIn(page: Page) {
 }
 
 test.describe('IqamaTime browser regression matrix', () => {
+  test('authenticated navigation uses the bundled icon font on every tab', async ({ page }) => {
+    const consoleErrors: string[] = [];
+    page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+    await useApi(page);
+    await signIn(page);
+
+    const font = await page.request.get(`${webOrigin}/fonts/material-symbols-outlined.woff2`);
+    expect(font.ok()).toBeTruthy();
+    expect((await font.body()).byteLength).toBeGreaterThan(300_000);
+
+    for (const label of ['Prayer Times', 'Iqama', 'Design', 'Hijri', 'Publish', 'Content', 'Profile', 'Help & Tips']) {
+      await page.locator('mat-nav-list').getByRole('link', { name: label, exact: true }).click();
+      const icon = page.locator('mat-nav-list mat-icon').first();
+      await expect(icon).toHaveCSS('font-family', /IqamaTime Material Symbols/);
+      const dimensions = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth
+      }));
+      expect(dimensions.scrollWidth, `${label} overflows horizontally`).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    }
+
+    expect(consoleErrors, consoleErrors.join('\n')).toEqual([]);
+  });
+
   test('all six organization tabs show their live contract state', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
