@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "DeenTime API",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj --no-launch-profile -- --urls http://localhost:8080",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "DeenTime Frontend",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm start -- --host localhost --port 4200",
+      "cwd": "${workspaceFolder}/frontend/deentime-web"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "DeenTime API + Frontend",
+      "configurations": [
+        "DeenTime API",
+        "DeenTime Frontend"
+      ],
+      "stopAll": true
+    }
+  ]
+}
