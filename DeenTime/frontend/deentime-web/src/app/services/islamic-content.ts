@@ -2,10 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import {
+  ApiClientAccess,
   HadithBook,
   HadithRecord,
   IslamicContentSummary,
   IslamicContentSyncState,
+  IssuedApiClient,
   PagedResult,
   QuranApiResponse,
   QuranAyah,
@@ -76,5 +78,29 @@ export class IslamicContentService {
     });
     return this.http.get<{ data: HadithRecord }>(
       `${this.base}/public/content/hadith/hadiths/random`, { params });
+  }
+
+  apiClients(organizationId: string) {
+    return this.http.get<{ data: ApiClientAccess[]; supportedScopes: string[] }>(
+      `${this.base}/api/v1/orgs/${organizationId}/api-clients`);
+  }
+
+  createApiClient(organizationId: string, name: string, requestsPerMinute: number) {
+    return this.http.post<IssuedApiClient>(
+      `${this.base}/api/v1/orgs/${organizationId}/api-clients`, {
+        name,
+        scopes: ['content:read'],
+        requestsPerMinute
+      });
+  }
+
+  rotateApiClient(organizationId: string, clientId: string) {
+    return this.http.post<IssuedApiClient>(
+      `${this.base}/api/v1/orgs/${organizationId}/api-clients/${clientId}/rotate`, {});
+  }
+
+  revokeApiClient(organizationId: string, clientId: string) {
+    return this.http.post<void>(
+      `${this.base}/api/v1/orgs/${organizationId}/api-clients/${clientId}/revoke`, {});
   }
 }

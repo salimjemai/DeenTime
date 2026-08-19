@@ -1,6 +1,7 @@
 using DeenTime.Api.Responses.Pagination;
 using DeenTime.Api.Services.IslamicContent;
 using DeenTime.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using DeenTime.Api.Services;
 namespace DeenTime.Api.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [EnableRateLimiting("public")]
 [Route("public/content")]
 public sealed class PublicIslamicContentController(
@@ -18,13 +20,19 @@ public sealed class PublicIslamicContentController(
     ApiClientCredentialService credentials) : ControllerBase
 {
     [HttpGet("capabilities")]
-    public async Task<IActionResult> Capabilities(CancellationToken cancellationToken)
+    public IActionResult Capabilities()
     {
-        var denied = await ValidateClientAsync(cancellationToken);
-        if (denied is not null) return denied;
         return Ok(new
         {
         apiVersion = "v1",
+        authentication = new
+        {
+            requiredForContent = true,
+            header = "X-IqamaTime-Client-Key",
+            legacyHeader = "X-DeenTime-Client-Key",
+            scope = "content:read",
+            note = "Administrators may use their IqamaTime session token; external masjid apps must send a client key."
+        },
         quran = new
         {
             provider = "AlQuran Cloud",
@@ -73,7 +81,7 @@ public sealed class PublicIslamicContentController(
                 .ToArray();
             if (ayahs.Length == identifiers.Length)
             {
-                Response.Headers["X-DeenTime-Source"] = "cache";
+                SetSourceHeader("cache");
                 return Ok(new { code = 200, status = "OK", data = ayahs });
             }
         }
@@ -83,7 +91,7 @@ public sealed class PublicIslamicContentController(
             var fallback = await quranClient.GetAsync(
                 "ayah/random/editions/quran-uthmani,en.sahih,ar.alafasy",
                 cancellationToken: cancellationToken);
-            Response.Headers["X-DeenTime-Source"] = fallback.FromCache ? "cache" : "provider";
+            SetSourceHeader(fallback.FromCache ? "cache" : "provider");
             return new ContentResult
             {
                 Content = fallback.Json,
@@ -110,7 +118,7 @@ public sealed class PublicIslamicContentController(
                 .Select(value => new KeyValuePair<string, string?>(pair.Key, value)));
             var payload = await quranClient.GetAsync(path, query, cancellationToken: cancellationToken);
 
-            Response.Headers["X-DeenTime-Source"] = payload.FromCache ? "cache" : "provider";
+            SetSourceHeader(payload.FromCache ? "cache" : "provider");
             Response.Headers["X-DeenTime-Retrieved"] = payload.RetrievedAtUtc.ToString("O");
             if (payload.IsStale) Response.Headers["Warning"] = "110 - Response is stale";
 
@@ -308,12 +316,30 @@ public sealed class PublicIslamicContentController(
 
     private async Task<IActionResult?> ValidateClientAsync(CancellationToken cancellationToken)
     {
-        var key = Request.Headers["X-DeenTime-Client-Key"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(key)) return null;
+        if (User.Identity?.IsAuthenticated == true &&
+            new[] { "Admin", "admin", "owner", "SuperUser" }.Any(User.IsInRole)) return null;
+
+        var key = Request.Headers["X-IqamaTime-Client-Key"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(key))
+            key = Request.Headers["X-DeenTime-Client-Key"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(key))
+            return Unauthorized(new
+            {
+                error = "An IqamaTime API client key is required.",
+                header = "X-IqamaTime-Client-Key",
+                scope = "content:read"
+            });
+
         var validation = await credentials.ValidateAsync(key, "content:read", Request.Path, cancellationToken);
         return validation.IsValid
             ? null
             : Unauthorized(new { error = validation.Error ?? "The API client key is not authorized." });
+    }
+
+    private void SetSourceHeader(string source)
+    {
+        Response.Headers["X-IqamaTime-Source"] = source;
+        Response.Headers["X-DeenTime-Source"] = source;
     }
 
     private static JsonObject? FindAyah(string json, int number)

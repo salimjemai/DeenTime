@@ -7,7 +7,7 @@
       <div class="hero-badges">
         <span><mat-icon>verified_user</mat-icon> Server-side credentials</span>
         <span><mat-icon>cloud_done</mat-icon> Offline-ready cache</span>
-        <span><mat-icon>language</mat-icon> Public JSON APIs</span>
+        <span><mat-icon>language</mat-icon> Client-key JSON APIs</span>
       </div>
     </div>
     <div class="hero-mark" aria-hidden="true">
@@ -199,11 +199,58 @@
     }
   </section>
 
+  <section class="api-access" aria-labelledby="api-access-title">
+    <header>
+      <div>
+        <span class="section-kicker">SECURE DISTRIBUTION</span>
+        <h3 id="api-access-title">API access keys</h3>
+        <p>Create a separate, revocable key for each masjid website, mobile app, or integration. External requests must send <code>X-IqamaTime-Client-Key</code>.</p>
+      </div>
+      <span class="scope-badge"><mat-icon>verified_user</mat-icon> content:read</span>
+    </header>
+
+    <div class="key-create-row">
+      <label><span>Integration name</span><input [(ngModel)]="apiClientName" placeholder="Masjid website" maxlength="100" /></label>
+      <label class="rate-field"><span>Requests / minute</span><input type="number" [(ngModel)]="apiClientRateLimit" min="1" max="10000" /></label>
+      <button mat-flat-button color="primary" (click)="createApiClient()" [disabled]="!apiClientName.trim() || apiClientBusy() === 'create'">
+        <mat-icon>key</mat-icon> {{ apiClientBusy() === 'create' ? 'Creating…' : 'Create key' }}
+      </button>
+    </div>
+
+    @if (issuedClient(); as issued) {
+      <div class="issued-key" role="status">
+        <span class="issued-icon"><mat-icon>vpn_key</mat-icon></span>
+        <div><strong>{{ issued.name }}</strong><small>Copy this key now. For security, IqamaTime will not show the complete value again.</small><code>{{ issued.key }}</code></div>
+        <button mat-stroked-button (click)="copyIssuedKey()"><mat-icon>content_copy</mat-icon> Copy key</button>
+        <button mat-icon-button aria-label="Hide issued key" (click)="dismissIssuedKey()"><mat-icon>close</mat-icon></button>
+      </div>
+    }
+
+    <div class="client-list">
+      @if (apiClientsLoading()) {
+        <div class="client-empty">Loading API clients…</div>
+      } @else if (apiClients().length === 0) {
+        <div class="client-empty"><mat-icon>key_off</mat-icon><span>No API keys yet. Create one for each external consumer.</span></div>
+      } @else {
+        @for (client of apiClients(); track client.id) {
+          <article [class.revoked]="!!client.revokedAtUtc">
+            <span class="client-mark"><mat-icon>{{ client.revokedAtUtc ? 'key_off' : 'key' }}</mat-icon></span>
+            <div><strong>{{ client.name }}</strong><small>{{ client.keyPrefix }}… · {{ client.requestsPerMinute }} requests/minute</small></div>
+            <span class="client-status">{{ clientStatus(client) }}</span>
+            <button mat-stroked-button (click)="rotateApiClient(client)" [disabled]="!!client.revokedAtUtc || apiClientBusy() === client.id">Rotate</button>
+            <button mat-stroked-button class="revoke-button" (click)="revokeApiClient(client)" [disabled]="!!client.revokedAtUtc || apiClientBusy() === client.id">Revoke</button>
+          </article>
+        }
+      }
+    </div>
+  </section>
+
   <section class="api-console">
     <div class="console-intro">
       <span class="section-kicker light">MASJID DEVELOPER API</span>
       <h3>Build once. Publish everywhere.</h3>
-      <p>These public, rate-limited routes return clean JSON for masjid websites, native apps, signage, classroom tools, and community integrations.</p>
+      <p>These client-key protected, rate-limited routes return clean JSON for masjid websites, native apps, signage, classroom tools, and community integrations.</p>
+      <p class="auth-hint"><mat-icon>key</mat-icon> Send your key in the <code>X-IqamaTime-Client-Key</code> request header.</p>
       <a [href]="apiUrl('/public/content/capabilities')" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon> Open capability manifest</a>
     </div>
     <div class="endpoint-list">

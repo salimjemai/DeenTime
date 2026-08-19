@@ -93,7 +93,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal("ready", readinessBody.RootElement.GetProperty("status").GetString());
 
         var version = await client.GetFromJsonAsync<JsonElement>("/api/version");
-        Assert.Equal("20260819041212_AddDisplayTypography", version.GetProperty("schemaVersion").GetString());
+        Assert.Equal("20260819050000_RenameDefaultBranding", version.GetProperty("schemaVersion").GetString());
         Assert.False(string.IsNullOrWhiteSpace(version.GetProperty("apiVersion").GetString()));
     }
 
@@ -199,28 +199,40 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Client_credentials_are_scoped_metered_and_revocable()
     {
-        var create = await client!.PostAsJsonAsync($"/api/v1/orgs/{organizationId}/api-clients", new
+        using var publicClient = factory!.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await publicClient.GetAsync("/public/content/capabilities")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await publicClient.GetAsync("/public/content/hadith/books")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client!.GetAsync("/public/content/hadith/books")).StatusCode);
+
+        var create = await client.PostAsJsonAsync($"/api/v1/orgs/{organizationId}/api-clients", new
         {
             name = "External website",
             scopes = new[] { "content:read" },
             requestsPerMinute = 5
         });
         create.EnsureSuccessStatusCode();
-        using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+        var createJson = await create.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("secretHash", createJson, StringComparison.OrdinalIgnoreCase);
+        using var created = JsonDocument.Parse(createJson);
         var key = created.RootElement.GetProperty("clientKey").GetString()!;
+        Assert.StartsWith("iqt_", key);
         var clientId = created.RootElement.GetProperty("client").GetProperty("id").GetGuid();
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/public/content/capabilities");
-        request.Headers.Add("X-DeenTime-Client-Key", key);
-        var authorized = await client!.SendAsync(request);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/public/content/hadith/books");
+        request.Headers.Add("X-IqamaTime-Client-Key", key);
+        var authorized = await publicClient.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, authorized.StatusCode);
 
-        var revoke = await client.PostAsync($"/api/v1/orgs/{organizationId}/api-clients/{clientId}/revoke", null);
+        using var legacyRequest = new HttpRequestMessage(HttpMethod.Get, "/public/content/hadith/books");
+        legacyRequest.Headers.Add("X-DeenTime-Client-Key", key);
+        Assert.Equal(HttpStatusCode.OK, (await publicClient.SendAsync(legacyRequest)).StatusCode);
+
+        var revoke = await client!.PostAsync($"/api/v1/orgs/{organizationId}/api-clients/{clientId}/revoke", null);
         Assert.Equal(HttpStatusCode.NoContent, revoke.StatusCode);
 
-        using var revokedRequest = new HttpRequestMessage(HttpMethod.Get, "/public/content/capabilities");
-        revokedRequest.Headers.Add("X-DeenTime-Client-Key", key);
-        var revoked = await client.SendAsync(revokedRequest);
+        using var revokedRequest = new HttpRequestMessage(HttpMethod.Get, "/public/content/hadith/books");
+        revokedRequest.Headers.Add("X-IqamaTime-Client-Key", key);
+        var revoked = await publicClient.SendAsync(revokedRequest);
         Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
     }
 }

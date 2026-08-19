@@ -191,9 +191,54 @@
 .empty-state h4 { margin: 13px 0 5px; font-family: Georgia, serif; font-size: 1.12rem; }
 .empty-state p { max-width: 470px; margin: 0; color: #71808a; font-size: .75rem; line-height: 1.55; }
 
+.api-access {
+  margin-bottom: 18px;
+  padding: 28px 30px;
+  border: 1px solid #d7e2e4;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #fff 0%, #f5faf9 100%);
+  box-shadow: 0 10px 30px rgba(31,56,70,.055);
+}
+.api-access > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.api-access h3 { margin: 4px 0 0; font-family: Georgia, serif; font-size: 1.65rem; font-weight: 500; letter-spacing: -.02em; }
+.api-access header p { max-width: 710px; margin: 8px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.55; }
+.api-access code { padding: 2px 5px; border-radius: 5px; background: #eaf1f1; color: #24546a; font-size: .72rem; }
+.scope-badge { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid #c8e0d4; border-radius: 999px; background: #eef8f2; color: #39714d; font-size: .65rem; font-weight: 800; }
+.scope-badge mat-icon { width: 16px; height: 16px; font-size: 16px; }
+
+.key-create-row { display: grid; grid-template-columns: minmax(210px, 1fr) 150px auto; align-items: end; gap: 10px; margin-top: 22px; padding: 14px; border: 1px solid #e0e7e7; border-radius: 16px; background: rgba(255,255,255,.86); }
+.key-create-row label span { display: block; margin: 0 0 6px 2px; color: #71818a; font-size: .59rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.key-create-row input { box-sizing: border-box; width: 100%; height: 42px; padding: 0 12px; border: 1px solid #d3dfe1; border-radius: 10px; outline: 0; background: #fff; color: #304b59; font: inherit; font-size: .75rem; }
+.key-create-row input:focus { border-color: #2d7889; box-shadow: 0 0 0 3px rgba(45,120,137,.11); }
+.key-create-row button { height: 42px; --mdc-filled-button-container-color: #176b87; --mdc-filled-button-label-text-color: white; }
+
+.issued-key { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid #e3c98e; border-radius: 15px; background: #fff9e9; }
+.issued-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #f4dfac; color: #8f641d; }
+.issued-key strong, .issued-key small, .issued-key code { display: block; }
+.issued-key strong { color: #5d451d; font-size: .78rem; }
+.issued-key small { margin: 3px 0 7px; color: #866d42; font-size: .64rem; }
+.issued-key code { overflow: hidden; padding: 7px 9px; border: 1px solid #ead6a7; background: #fffdf7; color: #60481e; text-overflow: ellipsis; white-space: nowrap; }
+
+.client-list { display: grid; gap: 8px; margin-top: 14px; }
+.client-list article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #dde5e6; border-radius: 13px; background: #fff; }
+.client-list article.revoked { opacity: .62; background: #f5f6f5; }
+.client-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #e4f1f2; color: #236a79; }
+.client-mark mat-icon { width: 18px; height: 18px; font-size: 18px; }
+.client-list strong, .client-list small { display: block; }
+.client-list strong { overflow: hidden; color: #294652; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.client-list small { margin-top: 3px; color: #7e8c92; font-size: .62rem; }
+.client-status { padding: 5px 8px; border-radius: 999px; background: #eaf5ed; color: #39714d; font-size: .59rem; font-weight: 850; text-transform: uppercase; }
+.revoked .client-status { background: #ececed; color: #777d80; }
+.client-list button { min-width: 74px; font-size: .68rem; }
+.client-list .revoke-button { color: #a6463f; }
+.client-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 66px; border: 1px dashed #d8e1e2; border-radius: 13px; color: #77868e; font-size: .72rem; }
+.client-empty mat-icon { width: 18px; height: 18px; font-size: 18px; }
+
 .api-console { display: grid; grid-template-columns: .8fr 1.2fr; gap: 30px; padding: 34px; border-radius: 24px; background: #112b3e; color: white; box-shadow: 0 18px 45px rgba(15,38,55,.14); }
 .section-kicker.light { color: #e6bd72; }
 .console-intro p { margin: 12px 0 18px; color: #bcd0d9; font-size: .78rem; line-height: 1.6; }
+.console-intro .auth-hint { display: flex; align-items: center; gap: 7px; margin: -7px 0 17px; padding: 9px 10px; border: 1px solid rgba(231,193,117,.16); border-radius: 9px; background: rgba(255,255,255,.045); color: #d9e5e9; }
+.auth-hint code { color: #efd49f; }
 .console-intro a { display: inline-flex; align-items: center; gap: 6px; color: #f0d49f; font-size: .71rem; text-decoration: none; }
 .console-intro a:hover { text-decoration: underline; }
 .console-intro mat-icon { width: 16px; height: 16px; font-size: 16px; }
@@ -213,6 +258,12 @@
   .hero-mark { display: none; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .provider-grid, .studio-grid { grid-template-columns: 1fr; }
+  .key-create-row { grid-template-columns: 1fr 150px; }
+  .key-create-row button { grid-column: 1 / -1; }
+  .client-list article { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .client-list article button { grid-row: 2; }
+  .client-list article button:first-of-type { grid-column: 2; }
+  .client-list article button:last-of-type { grid-column: 3; }
   .search-strip { grid-template-columns: 1fr 1.4fr; }
   .surprise-button { grid-column: 1 / -1; }
 }
@@ -237,5 +288,13 @@
   .surprise-button { grid-column: auto; }
   .hadith-results { grid-template-columns: 1fr; }
   .result-summary small { display: none; }
+  .api-access { padding: 22px 18px; border-radius: 18px; }
+  .api-access > header { flex-direction: column; gap: 12px; }
+  .key-create-row { grid-template-columns: 1fr; }
+  .key-create-row button { grid-column: auto; }
+  .issued-key { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .issued-key > button[mat-stroked-button] { grid-column: 1 / -1; }
+  .issued-key > button[mat-icon-button] { grid-column: 3; grid-row: 1; }
+  .client-list article { grid-template-columns: auto minmax(0, 1fr) auto; }
   .api-console { grid-template-columns: 1fr; padding: 25px; }
 }

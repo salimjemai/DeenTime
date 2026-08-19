@@ -23,7 +23,7 @@ public sealed class ApiClientCredentialService(AppDbContext db)
         var normalizedScopes = NormalizeScopes(scopes);
         var id = Guid.NewGuid();
         var secret = Base64Url(RandomNumberGenerator.GetBytes(32));
-        var key = $"dtc_{id:N}_{secret}";
+        var key = $"iqt_{id:N}_{secret}";
         var client = new ApiClient
         {
             Id = id,
@@ -47,11 +47,11 @@ public sealed class ApiClientCredentialService(AppDbContext db)
         if (client is null || client.RevokedAtUtc is not null) return null;
 
         var secret = Base64Url(RandomNumberGenerator.GetBytes(32));
-        client.KeyPrefix = $"dtc_{client.Id:N}_{secret}"[..18];
+        client.KeyPrefix = $"iqt_{client.Id:N}_{secret}"[..18];
         client.SecretHash = Hash(secret);
         client.LastUsedAtUtc = null;
         await db.SaveChangesAsync(cancellationToken);
-        return new CreatedApiClient(client, $"dtc_{client.Id:N}_{secret}");
+        return new CreatedApiClient(client, $"iqt_{client.Id:N}_{secret}");
     }
 
     public async Task<bool> RevokeAsync(Guid organizationId, Guid clientId, CancellationToken cancellationToken)
@@ -72,7 +72,7 @@ public sealed class ApiClientCredentialService(AppDbContext db)
         CancellationToken cancellationToken)
     {
         var parts = rawKey.Split('_', 3, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 3 || parts[0] != "dtc" || !Guid.TryParseExact(parts[1], "N", out var clientId))
+        if (parts.Length != 3 || (parts[0] != "iqt" && parts[0] != "dtc") || !Guid.TryParseExact(parts[1], "N", out var clientId))
             return new(false, "The API client key is malformed.", null);
 
         var client = await db.ApiClients.FirstOrDefaultAsync(item => item.Id == clientId, cancellationToken);

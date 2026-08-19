@@ -1,5 +1,6 @@
 using DeenTime.Api.Authorization;
 using DeenTime.Api.Services;
+using DeenTime.Core.Entities;
 using DeenTime.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,16 @@ public sealed class ApiClientsController(
     ApiClientCredentialService credentials) : ControllerBase
 {
     public sealed record CreateRequest(string Name, string[]? Scopes, int RequestsPerMinute = 60);
+    public sealed record ApiClientResponse(
+        Guid Id,
+        Guid OrganizationId,
+        string Name,
+        string KeyPrefix,
+        string[] Scopes,
+        int RequestsPerMinute,
+        DateTime CreatedAtUtc,
+        DateTime? LastUsedAtUtc,
+        DateTime? RevokedAtUtc);
 
     [HttpGet]
     public async Task<IActionResult> List(Guid organizationId, CancellationToken cancellationToken)
@@ -26,6 +37,7 @@ public sealed class ApiClientsController(
             .Select(client => new
             {
                 client.Id,
+                client.OrganizationId,
                 client.Name,
                 client.KeyPrefix,
                 client.Scopes,
@@ -49,7 +61,7 @@ public sealed class ApiClientsController(
             request.Scopes ?? ["content:read"],
             request.RequestsPerMinute,
             cancellationToken);
-        return Ok(new { client = created.Client, clientKey = created.ClientKey });
+        return Ok(new { client = ToResponse(created.Client), clientKey = created.ClientKey });
     }
 
     [HttpPost("{clientId:guid}/rotate")]
@@ -57,7 +69,7 @@ public sealed class ApiClientsController(
     {
         if (!User.CanAccessOrganization(organizationId)) return Forbid();
         var rotated = await credentials.RotateAsync(organizationId, clientId, cancellationToken);
-        return rotated is null ? NotFound() : Ok(new { client = rotated.Client, clientKey = rotated.ClientKey });
+        return rotated is null ? NotFound() : Ok(new { client = ToResponse(rotated.Client), clientKey = rotated.ClientKey });
     }
 
     [HttpPost("{clientId:guid}/revoke")]
@@ -66,4 +78,15 @@ public sealed class ApiClientsController(
         if (!User.CanAccessOrganization(organizationId)) return Forbid();
         return await credentials.RevokeAsync(organizationId, clientId, cancellationToken) ? NoContent() : NotFound();
     }
+
+    private static ApiClientResponse ToResponse(ApiClient client) => new(
+        client.Id,
+        client.OrganizationId,
+        client.Name,
+        client.KeyPrefix,
+        client.Scopes,
+        client.RequestsPerMinute,
+        client.CreatedAtUtc,
+        client.LastUsedAtUtc,
+        client.RevokedAtUtc);
 }

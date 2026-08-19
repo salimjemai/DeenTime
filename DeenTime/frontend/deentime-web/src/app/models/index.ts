@@ -321,6 +321,23 @@ export interface QuranApiResponse<T> {
   data: T;
 }
 
+export interface ApiClientAccess {
+  id: string;
+  organizationId: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string[];
+  requestsPerMinute: number;
+  createdAtUtc: string;
+  lastUsedAtUtc?: string;
+  revokedAtUtc?: string;
+}
+
+export interface IssuedApiClient {
+  client: ApiClientAccess;
+  clientKey: string;
+}
+
 export interface HadithBook {
   id: number;
   slug: string;
