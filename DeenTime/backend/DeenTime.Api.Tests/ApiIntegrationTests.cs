@@ -6,12 +6,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Testcontainers.PostgreSql;
 using Xunit;
 using Xunit.Sdk;
 using DeenTime.Core.Entities;
 using DeenTime.Core.Enums;
 using DeenTime.Infrastructure;
+using DeenTime.Api.Services;
 
 namespace DeenTime.Api.Tests;
 
@@ -68,6 +70,14 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
                 ["SuperUser:Longitude"] = "-97.8177601",
                 ["SuperUser:TimezoneId"] = "America/Chicago"
             }));
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<PostalCodeResolver>();
+                services.AddSingleton(new PostalCodeResolver(new HttpClient(new PostalLookupHandler())
+                {
+                    BaseAddress = new Uri("https://postal.test/")
+                }));
+            });
         });
         client = factory.CreateClient();
         var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { email = "admin@deentime.test", password = Password });
@@ -99,6 +109,30 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         var version = await client.GetFromJsonAsync<JsonElement>("/api/version");
         Assert.Equal("20260819050000_RenameDefaultBranding", version.GetProperty("schemaVersion").GetString());
         Assert.False(string.IsNullOrWhiteSpace(version.GetProperty("apiVersion").GetString()));
+    }
+
+    [Fact]
+    public async Task US_zip_is_authoritative_when_prayer_criteria_are_saved()
+    {
+        var update = await client!.PutAsJsonAsync($"/api/v1/orgs/{organizationId}/criteria", new
+        {
+            organizationId,
+            zipCode = "78613",
+            method = "ISNA",
+            juristicMethodAsr = "Other",
+            latitude = 30.5052,
+            longitude = 30.5052,
+            timezoneId = "America/Chicago",
+            dstObserved = true,
+            minutesAfterZawal = 5,
+            minutesAfterMaghrib = 1,
+            khutbahTimeMinutes = 20
+        });
+        Assert.Equal(HttpStatusCode.NoContent, update.StatusCode);
+
+        var saved = await client!.GetFromJsonAsync<JsonElement>($"/api/v1/orgs/{organizationId}/criteria");
+        Assert.Equal(30.5052m, saved.GetProperty("latitude").GetDecimal());
+        Assert.Equal(-97.8203m, saved.GetProperty("longitude").GetDecimal());
     }
 
     [Fact]
@@ -290,5 +324,29 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         revokedRequest.Headers.Add("X-IqamaTime-Client-Key", key);
         var revoked = await publicClient.SendAsync(revokedRequest);
         Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
+    }
+
+    private sealed class PostalLookupHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            const string response = """
+                {
+                  "post code": "78613",
+                  "country": "United States",
+                  "places": [{
+                    "place name": "Cedar Park",
+                    "state": "Texas",
+                    "state abbreviation": "TX",
+                    "latitude": "30.5052",
+                    "longitude": "-97.8203"
+                  }]
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(response, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
     }
 }

@@ -9,8 +9,10 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 import { OrgsService } from '../../../services/orgs';
 import { AuthService } from '../../../services/auth';
+import { PostalCodeLocation } from '../../../models';
 
 @Component({
   selector: 'app-profile',
@@ -18,7 +20,7 @@ import { AuthService } from '../../../services/auth';
   imports: [
     ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatSelectModule, MatCheckboxModule,
-    MatProgressSpinnerModule, MatSnackBarModule, MatDividerModule
+    MatProgressSpinnerModule, MatSnackBarModule, MatDividerModule, MatIconModule
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.scss'
@@ -32,6 +34,9 @@ export class ProfileComponent implements OnInit {
   orgId   = this.auth.getOrgId() ?? '';
   loading = signal(false);
   saving  = signal(false);
+  resolvingLocation = signal(false);
+  resolvedLocation = signal<PostalCodeLocation | null>(null);
+  locationError = signal('');
 
   orgForm = this.fb.nonNullable.group({
     name:        ['', Validators.required],
@@ -43,19 +48,22 @@ export class ProfileComponent implements OnInit {
     zipCode:             [''],
     method:             ['ISNA'],
     juristicMethodAsr:  ['Other'],
-    latitude:           [0, Validators.required],
-    longitude:          [0, Validators.required],
+    latitude:           [0, [Validators.required, Validators.min(-90), Validators.max(90)]],
+    longitude:          [0, [Validators.required, Validators.min(-180), Validators.max(180)]],
     timezoneId:         ['America/Chicago'],
     dstObserved:        [true],
     dstBegins:          [''],
     dstEnds:            [''],
-    minutesAfterZawal:  [1],
-    minutesAfterMaghrib:[2],
-    khutbahTimeMinutes: [30]
+    minutesAfterZawal:  [5, [Validators.required, Validators.min(0), Validators.max(120)]],
+    minutesAfterMaghrib:[1, [Validators.required, Validators.min(0), Validators.max(120)]],
+    khutbahTimeMinutes: [20, [Validators.required, Validators.min(0), Validators.max(180)]]
   });
 
   methods = ['ISNA','MWL','Egyptian','Karachi','UmmAlQura','Gulf','Kuwait','Qatar','Tehran','Jafari'];
-  juristicMethods = ['Other','Hanafi'];
+  juristicMethods = [
+    { value: 'Other', label: 'Standard (Shafi‘i / Maliki / Hanbali)' },
+    { value: 'Hanafi', label: 'Hanafi' }
+  ];
   timezones = [
     { value: 'America/New_York', label: 'Eastern' },
     { value: 'America/Chicago', label: 'Central' },
@@ -93,6 +101,8 @@ export class ProfileComponent implements OnInit {
           minutesAfterMaghrib: org.criteria.minutesAfterMaghrib,
           khutbahTimeMinutes: org.criteria.khutbahTimeMinutes
         });
+      } else if (org.zipCode) {
+        this.criteriaForm.controls.zipCode.setValue(org.zipCode);
       }
       this.loading.set(false);
     });
@@ -103,11 +113,72 @@ export class ProfileComponent implements OnInit {
     this.saving.set(true);
     this.orgs.update(this.orgId, this.orgForm.getRawValue()).subscribe({
       next: () => { this.saving.set(false); this.snack.open('Saved', '', { duration: 2000 }); },
-      error: () => { this.saving.set(false); this.snack.open('Save failed', 'Dismiss', { duration: 3000 }); }
+      error: error => {
+        this.saving.set(false);
+        this.snack.open(this.apiErrorMessage(error, 'Organization could not be saved.'), 'Dismiss', { duration: 4500 });
+      }
     });
   }
 
+  private apiErrorMessage(error: any, fallback: string): string {
+    const validationErrors = error?.error?.errors as Record<string, string[]> | undefined;
+    const firstValidationError = validationErrors ? Object.values(validationErrors).flat()[0] : undefined;
+    return firstValidationError ?? error?.error?.detail ?? error?.error?.title ?? fallback;
+  }
+
   saveCriteria() {
+    if (this.criteriaForm.invalid) {
+      this.criteriaForm.markAllAsTouched();
+      this.snack.open('Check the prayer criteria fields', 'Dismiss', { duration: 3000 });
+      return;
+    }
+
+    const postalCode = this.criteriaForm.controls.zipCode.value.trim();
+    if (/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+      this.resolveLocation(true);
+      return;
+    }
+
+    this.persistCriteria();
+  }
+
+  lookupPostalCode() {
+    this.resolveLocation(false);
+  }
+
+  private resolveLocation(saveAfterResolution: boolean) {
+    const postalCode = this.criteriaForm.controls.zipCode.value.trim();
+    if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+      this.locationError.set('Enter a valid 5-digit U.S. ZIP code.');
+      if (saveAfterResolution) this.snack.open(this.locationError(), 'Dismiss', { duration: 3000 });
+      return;
+    }
+
+    this.resolvingLocation.set(true);
+    this.locationError.set('');
+    if (saveAfterResolution) this.saving.set(true);
+    this.orgs.resolveUsPostalCode(postalCode).subscribe({
+      next: location => {
+        this.resolvedLocation.set(location);
+        this.resolvingLocation.set(false);
+        this.criteriaForm.patchValue({
+          zipCode: location.postalCode,
+          latitude: location.latitude,
+          longitude: location.longitude
+        });
+        if (saveAfterResolution) this.persistCriteria();
+      },
+      error: error => {
+        this.resolvingLocation.set(false);
+        this.saving.set(false);
+        const message = error?.error?.message ?? error?.error?.title ?? 'Could not verify that ZIP code.';
+        this.locationError.set(message);
+        this.snack.open(message, 'Dismiss', { duration: 4000 });
+      }
+    });
+  }
+
+  private persistCriteria() {
     this.saving.set(true);
     const raw = this.criteriaForm.getRawValue();
     this.orgs.putCriteria(this.orgId, {
@@ -117,7 +188,10 @@ export class ProfileComponent implements OnInit {
       dstEnds: raw.dstEnds || undefined
     }).subscribe({
       next: () => { this.saving.set(false); this.snack.open('Criteria saved', '', { duration: 2000 }); },
-      error: () => { this.saving.set(false); this.snack.open('Save failed', 'Dismiss', { duration: 3000 }); }
+      error: error => {
+        this.saving.set(false);
+        this.snack.open(this.apiErrorMessage(error, 'Prayer criteria could not be saved.'), 'Dismiss', { duration: 4500 });
+      }
     });
   }
 
@@ -130,8 +204,10 @@ export class ProfileComponent implements OnInit {
         this.criteriaForm.reset({
           zipCode: '', method: 'ISNA', juristicMethodAsr: 'Other', latitude: 0, longitude: 0,
           timezoneId: 'America/Chicago', dstObserved: true, dstBegins: '', dstEnds: '',
-          minutesAfterZawal: 1, minutesAfterMaghrib: 2, khutbahTimeMinutes: 30
+          minutesAfterZawal: 5, minutesAfterMaghrib: 1, khutbahTimeMinutes: 20
         });
+        this.resolvedLocation.set(null);
+        this.locationError.set('');
         this.snack.open('Prayer criteria removed', '', { duration: 2500 });
       },
       error: () => { this.saving.set(false); this.snack.open('Could not remove criteria', 'Dismiss', { duration: 3000 }); }

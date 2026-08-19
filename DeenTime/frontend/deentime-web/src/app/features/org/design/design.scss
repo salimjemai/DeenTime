@@ -29,6 +29,8 @@ input[type='file'] { display: none; }
 .preview-heading { padding: 18px 18px 3px; font-size: .96rem; font-weight: 800; }
 .preview-date { display: flex; justify-content: space-between; gap: 10px; padding: 0 18px 15px; color: #7b8e80; font-size: .68rem; }
 .preview-date span:last-child { text-align: right; }
+.preview-source { display: flex; align-items: center; gap: 4px; margin: -9px 18px 13px; color: #78917e; font-size: .57rem; }
+.preview-source mat-icon { width: 13px; height: 13px; font-size: 13px; }
 .preview-partial-note { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin: 0 12px 12px; padding: 9px 10px; border: 1px solid #ead8ac; border-radius: 10px; background: #fff8e8; color: #796538; font-size: .62rem; line-height: 1.35; }
 .preview-partial-note mat-icon { width: 17px; height: 17px; color: #a57821; font-size: 17px; }
 .preview-partial-note strong { color: #654f20; }

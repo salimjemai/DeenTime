@@ -7,6 +7,7 @@ using DeenTime.Api.Responses.Pagination;
 using DeenTime.Api.Requests.Organizations;
 using DeenTime.Core.Enums;
 using DeenTime.Api.Authorization;
+using DeenTime.Api.Services;
 
 namespace DeenTime.Api.Controllers
 {
@@ -16,7 +17,12 @@ namespace DeenTime.Api.Controllers
 	public sealed class OrganizationsController : ControllerBase
 	{
 		private readonly AppDbContext _db;
-		public OrganizationsController(AppDbContext db) { _db = db; }
+		private readonly PostalCodeResolver _postalCodes;
+		public OrganizationsController(AppDbContext db, PostalCodeResolver postalCodes)
+		{
+			_db = db;
+			_postalCodes = postalCodes;
+		}
 
 		[HttpGet]
 		public async Task<IActionResult> List([FromQuery] string? search, [FromQuery] int page)
@@ -64,9 +70,41 @@ namespace DeenTime.Api.Controllers
 		}
 
 		[HttpPut("{id:guid}/criteria")]
-		public async Task<IActionResult> PutCriteria(Guid id, [FromBody] PrayerTimingCriteria input)
+		public async Task<IActionResult> PutCriteria(Guid id, [FromBody] PrayerTimingCriteria input, CancellationToken cancellationToken)
 		{
-			var existing = await _db.PrayerTimingCriteria.FirstOrDefaultAsync(c => c.OrganizationId == id);
+			if (!User.CanAccessOrganization(id)) return Forbid();
+
+			var normalizedUsPostalCode = PostalCodeResolver.NormalizeUsPostalCode(input.ZipCode);
+			if (normalizedUsPostalCode is not null)
+			{
+				PostalCodeLocation? location;
+				try
+				{
+					location = await _postalCodes.ResolveUsAsync(normalizedUsPostalCode, cancellationToken);
+				}
+				catch (HttpRequestException)
+				{
+					return Problem(
+						title: "Postal-code lookup is temporarily unavailable.",
+						detail: "Prayer criteria were not saved because the location could not be verified.",
+						statusCode: StatusCodes.Status503ServiceUnavailable);
+				}
+
+				if (location is null)
+				{
+					ModelState.AddModelError(nameof(input.ZipCode), "The U.S. ZIP code could not be found.");
+					return ValidationProblem(ModelState);
+				}
+
+				// A U.S. ZIP is the source of truth for the calculation location. This
+				// prevents a copied latitude (for example 30.5052) from being saved as
+				// a positive longitude and shifting every prayer by several hours.
+				input.ZipCode = location.PostalCode;
+				input.Latitude = location.Latitude;
+				input.Longitude = location.Longitude;
+			}
+
+			var existing = await _db.PrayerTimingCriteria.FirstOrDefaultAsync(c => c.OrganizationId == id, cancellationToken);
 			if (existing is null)
 			{
 				input.Id = Guid.NewGuid();
@@ -90,7 +128,7 @@ namespace DeenTime.Api.Controllers
 				existing.KhutbahTimeMinutes = input.KhutbahTimeMinutes;
 				existing.UpdatedAtUtc = DateTime.UtcNow;
 			}
-			await _db.SaveChangesAsync();
+			await _db.SaveChangesAsync(cancellationToken);
 			return NoContent();
 		}
 

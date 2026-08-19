@@ -361,7 +361,7 @@ export class ContentComponent implements OnInit {
   }
 
   hadithArabicFlipLabel() {
-    return this.language === 'ur' ? 'Flip to Urdu' : 'Flip to English';
+    return 'English';
   }
 
   toArabicNumerals(value: string | number | undefined) {

@@ -222,6 +222,13 @@ export class DesignComponent implements OnInit {
       : '';
   }
 
+  criteriaSource(): string {
+    const criteria = this.organization()?.criteria;
+    if (!criteria) return '';
+    const postalCode = criteria.zipCode ? `ZIP ${criteria.zipCode}` : `${criteria.latitude}, ${criteria.longitude}`;
+    return `${criteria.method} · ${postalCode} · ${criteria.timezoneId}`;
+  }
+
   formatTime(value: string | undefined): string {
     if (!value) return '—';
     const [hours, minutes] = value.split(':').map(Number);

@@ -80,6 +80,16 @@ export interface PrayerTimingCriteria {
   updatedAtUtc: string;
 }
 
+export interface PostalCodeLocation {
+  postalCode: string;
+  city: string;
+  state: string;
+  stateAbbreviation: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+}
+
 // ── Prayer Times ──────────────────────────────────────────────────────────────
 export interface PrayerTimesDto {
   date: string;       // YYYY-MM-DD

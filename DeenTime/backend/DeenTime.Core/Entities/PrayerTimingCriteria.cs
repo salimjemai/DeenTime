@@ -20,9 +20,9 @@ public sealed class PrayerTimingCriteria
     public DateOnly? DstBegins { get; set; }
     public DateOnly? DstEnds { get; set; }
     public string ZipCode { get; set; } = "";
-    public int MinutesAfterZawal { get; set; } = 1;
-    public int MinutesAfterMaghrib { get; set; } = 2;
-    public int KhutbahTimeMinutes { get; set; } = 30;
+    public int MinutesAfterZawal { get; set; } = 5;
+    public int MinutesAfterMaghrib { get; set; } = 1;
+    public int KhutbahTimeMinutes { get; set; } = 20;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public Organization? Organization { get; set; }
 }

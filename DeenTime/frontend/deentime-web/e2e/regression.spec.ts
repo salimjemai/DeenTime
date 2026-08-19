@@ -64,10 +64,10 @@ test.describe('IqamaTime browser regression matrix', () => {
     await expect(card.locator('.hadith-back header')).toContainText('سنن أبي داود');
     await expect(card.locator('.hadith-back header')).toContainText('الحديث رقم ١');
     await expect(card.locator('.hadith-back .grade')).toHaveText('صحيح');
-    await expect(card.locator('.hadith-back .flip-hint')).toContainText('Flip to English');
+    await expect(card.locator('.hadith-back .flip-hint')).toContainText('English');
     await expect(card).toHaveAttribute('aria-label', /الحديث رقم ١/);
     const arabicFaceText = await card.locator('.hadith-back').innerText();
-    expect(arabicFaceText.match(/[A-Za-z]+(?:\s+[A-Za-z]+)*/g) ?? []).toEqual(['Flip to English']);
+    expect(arabicFaceText.match(/[A-Za-z]+(?:\s+[A-Za-z]+)*/g) ?? []).toEqual(['English']);
 
     const longCard = page.locator('.hadith-flip-card').nth(2);
     const longText = longCard.locator('.hadith-front .hadith-scroll-area');

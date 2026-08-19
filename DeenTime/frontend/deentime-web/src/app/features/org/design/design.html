@@ -110,6 +110,9 @@
                 <span>{{ dateLabel() }}</span>
                 @if (display()!.hijri; as hijri) { <span>{{ hijri.formatted }}</span> }
               </div>
+              @if (criteriaSource()) {
+                <div class="preview-source"><mat-icon>location_on</mat-icon><span>{{ criteriaSource() }}</span></div>
+              }
               @if (!hasAdhanTimings()) {
                 <div class="preview-partial-note">
                   <mat-icon>info</mat-icon>

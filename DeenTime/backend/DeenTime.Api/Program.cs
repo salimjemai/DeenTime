@@ -73,6 +73,13 @@ b.Services.AddHttpClient<HadithProviderClient>((services, client) =>
     PooledConnectionLifetime = TimeSpan.FromMinutes(10)
   });
 
+b.Services.AddHttpClient<PostalCodeResolver>(client =>
+{
+  client.BaseAddress = new Uri("https://api.zippopotam.us/");
+  client.Timeout = TimeSpan.FromSeconds(10);
+  client.DefaultRequestHeaders.UserAgent.ParseAdd("IqamaTime/1.0");
+});
+
 b.Services.AddSingleton<IIslamicContentSyncQueue, IslamicContentSyncQueue>();
 b.Services.AddScoped<IslamicContentSyncService>();
 b.Services.AddHostedService<IslamicContentSyncWorker>();

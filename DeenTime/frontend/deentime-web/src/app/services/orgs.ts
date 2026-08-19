@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Organization, OrganizationReadiness, OrganizationUpdateRequest, PrayerTimingCriteria, PagedResult } from '../models';
+import { Organization, OrganizationReadiness, OrganizationUpdateRequest, PostalCodeLocation, PrayerTimingCriteria, PagedResult } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class OrgsService {
@@ -30,6 +30,10 @@ export class OrgsService {
 
   deleteCriteria(id: string) {
     return this.http.delete<void>(`${this.base}/api/v1/orgs/${id}/criteria`);
+  }
+
+  resolveUsPostalCode(postalCode: string) {
+    return this.http.get<PostalCodeLocation>(`${this.base}/api/v1/locations/postal-code/${encodeURIComponent(postalCode)}`);
   }
 
   readiness(id: string) {
