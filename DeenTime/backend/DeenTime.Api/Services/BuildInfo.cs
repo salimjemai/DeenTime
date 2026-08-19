@@ -10,7 +10,7 @@ public sealed record BuildInfo(
 
 public static class BuildInfoProvider
 {
-    public const string CurrentSchemaVersion = "20260819041212_AddDisplayTypography";
+    public const string CurrentSchemaVersion = "20260819050000_RenameDefaultBranding";
 
     public static BuildInfo Create(IConfiguration configuration)
     {

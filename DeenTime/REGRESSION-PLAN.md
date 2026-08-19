@@ -178,6 +178,73 @@ CI gate:
 - Public browser smoke test: TV, full widget, and compact widget render.
 - Public Content probes: capabilities 200, random Qur’an 200, Hadith books 200 with empty data, random Hadith 404 because no records are imported.
 
+## Display publishing and IqamaTime branding addendum
+
+The TV display, full website widget, and compact widget are three public products backed by one masjid schedule and one saved design. The following requirements are part of the regression fix, not deferred enhancements.
+
+### 1. Use “Adhan” consistently in public schedules
+
+- Change the visible “Start”/“Starts” label to **Adhan** on TV, full widget, compact widget, Design preview, Publish preview, and generated public schedule surfaces.
+- Keep Sunrise labeled Sunrise/Shuruq; it does not have an Iqama and must not be presented as a congregational prayer.
+- Preserve existing JSON/API field names for backward compatibility unless a versioned contract is introduced.
+
+Acceptance:
+
+- No active public template displays “Start” or “Starts” as the prayer-time column label.
+- TV, widget, and compact browser tests show Adhan and Iqama values for all applicable prayers.
+
+### 2. Add per-layout typography settings
+
+- Persist independent font-size/scale controls for TV, full widget, and compact widget, defaulting to 100% for existing organizations.
+- Permit a bounded, accessible range (recommended 75%–160%, in 5% steps) and validate it in both API and UI.
+- Provide a small curated font-family choice per layout using safe/self-hosted stacks; do not accept arbitrary CSS.
+- Show the controls with live previews and apply them through root CSS custom properties so every text role scales coherently without breaking the layout.
+
+Acceptance:
+
+- Changing one layout’s typography does not alter the other two.
+- Settings survive reload, appear in the public display payload, and are visibly applied at `/tv/{slug}`, `/w/{slug}`, and `/w2/{slug}`.
+- Minimum/maximum values remain readable without clipping at supported viewport sizes.
+
+### 3. Rename the user-facing product to IqamaTime
+
+- Replace user-visible **DeenTime** branding with **IqamaTime** in the Angular title/metadata, login, navigation shell, Help, Content copy, TV/widget/compact footers, embed titles, public capability documentation, and generated artifacts where the product name appears.
+- Update seeded/demo-facing default copy and migrate existing default footer copy where it is clearly system-generated.
+- Keep .NET namespaces, assembly names, database table names, and existing URLs stable unless a separate technical migration is required.
+
+Acceptance:
+
+- A user-facing text and metadata scan finds no unintended “DeenTime” product labels.
+- Existing links, API integrations, and persisted organization data continue to work.
+
+### 4. Make Design the single source for every public layout
+
+- The saved image and theme must flow from Design settings into the public display contract and be bound by TV, full widget, and compact widget.
+- Resolve stored media to an absolute, publicly reachable URL; refresh/cache-bust it after upload or replacement.
+- Apply a readable contrast overlay for background images in every theme and keep the selected theme’s root class consistent across all layouts.
+- Saving Design must refresh the preview from the saved server response, not only mutate local preview state.
+
+Acceptance:
+
+- Automated tests upload an image, select each theme, reload, and verify all three public layouts use the saved image URL, theme class, and typography values.
+- The image request returns 200 without an admin token and replacement images are not hidden by stale browser/CDN cache.
+
+### 5. Publish portable public URLs and a display discovery API
+
+- Keep the short, unauthenticated public routes `/tv/{slug}`, `/w/{slug}`, and `/w2/{slug}` for direct sharing and website embedding.
+- Make `GET /api/v1/publish/embed-code/{orgId}` return absolute HTTPS URLs and absolute iframe `src` attributes based on the configured public frontend origin (with forwarded-host fallback where appropriate).
+- Add an unauthenticated discovery contract such as `GET /public/organizations/{slug}/displays` that returns absolute TV, widget, and compact URLs, ready-to-copy iframe snippets, and documented supported query parameters.
+- Support only validated display parameters (for example locale, theme override, and bounded font scale where product policy allows); saved masjid settings remain the defaults. Do not permit arbitrary CSS or HTML parameters.
+- Ensure production frame/CSP headers intentionally allow embedding according to deployment policy, and HTML-encode organization names and iframe attributes.
+- Public display access must not require the Content API client token. Content/Qur’an/Hadith API credentials remain a separate scoped product.
+
+Acceptance:
+
+- Pasting either generated iframe into a page on a different origin loads IqamaTime successfully.
+- The sample code never contains `src="/w/..."` or `src="/w2/..."`; production output never contains localhost, and an `admin` path is used only when `admin` is genuinely the organization’s public slug.
+- Public URL discovery works without login, while admin settings remain protected.
+- Legacy IqamaTime URL aliases and redirects continue to work.
+
 ## Guardrails for implementation
 
 - Preserve existing user changes and database data.
