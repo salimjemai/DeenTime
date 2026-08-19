@@ -126,14 +126,31 @@
           <span>{{ ayah.reference }}</span>
           <span>Juz {{ ayah.juz }} · Page {{ ayah.page }}</span>
         </div>
+        <div class="reciter-picker">
+          <label for="quran-reciter"><span>Choose a reciter</span><small>Compare the same ayah in different voices.</small></label>
+          <div class="reciter-select-shell">
+            <mat-icon>record_voice_over</mat-icon>
+            <select id="quran-reciter" aria-label="Qur’an reciter" [(ngModel)]="selectedReciter" (change)="changeReciter()" [disabled]="reciterLoading() || reciters().length === 0">
+              @for (reciter of reciters(); track reciter.identifier) {
+                <option [value]="reciter.identifier">{{ reciter.englishName }}</option>
+              }
+            </select>
+            <mat-icon>expand_more</mat-icon>
+          </div>
+          <span class="reciter-count"><mat-icon>headphones</mat-icon>{{ reciters().length }} voices</span>
+        </div>
         <blockquote class="arabic-verse" dir="rtl">{{ ayah.arabic }}</blockquote>
         <p class="translation">{{ ayah.translation }}</p>
         <small class="attribution">{{ ayah.translator }}</small>
-        @if (ayah.audioUrl) {
-          <div class="audio-player">
+        @if (ayah.audioUrl || reciterLoading()) {
+          <div class="audio-player" [class.loading]="reciterLoading()" aria-live="polite">
             <span class="play-emblem"><mat-icon>graphic_eq</mat-icon></span>
-            <div><b>{{ ayah.reciter }}</b><small>Ayah recitation</small></div>
-            <audio controls preload="none" [src]="ayah.audioUrl"></audio>
+            <div><b>{{ reciterLoading() ? 'Loading selected voice…' : ayah.reciter }}</b><small>Choose a voice, then press play</small></div>
+            @if (reciterLoading()) {
+              <span class="audio-shimmer"></span>
+            } @else {
+              <audio controls preload="metadata" [src]="ayah.audioUrl"></audio>
+            }
           </div>
         }
       }
@@ -166,11 +183,14 @@
 
   <section class="hadith-browser">
     <header class="browser-heading">
-      <div><span class="section-kicker">HADITH EXPLORER</span><h3>Search across the local collection</h3><p>Fast, provider-independent search after one complete import.</p></div>
-      <div class="language-switch" aria-label="Hadith language">
-        <button [class.active]="language === 'en'" (click)="language = 'en'; searchHadith()">English</button>
-        <button [class.active]="language === 'ar'" (click)="language = 'ar'; searchHadith()">العربية</button>
-        <button [class.active]="language === 'ur'" (click)="language = 'ur'; searchHadith()">اردو</button>
+      <div><span class="section-kicker">HADITH EXPLORER</span><h3>Search, read, then flip</h3><p>Search in any available language, then turn every card between English and Arabic.</p></div>
+      <div class="language-filter">
+        <span>Search in</span>
+        <div class="language-switch" aria-label="Hadith search language">
+          <button [class.active]="language === 'en'" (click)="language = 'en'; searchHadith()">English</button>
+          <button [class.active]="language === 'ar'" (click)="language = 'ar'; searchHadith()">العربية</button>
+          <button [class.active]="language === 'ur'" (click)="language = 'ur'; searchHadith()">اردو</button>
+        </div>
       </div>
     </header>
     <div class="search-strip">
@@ -178,7 +198,7 @@
       <label class="search-box"><mat-icon>search</mat-icon><input [(ngModel)]="hadithSearch" (keyup.enter)="searchHadith()" placeholder="Search text or narrator…" /><button (click)="searchHadith()">Search</button></label>
       <button mat-stroked-button class="surprise-button" (click)="randomHadith()"><mat-icon>casino</mat-icon> Surprise me</button>
     </div>
-    <div class="result-summary"><span>{{ formatNumber(hadithTotal()) }} matching records</span><small>All available Arabic · English · Urdu fields preserved</small></div>
+    <div class="result-summary"><span>{{ formatNumber(hadithTotal()) }} matching records</span><small><mat-icon>360</mat-icon> Select a card to flip {{ hadithFrontLanguage() }} ↔ Arabic</small></div>
 
     @if (hadithLoading()) {
       <div class="hadith-loading"><mat-progress-bar mode="indeterminate" /></div>
@@ -187,12 +207,43 @@
     } @else {
       <div class="hadith-results">
         @for (hadith of hadiths(); track hadith.id) {
-          <article>
-            <header><span>{{ hadith.bookSlug.replaceAll('-', ' ') }}</span><span>No. {{ hadith.hadithNumber }}@if (hadith.chapterNumber) { · Chapter {{ hadith.chapterNumber }}}</span></header>
-            @if (hadithHeading(hadith)) {<h4 [dir]="isRtl() ? 'rtl' : 'ltr'">{{ hadithHeading(hadith) }}</h4>}
-            @if (hadithNarrator(hadith)) {<p class="narrator" [dir]="language === 'ur' ? 'rtl' : 'ltr'">{{ hadithNarrator(hadith) }}</p>}
-            <div class="hadith-copy" [class.rtl]="isRtl()" [dir]="isRtl() ? 'rtl' : 'ltr'" [innerHTML]="hadithText(hadith)"></div>
-            <footer>@if (hadith.status) {<span class="grade">{{ hadith.status }}</span>}<span>Source ID {{ hadith.id }}</span></footer>
+          <article class="hadith-flip-card" [class.flipped]="isHadithFlipped(hadith.id)" [class.not-flippable]="!canFlipHadith(hadith)"
+                   [attr.role]="canFlipHadith(hadith) ? 'button' : null" [attr.tabindex]="canFlipHadith(hadith) ? 0 : null"
+                   [attr.aria-label]="hadithCardLabel(hadith)" [attr.aria-pressed]="canFlipHadith(hadith) ? isHadithFlipped(hadith.id) : null"
+                   (click)="flipHadith(hadith)" (keydown.enter)="flipHadith(hadith)" (keydown.space)="$event.preventDefault(); flipHadith(hadith)">
+            <div class="hadith-card-inner">
+              <section class="hadith-face hadith-front" [attr.aria-hidden]="isHadithFlipped(hadith.id)">
+                <header><span>{{ hadith.bookSlug.replaceAll('-', ' ') }}</span><span>No. {{ hadith.hadithNumber }}@if (hadith.chapterNumber) { · Chapter {{ hadith.chapterNumber }}}</span></header>
+                <span class="face-language" [class.urdu]="hadithFrontIsRtl()">{{ hadithFrontLanguageNative() }}</span>
+                <div class="hadith-scroll-area" [class.rtl]="hadithFrontIsRtl()" [dir]="hadithFrontIsRtl() ? 'rtl' : 'ltr'" role="region" tabindex="0"
+                     [attr.aria-label]="hadithFrontLanguage() + ' Hadith text. Scroll to read the complete Hadith.'"
+                     (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                  @if (hadithFrontHeading(hadith)) {<h4 [class.urdu]="hadithFrontIsRtl()">{{ hadithFrontHeading(hadith) }}</h4>}
+                  @if (hadithFrontNarrator(hadith)) {<p class="narrator">{{ hadithFrontNarrator(hadith) }}</p>}
+                  <div class="hadith-copy" [class.rtl]="hadithFrontIsRtl()" [innerHTML]="hadithFrontText(hadith) || 'This translation is not available for this record.'"></div>
+                </div>
+                <footer>
+                  @if (hadith.status) {<span class="grade">{{ hadith.status }}</span>}
+                  @if (canFlipHadith(hadith)) {<span class="flip-hint"><mat-icon>360</mat-icon> العربية</span>} @else {<span>Source ID {{ hadith.id }}</span>}
+                </footer>
+              </section>
+              <section class="hadith-face hadith-back" dir="rtl" [attr.aria-hidden]="!isHadithFlipped(hadith.id)">
+                <header class="arabic-meta">
+                  <span>{{ hadithArabicBookName(hadith.bookSlug) }}</span>
+                  <span>الحديث رقم {{ toArabicNumerals(hadith.hadithNumber) }}@if (hadith.chapterNumber) { · الباب {{ toArabicNumerals(hadith.chapterNumber) }}}</span>
+                </header>
+                <span class="face-language">العربية</span>
+                <div class="hadith-scroll-area rtl" role="region" tabindex="0" aria-label="النص العربي الكامل للحديث. مرّر للقراءة."
+                     (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                  @if (hadith.headingArabic) {<h4>{{ hadith.headingArabic }}</h4>}
+                  <div class="hadith-copy rtl" [innerHTML]="hadith.hadithArabic || 'النص العربي غير متاح لهذا الحديث.'"></div>
+                </div>
+                <footer class="arabic-footer">
+                  @if (hadith.status) {<span class="grade">{{ hadithArabicGrade(hadith.status) }}</span>}
+                  <span class="flip-hint"><mat-icon>360</mat-icon> {{ hadithArabicFlipLabel() }}</span>
+                </footer>
+              </section>
+            </div>
           </article>
         }
       </div>

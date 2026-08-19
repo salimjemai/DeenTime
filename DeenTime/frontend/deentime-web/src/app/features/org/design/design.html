@@ -110,6 +110,13 @@
                 <span>{{ dateLabel() }}</span>
                 @if (display()!.hijri; as hijri) { <span>{{ hijri.formatted }}</span> }
               </div>
+              @if (!hasAdhanTimings()) {
+                <div class="preview-partial-note">
+                  <mat-icon>info</mat-icon>
+                  <span><strong>Saved Iqama times loaded.</strong> Complete Prayer Time Criteria to calculate the Adhan column.</span>
+                  <a [href]="'/org/' + orgId + '/profile'">Set up Adhan</a>
+                </div>
+              }
               <div class="preview-columns"><span>Prayer</span><span>Adhan</span><span>Iqama</span></div>
               <div class="preview-rows">
                 @for (prayer of prayers; track prayer.key) {

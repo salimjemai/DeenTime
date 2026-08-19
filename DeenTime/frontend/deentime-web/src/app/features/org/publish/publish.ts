@@ -11,7 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { PublishService } from '../../../services/publish';
+import { PublishEmbedCode, PublishService, resolvePublishEmbedCode } from '../../../services/publish';
 import { AuthService } from '../../../services/auth';
 import { PublishArtifact, PdfSize, PdfOrientation, TvDisplayConfig } from '../../../models';
 import { OrganizationReadiness } from '../../../models';
@@ -38,10 +38,11 @@ export class PublishComponent implements OnInit {
   private orgs = inject(OrgsService);
 
   orgId      = this.auth.getOrgId() ?? '';
+  readonly publicAppOrigin = window.location.origin;
   generating = signal(false);
   loading    = signal(false);
   artifacts  = signal<PublishArtifact[]>([]);
-  embedCode  = signal<{ widgetUrl: string; compactWidgetUrl: string; tvUrl: string; iframe: string; compactIframe: string; script: string } | null>(null);
+  embedCode  = signal<PublishEmbedCode | null>(null);
   tvLoading  = signal(true);
   savingTv   = signal(false);
   generatingKey = signal('');
@@ -72,8 +73,9 @@ export class PublishComponent implements OnInit {
       next: value => this.readiness.set(value),
       error: error => this.readinessError.set(apiErrorMessage(error, 'Could not load publishing readiness.'))
     });
-    this.svc.getEmbedCode(this.orgId).subscribe({
-      next: code => {
+    this.svc.getEmbedCode(this.orgId, this.publicAppOrigin).subscribe({
+      next: response => {
+        const code = resolvePublishEmbedCode(response, this.publicAppOrigin);
         this.embedCode.set(code);
         this.previewSources.set({
           tv: this.sanitizer.bypassSecurityTrustResourceUrl(code.tvUrl),

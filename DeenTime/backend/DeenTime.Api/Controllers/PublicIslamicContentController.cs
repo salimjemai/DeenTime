@@ -41,6 +41,7 @@ public sealed class PublicIslamicContentController(
             endpointTemplates = QuranProviderClient.EndpointTemplates,
             queryParameters = new[] { "type", "format", "language", "offset", "limit" },
             showcaseRandom = "/public/content/quran/showcase/random",
+            showcaseRecitation = "/public/content/quran/showcase/ayah/{number}/recitation/{edition}",
             behavior = "Provider-compatible JSON with local caching and stale-data fallback"
         },
         hadith = new
@@ -90,6 +91,56 @@ public sealed class PublicIslamicContentController(
         {
             var fallback = await quranClient.GetAsync(
                 "ayah/random/editions/quran-uthmani,en.sahih,ar.alafasy",
+                cancellationToken: cancellationToken);
+            SetSourceHeader(fallback.FromCache ? "cache" : "provider");
+            return new ContentResult
+            {
+                Content = fallback.Json,
+                ContentType = fallback.ContentType,
+                StatusCode = fallback.StatusCode
+            };
+        }
+        catch (IslamicContentProviderException exception)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = exception.Message });
+        }
+    }
+
+    [HttpGet("quran/showcase/ayah/{number:int}/recitation/{edition}")]
+    public async Task<IActionResult> CachedAyahRecitation(
+        int number,
+        string edition,
+        CancellationToken cancellationToken)
+    {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
+        if (number is < 1 or > 6236)
+            return BadRequest(new { error = "Ayah number must be between 1 and 6236." });
+
+        var identifier = edition.Trim();
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var audioIdentifier = await db.QuranEditions.AsNoTracking()
+            .Where(item => item.Identifier == identifier && item.Format == "audio")
+            .Select(item => item.Identifier)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (audioIdentifier is null)
+            return BadRequest(new { error = "Choose a valid audio edition from the IqamaTime Qur'an catalogue." });
+
+        var cachedPayload = await db.IslamicContentCacheEntries.AsNoTracking()
+            .Where(entry => entry.Provider == QuranProviderClient.ProviderName &&
+                            entry.CacheKey == $"/quran/{audioIdentifier}")
+            .Select(entry => entry.PayloadJson)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (cachedPayload is not null && FindAyah(cachedPayload, number) is { } cachedAyah)
+        {
+            SetSourceHeader("cache");
+            return Ok(new { code = 200, status = "OK", data = cachedAyah });
+        }
+
+        try
+        {
+            var fallback = await quranClient.GetAsync(
+                $"ayah/{number}/{audioIdentifier}",
                 cancellationToken: cancellationToken);
             SetSourceHeader(fallback.FromCache ? "cache" : "provider");
             return new ContentResult

@@ -21,15 +21,45 @@ import {
 } from '../../../models';
 
 interface VersePreview {
+  number?: number;
   reference: string;
   arabic?: string;
   translation?: string;
   translator?: string;
   audioUrl?: string;
   reciter?: string;
+  audioEdition?: string;
   juz?: number;
   page?: number;
 }
+
+const ARABIC_HADITH_BOOK_NAMES: Readonly<Record<string, string>> = {
+  'sahih-bukhari': 'صحيح البخاري',
+  'sahih-muslim': 'صحيح مسلم',
+  'al-tirmidhi': 'جامع الترمذي',
+  'abu-dawood': 'سنن أبي داود',
+  'ibn-e-majah': 'سنن ابن ماجه',
+  'sunan-nasai': 'سنن النسائي',
+  mishkat: 'مشكاة المصابيح',
+  'musnad-ahmad': 'مسند أحمد',
+  'al-silsila-sahiha': 'السلسلة الصحيحة'
+};
+
+const ARABIC_HADITH_GRADES: Readonly<Record<string, string>> = {
+  sahih: 'صحيح',
+  authentic: 'صحيح',
+  hasan: 'حسن',
+  good: 'حسن',
+  daeef: 'ضعيف',
+  daif: 'ضعيف',
+  weak: 'ضعيف',
+  mawdu: 'موضوع',
+  fabricated: 'موضوع',
+  marfu: 'مرفوع',
+  mawquf: 'موقوف',
+  mauquf: 'موقوف',
+  maqtu: 'مقطوع'
+};
 
 @Component({
   selector: 'app-content',
@@ -50,6 +80,7 @@ export class ContentComponent implements OnInit {
   private snack = inject(MatSnackBar);
   private destroyRef = inject(DestroyRef);
   private completionMarkers = new Map<string, string>();
+  private reciterRequest = 0;
 
   summary = signal<IslamicContentSummary | null>(null);
   editions = signal<QuranEdition[]>([]);
@@ -59,7 +90,9 @@ export class ContentComponent implements OnInit {
   hadithTotal = signal(0);
   loadingSummary = signal(true);
   verseLoading = signal(true);
+  reciterLoading = signal(false);
   hadithLoading = signal(false);
+  flippedHadithIds = signal<ReadonlySet<number>>(new Set<number>());
   syncing = signal<'' | 'quran' | 'hadith'>('');
   apiClients = signal<ApiClientAccess[]>([]);
   apiClientsLoading = signal(true);
@@ -67,6 +100,7 @@ export class ContentComponent implements OnInit {
   issuedClient = signal<{ name: string; key: string } | null>(null);
 
   selectedBook = '';
+  selectedReciter = 'ar.alafasy';
   hadithSearch = '';
   language: 'en' | 'ar' | 'ur' = 'en';
   apiClientName = '';
@@ -80,11 +114,40 @@ export class ContentComponent implements OnInit {
   textPercent = computed(() => this.editionPercent(this.summary()?.quran.textEditionCount));
   audioPercent = computed(() => this.editionPercent(this.summary()?.quran.audioEditionCount));
   additionalLanguages = computed(() => Math.max(0, (this.summary()?.quran.languageCount ?? 0) - 12));
+  reciters = computed(() => {
+    const priority = new Map([
+      'ar.alafasy',
+      'ar.abdurrahmaansudais',
+      'ar.abdulsamad',
+      'ar.husary',
+      'ar.minshawi',
+      'ar.mahermuaiqly',
+      'ar.shaatree'
+    ].map((identifier, index) => [identifier, index]));
+    const ordered = this.editions()
+      .filter(edition => edition.format === 'audio' && edition.language === 'ar')
+      .sort((left, right) => {
+        const leftPriority = priority.get(left.identifier) ?? Number.MAX_SAFE_INTEGER;
+        const rightPriority = priority.get(right.identifier) ?? Number.MAX_SAFE_INTEGER;
+        return leftPriority - rightPriority || left.englishName.localeCompare(right.englishName);
+      });
+    const seenNames = new Set<string>();
+    return ordered.filter(edition => {
+      const name = edition.englishName.trim().toLocaleLowerCase();
+      if (seenNames.has(name)) return false;
+      seenNames.add(name);
+      return true;
+    });
+  });
 
   apiExamples = [
     {
       label: 'Random ayah · Arabic + English + audio',
       path: '/public/content/quran/ayah/random/editions/quran-uthmani,en.sahih,ar.alafasy'
+    },
+    {
+      label: 'Reciter sample for one ayah',
+      path: '/public/content/quran/showcase/ayah/1/recitation/ar.alafasy'
     },
     { label: 'Complete Qur’an edition', path: '/public/content/quran/quran/en.sahih' },
     { label: 'Search the Qur’an', path: '/public/content/quran/search/mercy/all/en?limit=20' },
@@ -127,7 +190,13 @@ export class ContentComponent implements OnInit {
 
   loadEditions() {
     this.content.quranEditions().subscribe({
-      next: response => this.editions.set(response.data),
+      next: response => {
+        this.editions.set(response.data);
+        const available = this.reciters();
+        if (available.length && !available.some(reciter => reciter.identifier === this.selectedReciter)) {
+          this.selectedReciter = available[0].identifier;
+        }
+      },
       error: () => this.editions.set([])
     });
   }
@@ -168,12 +237,16 @@ export class ContentComponent implements OnInit {
   }
 
   loadRandomAyah() {
+    this.reciterRequest += 1;
     this.verseLoading.set(true);
+    this.reciterLoading.set(false);
     this.content.randomAyah().subscribe({
       next: response => {
         const items = Array.isArray(response.data) ? response.data : [response.data];
-        this.verse.set(this.toVersePreview(items));
+        const preview = this.toVersePreview(items);
+        this.verse.set(preview);
         this.verseLoading.set(false);
+        if (preview.audioEdition !== this.selectedReciter) this.loadReciterSample(false);
       },
       error: error => {
         this.verseLoading.set(false);
@@ -194,6 +267,7 @@ export class ContentComponent implements OnInit {
       next: response => {
         this.hadiths.set(response.items);
         this.hadithTotal.set(response.total);
+        this.flippedHadithIds.set(new Set<number>());
         this.hadithLoading.set(false);
       },
       error: () => {
@@ -210,6 +284,7 @@ export class ContentComponent implements OnInit {
       next: response => {
         this.hadiths.set([response.data]);
         this.hadithTotal.set(1);
+        this.flippedHadithIds.set(new Set<number>());
         this.hadithLoading.set(false);
       },
       error: error => {
@@ -219,19 +294,80 @@ export class ContentComponent implements OnInit {
     });
   }
 
-  hadithText(record: HadithRecord) {
-    return this.language === 'ar' ? record.hadithArabic : this.language === 'ur' ? record.hadithUrdu : record.hadithEnglish;
+  changeReciter() {
+    this.loadReciterSample(true);
   }
 
-  hadithHeading(record: HadithRecord) {
-    return this.language === 'ar' ? record.headingArabic : this.language === 'ur' ? record.headingUrdu : record.headingEnglish;
+  hadithFrontLanguage() {
+    return this.language === 'ur' ? 'Urdu' : 'English';
   }
 
-  hadithNarrator(record: HadithRecord) {
+  hadithFrontLanguageNative() {
+    return this.language === 'ur' ? 'اردو' : 'English';
+  }
+
+  hadithFrontText(record: HadithRecord) {
+    return this.language === 'ur' ? record.hadithUrdu : record.hadithEnglish;
+  }
+
+  hadithFrontHeading(record: HadithRecord) {
+    return this.language === 'ur' ? record.headingUrdu : record.headingEnglish;
+  }
+
+  hadithFrontNarrator(record: HadithRecord) {
     return this.language === 'ur' ? record.urduNarrator : record.englishNarrator;
   }
 
-  isRtl() { return this.language === 'ar' || this.language === 'ur'; }
+  hadithFrontIsRtl() {
+    return this.language === 'ur';
+  }
+
+  canFlipHadith(record: HadithRecord) {
+    return !!this.hadithFrontText(record)?.trim() && !!record.hadithArabic?.trim();
+  }
+
+  isHadithFlipped(id: number) {
+    return this.flippedHadithIds().has(id);
+  }
+
+  flipHadith(record: HadithRecord) {
+    if (!this.canFlipHadith(record)) return;
+    this.flippedHadithIds.update(ids => {
+      const next = new Set(ids);
+      if (next.has(record.id)) next.delete(record.id);
+      else next.add(record.id);
+      return next;
+    });
+  }
+
+  hadithCardLabel(record: HadithRecord) {
+    if (!this.canFlipHadith(record)) return `Hadith ${record.hadithNumber}`;
+    if (this.isHadithFlipped(record.id)) {
+      return `الحديث رقم ${this.toArabicNumerals(record.hadithNumber)}: ${this.hadithArabicFlipLabel()}`;
+    }
+    return `Hadith ${record.hadithNumber}: show Arabic`;
+  }
+
+  hadithArabicBookName(bookSlug: string) {
+    return ARABIC_HADITH_BOOK_NAMES[bookSlug.trim().toLowerCase()] ?? 'كتاب الحديث';
+  }
+
+  hadithArabicGrade(status: string) {
+    const key = status
+      .trim()
+      .toLowerCase()
+      .replace(/[`'’ʼ\-\s]/g, '');
+    return ARABIC_HADITH_GRADES[key] ?? 'غير مصنّف';
+  }
+
+  hadithArabicFlipLabel() {
+    return this.language === 'ur' ? 'Flip to Urdu' : 'Flip to English';
+  }
+
+  toArabicNumerals(value: string | number | undefined) {
+    if (value === undefined) return '';
+    return String(value).replace(/\d/g, digit => '٠١٢٣٤٥٦٧٨٩'[Number(digit)]);
+  }
 
   stateLabel(state?: IslamicContentSyncState) {
     if (!state) return 'Not synchronized';
@@ -340,18 +476,48 @@ export class ContentComponent implements OnInit {
 
   clientStatus(client: ApiClientAccess) { return client.revokedAtUtc ? 'Revoked' : 'Active'; }
 
+  private loadReciterSample(notifyOnError: boolean) {
+    const currentVerse = this.verse();
+    if (!currentVerse?.number || !this.selectedReciter) return;
+
+    const requestId = ++this.reciterRequest;
+    const verseNumber = currentVerse.number;
+    const edition = this.selectedReciter;
+    this.reciterLoading.set(true);
+    this.content.ayahRecitation(verseNumber, edition).subscribe({
+      next: response => {
+        if (requestId !== this.reciterRequest || this.verse()?.number !== verseNumber || this.selectedReciter !== edition) return;
+        this.verse.update(verse => verse ? {
+          ...verse,
+          audioUrl: response.data.audio,
+          reciter: response.data.edition.englishName,
+          audioEdition: response.data.edition.identifier
+        } : verse);
+        this.reciterLoading.set(false);
+      },
+      error: error => {
+        if (requestId !== this.reciterRequest) return;
+        this.reciterLoading.set(false);
+        this.selectedReciter = this.verse()?.audioEdition ?? this.selectedReciter;
+        if (notifyOnError) this.notifyError(error, 'Could not load that reciter sample.');
+      }
+    });
+  }
+
   private toVersePreview(items: QuranAyah[]): VersePreview {
     const arabic = items.find(item => item.edition?.format === 'text' && item.edition?.language === 'ar');
     const translation = items.find(item => item.edition?.format === 'text' && item.edition?.language === 'en');
     const audio = items.find(item => item.edition?.format === 'audio');
     const anchor = arabic ?? translation ?? audio;
     return {
+      number: anchor?.number,
       reference: anchor ? `${anchor.surah.englishName} · ${anchor.surah.number}:${anchor.numberInSurah}` : 'Random ayah',
       arabic: arabic?.text,
       translation: translation?.text,
       translator: translation?.edition.englishName,
       audioUrl: audio?.audio,
       reciter: audio?.edition.englishName,
+      audioEdition: audio?.edition.identifier,
       juz: anchor?.juz,
       page: anchor?.page
     };

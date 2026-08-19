@@ -44,12 +44,14 @@ public sealed class PublicController : ControllerBase
             .Include(o => o.Design)
             .FirstOrDefaultAsync(o => o.Slug == slug);
 
-        if (org?.Criteria is null) return NotFound();
+        if (org is null) return NotFound();
 
-        var timezone = TimeZoneInfo.FindSystemTimeZoneById(org.Criteria.TimezoneId);
+        var timezone = org.Criteria is null
+            ? TimeZoneInfo.Utc
+            : TimeZoneInfo.FindSystemTimeZoneById(org.Criteria.TimezoneId);
         var localNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, timezone);
         var date = DateOnly.FromDateTime(localNow);
-        var timings = _calculator.Compute(org.Criteria, date);
+        var timings = org.Criteria is null ? null : _calculator.Compute(org.Criteria, date);
 
         var iqamaHistory = await _db.IqamaEntries
             .AsNoTracking()
@@ -61,15 +63,21 @@ public sealed class PublicController : ControllerBase
             .Select(group => group.Last())
             .OrderBy(i => i.Time)
             .ThenBy(i => i.Salah)
-            .Select(i => new
+            .Select(i =>
             {
-                salah = i.Salah.ToString(),
-                time = ResolveIqamaTime(i, timings).ToString("HH:mm"),
-                salahTime = i.Salah.ToString().StartsWith("Jumuah", StringComparison.Ordinal)
-                    ? ResolveIqamaTime(i, timings).AddMinutes(org.Criteria.KhutbahTimeMinutes).ToString("HH:mm")
-                    : null,
-                note = i.OffsetMinutes.HasValue ? $"+{i.OffsetMinutes} minutes" : i.Note,
-                effectiveDate = i.Date
+                var resolvedTime = ResolveIqamaTime(i, timings);
+                var isJumuah = i.Salah.ToString().StartsWith("Jumuah", StringComparison.Ordinal);
+                return new
+                {
+                    salah = i.Salah.ToString(),
+                    time = resolvedTime?.ToString("HH:mm"),
+                    salahTime = isJumuah && resolvedTime.HasValue
+                        ? resolvedTime.Value.AddMinutes(org.Criteria?.KhutbahTimeMinutes ?? 30).ToString("HH:mm")
+                        : null,
+                    offsetMinutes = i.OffsetMinutes,
+                    note = i.OffsetMinutes.HasValue ? $"+{i.OffsetMinutes} minutes" : i.Note,
+                    effectiveDate = i.Date
+                };
             })
             .ToArray();
 
@@ -111,7 +119,7 @@ public sealed class PublicController : ControllerBase
         {
             organization = new { org.Name, org.Slug, org.AddressLine, org.City, org.State },
             date,
-            timezoneId = org.Criteria.TimezoneId,
+            timezoneId = org.Criteria?.TimezoneId ?? TimeZoneInfo.Utc.Id,
             timings,
             iqama,
             monthlyPdfUrl,
@@ -290,9 +298,10 @@ public sealed class PublicController : ControllerBase
         }
     }
 
-    private static TimeOnly ResolveIqamaTime(IqamaEntry entry, PrayerTimesDto timings)
+    private static TimeOnly? ResolveIqamaTime(IqamaEntry entry, PrayerTimesDto? timings)
     {
         if (!entry.OffsetMinutes.HasValue) return entry.Time;
+        if (timings is null) return null;
         var prayerStart = entry.Salah switch
         {
             DeenTime.Core.Enums.SalahType.Fajr => timings.Fajr,

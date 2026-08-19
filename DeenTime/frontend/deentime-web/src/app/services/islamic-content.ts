@@ -51,6 +51,11 @@ export class IslamicContentService {
       `${this.base}/public/content/quran/showcase/random`);
   }
 
+  ayahRecitation(number: number, edition: string) {
+    return this.http.get<QuranApiResponse<QuranAyah>>(
+      `${this.base}/public/content/quran/showcase/ayah/${number}/recitation/${encodeURIComponent(edition)}`);
+  }
+
   hadithBooks() {
     return this.http.get<{ data: HadithBook[]; total: number }>(
       `${this.base}/public/content/hadith/books`);

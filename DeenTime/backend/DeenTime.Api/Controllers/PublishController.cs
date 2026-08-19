@@ -23,15 +23,16 @@ namespace DeenTime.Api.Controllers
 		public PublishController(AppDbContext db, IConfiguration configuration, IWebHostEnvironment environment) { _db = db; _configuration = configuration; _environment = environment; }
 
 		[HttpGet("embed-code/{orgId:guid}")]
-		public async Task<IActionResult> EmbedCode(Guid orgId)
+		public async Task<IActionResult> EmbedCode(Guid orgId, [FromQuery] string? publicOrigin = null)
 		{
 			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			var org = await _db.Organizations.AsNoTracking().FirstOrDefaultAsync(o => o.Id == orgId);
 			if (org is null) return NotFound();
 
-			var widgetUrl = PublicUrl($"/w/{Uri.EscapeDataString(org.Slug)}");
-			var compactWidgetUrl = PublicUrl($"/w2/{Uri.EscapeDataString(org.Slug)}");
-			var tvUrl = PublicUrl($"/tv/{Uri.EscapeDataString(org.Slug)}");
+			var origin = PublicOrigin(publicOrigin);
+			var widgetUrl = PublicUrl(origin, $"/w/{Uri.EscapeDataString(org.Slug)}");
+			var compactWidgetUrl = PublicUrl(origin, $"/w2/{Uri.EscapeDataString(org.Slug)}");
+			var tvUrl = PublicUrl(origin, $"/tv/{Uri.EscapeDataString(org.Slug)}");
 			var encodedName = WebUtility.HtmlEncode(org.Name);
 			var encodedTitle = WebUtility.HtmlEncode($"IqamaTime · {org.Name} prayer times");
 			var iframe = $"<iframe src=\"{WebUtility.HtmlEncode(widgetUrl)}\" title=\"{encodedTitle}\" width=\"420\" height=\"900\" loading=\"lazy\" style=\"max-width:100%;border:0\"></iframe>";
@@ -124,15 +125,20 @@ namespace DeenTime.Api.Controllers
 			return Redirect(a.StorageUrl);
 		}
 
-		private string PublicUrl(string path)
+		private Uri PublicOrigin(string? requestedOrigin)
 		{
-			var configured = _configuration["Frontend:PublicBaseUrl"]?.TrimEnd('/');
-			if (!Uri.TryCreate(configured, UriKind.Absolute, out var baseUri) ||
+			var candidate = string.IsNullOrWhiteSpace(requestedOrigin)
+				? _configuration["Frontend:PublicBaseUrl"]
+				: requestedOrigin;
+			if (!Uri.TryCreate(candidate?.TrimEnd('/'), UriKind.Absolute, out var baseUri) ||
 				baseUri.Scheme is not ("http" or "https"))
-				throw new InvalidOperationException("Frontend:PublicBaseUrl must be an absolute http(s) URL.");
+				throw new InvalidOperationException("The public app address must be an absolute http(s) URL.");
 			if (!_environment.IsDevelopment() && (baseUri.Scheme != Uri.UriSchemeHttps || baseUri.Host is "localhost" or "127.0.0.1" or "::1"))
 				throw new InvalidOperationException("Production public display URLs must use a non-local HTTPS origin.");
-			return new Uri(baseUri, path.TrimStart('/')).ToString();
+			return new Uri(baseUri.GetLeftPart(UriPartial.Authority) + "/");
 		}
+
+		private static string PublicUrl(Uri origin, string path) =>
+			new Uri(origin, path.TrimStart('/')).AbsoluteUri;
 	}
 }

@@ -70,4 +70,21 @@ describe('WidgetComponent typography', () => {
       locale: 'ur'
     });
   });
+
+  it('keeps fixed and offset Iqama values visible while Adhan criteria are incomplete', () => {
+    const full = create('full');
+    full.component.display.set({
+      ...display,
+      timings: undefined,
+      iqama: [
+        { salah: 'Fajr', time: '06:15' },
+        { salah: 'Maghrib', offsetMinutes: 5 }
+      ]
+    });
+    full.component.timings.set(null);
+
+    expect(full.component.timeFor('fajr')).toBe('—');
+    expect(full.component.iqamaFor('Fajr')).toBe('6:15');
+    expect(full.component.iqamaFor('Maghrib')).toBe('+5 min');
+  });
 });

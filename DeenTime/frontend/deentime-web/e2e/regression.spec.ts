@@ -49,6 +49,65 @@ test.describe('IqamaTime browser regression matrix', () => {
     expect(consoleErrors, consoleErrors.join('\n')).toEqual([]);
   });
 
+  test('Hadith cards flip and Qur’an reciters can be previewed', async ({ page }) => {
+    await useApi(page);
+    await signIn(page);
+    await page.locator('mat-nav-list').getByRole('link', { name: 'Content', exact: true }).click();
+
+    const card = page.locator('.hadith-flip-card').first();
+    await expect(card).toBeVisible();
+    await expect(card).toHaveAttribute('aria-pressed', 'false');
+    await card.locator('.hadith-front .flip-hint').click();
+    await expect(card).toHaveClass(/flipped/);
+    await expect(card).toHaveAttribute('aria-pressed', 'true');
+    await expect(card.locator('.hadith-back')).toHaveAttribute('aria-hidden', 'false');
+    await expect(card.locator('.hadith-back header')).toContainText('سنن أبي داود');
+    await expect(card.locator('.hadith-back header')).toContainText('الحديث رقم ١');
+    await expect(card.locator('.hadith-back .grade')).toHaveText('صحيح');
+    await expect(card.locator('.hadith-back .flip-hint')).toContainText('Flip to English');
+    await expect(card).toHaveAttribute('aria-label', /الحديث رقم ١/);
+    const arabicFaceText = await card.locator('.hadith-back').innerText();
+    expect(arabicFaceText.match(/[A-Za-z]+(?:\s+[A-Za-z]+)*/g) ?? []).toEqual(['Flip to English']);
+
+    const longCard = page.locator('.hadith-flip-card').nth(2);
+    const longText = longCard.locator('.hadith-front .hadith-scroll-area');
+    await expect(longText).toHaveCSS('overflow-y', 'auto');
+    const scrollMetrics = await longText.evaluate(element => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight
+    }));
+    expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight);
+    await longText.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    await expect(longCard).not.toHaveClass(/flipped/);
+
+    await page.getByRole('button', { name: 'اردو', exact: true }).click();
+    await expect(page.locator('.hadith-front .face-language').first()).toHaveText('اردو');
+
+    const reciter = page.getByLabel('Qur’an reciter');
+    await expect(reciter).toBeVisible();
+    const choices = await reciter.locator('option').evaluateAll(options =>
+      options.map(option => (option as HTMLOptionElement).value));
+    expect(choices.length).toBeGreaterThan(10);
+    const current = await reciter.inputValue();
+    const alternative = choices.find(choice => choice !== current);
+    expect(alternative).toBeTruthy();
+
+    const sample = page.waitForResponse(response =>
+      response.url().includes('/quran/showcase/ayah/') &&
+      response.url().includes('/recitation/') &&
+      response.ok());
+    await reciter.selectOption(alternative!);
+    await sample;
+    await expect(page.locator('.audio-player audio')).toHaveAttribute('src', /^https?:\/\//);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileBounds = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth
+    }));
+    expect(mobileBounds.scrollWidth).toBeLessThanOrEqual(mobileBounds.clientWidth + 1);
+  });
+
   test('all six organization tabs show their live contract state', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
@@ -180,7 +239,7 @@ test.describe('IqamaTime browser regression matrix', () => {
     }
 
     await page.goto(`${webOrigin}/org/${payload.orgId}/publish`);
-    await expect(page.locator('code').filter({ hasText: 'http://127.0.0.1:14200/w/' }).first()).toBeVisible();
+    await expect(page.locator('code').filter({ hasText: `${webOrigin}/w/` }).first()).toBeVisible();
     await expect(page.locator('code').filter({ hasText: 'src="/w/' })).toHaveCount(0);
   });
 });

@@ -203,8 +203,8 @@ export interface PublicDisplay {
   };
   date: string;
   timezoneId: string;
-  timings: PrayerTimesDto;
-  iqama: { salah: string; time: string; salahTime?: string; note?: string; effectiveDate?: string }[];
+  timings?: PrayerTimesDto;
+  iqama: { salah: string; time?: string; salahTime?: string; offsetMinutes?: number; note?: string; effectiveDate?: string }[];
   monthlyPdfUrl?: string;
   design?: {
     headerImageUrl?: string;

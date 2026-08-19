@@ -25,6 +25,10 @@
 .embed-options mat-icon { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px; color: #43805a; font-size: 18px; }
 .embed-options strong { color: #31523a; }
 .embed-options code { padding: 2px 5px; border-radius: 5px; background: #e4efe6; color: #295336; font-size: .68rem; }
+.dynamic-origin-note { display: flex; align-items: center; gap: 9px; margin-top: 10px; padding: 11px 13px; border: 1px solid #cfe0eb; border-radius: 11px; background: #f2f8fc; color: #526d7b; font-size: .72rem; line-height: 1.5; }
+.dynamic-origin-note mat-icon { flex: 0 0 auto; width: 18px; height: 18px; color: #27708e; font-size: 18px; }
+.dynamic-origin-note strong { color: #244e62; }
+.dynamic-origin-note code { padding: 2px 5px; border-radius: 5px; background: #e1eef5; color: #20536c; font-size: .68rem; }
 .preview-card { overflow: hidden; background: linear-gradient(145deg, #f5f9fb, #fff); }
 .preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 20px 0 10px; }
 .preview-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #dce6e0; border-radius: 13px; background: #edf3ef; }

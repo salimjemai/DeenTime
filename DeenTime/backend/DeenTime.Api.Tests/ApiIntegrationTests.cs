@@ -5,9 +5,13 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 using Xunit;
 using Xunit.Sdk;
+using DeenTime.Core.Entities;
+using DeenTime.Core.Enums;
+using DeenTime.Infrastructure;
 
 namespace DeenTime.Api.Tests;
 
@@ -109,6 +113,12 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Contains("title=\"IqamaTime", iframe);
         Assert.Contains("Integration Mosque prayer times", iframe);
         Assert.Contains("Integration Mosque", WebUtility.HtmlDecode(iframe));
+
+        var dynamicEmbed = await client!.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/publish/embed-code/{organizationId}?publicOrigin=https%3A%2F%2Fiqamatime.example");
+        var dynamicIframe = dynamicEmbed.GetProperty("iframe").GetString()!;
+        Assert.Contains("src=\"https://iqamatime.example/w/", dynamicIframe);
+        Assert.DoesNotContain("public.deentime.test", dynamicIframe);
     }
 
     [Fact]
@@ -197,12 +207,58 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Public_display_keeps_saved_iqama_visible_before_adhan_criteria_are_configured()
+    {
+        var partialOrganizationId = Guid.NewGuid();
+        const string partialSlug = "partial-schedule";
+        await using (var scope = factory!.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Organizations.Add(new Organization
+            {
+                Id = partialOrganizationId,
+                Slug = partialSlug,
+                Name = "Partial Schedule Mosque"
+            });
+            var effectiveDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+            db.IqamaEntries.AddRange(
+                new IqamaEntry
+                {
+                    Id = Guid.NewGuid(), OrganizationId = partialOrganizationId, Date = effectiveDate,
+                    Salah = SalahType.Fajr, Time = new TimeOnly(6, 15)
+                },
+                new IqamaEntry
+                {
+                    Id = Guid.NewGuid(), OrganizationId = partialOrganizationId, Date = effectiveDate,
+                    Salah = SalahType.Maghrib, OffsetMinutes = 5
+                });
+            await db.SaveChangesAsync();
+        }
+
+        using var publicClient = factory!.CreateClient();
+        var display = await publicClient.GetFromJsonAsync<JsonElement>($"/public/display/{partialSlug}");
+        Assert.Equal(JsonValueKind.Null, display.GetProperty("timings").ValueKind);
+        var iqama = display.GetProperty("iqama").EnumerateArray().ToArray();
+        var fajr = iqama.Single(item => item.GetProperty("salah").GetString() == "Fajr");
+        var maghrib = iqama.Single(item => item.GetProperty("salah").GetString() == "Maghrib");
+        Assert.Equal("06:15", fajr.GetProperty("time").GetString());
+        Assert.Equal(JsonValueKind.Null, maghrib.GetProperty("time").ValueKind);
+        Assert.Equal(5, maghrib.GetProperty("offsetMinutes").GetInt32());
+    }
+
+    [Fact]
     public async Task Client_credentials_are_scoped_metered_and_revocable()
     {
         using var publicClient = factory!.CreateClient();
-        Assert.Equal(HttpStatusCode.OK, (await publicClient.GetAsync("/public/content/capabilities")).StatusCode);
+        var capabilities = await publicClient.GetFromJsonAsync<JsonElement>("/public/content/capabilities");
+        Assert.Equal(
+            "/public/content/quran/showcase/ayah/{number}/recitation/{edition}",
+            capabilities.GetProperty("quran").GetProperty("showcaseRecitation").GetString());
         Assert.Equal(HttpStatusCode.Unauthorized, (await publicClient.GetAsync("/public/content/hadith/books")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client!.GetAsync("/public/content/hadith/books")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await client.GetAsync("/public/content/quran/showcase/ayah/0/recitation/ar.alafasy")).StatusCode);
 
         var create = await client.PostAsJsonAsync($"/api/v1/orgs/{organizationId}/api-clients", new
         {

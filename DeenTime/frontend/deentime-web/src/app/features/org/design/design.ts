@@ -12,8 +12,10 @@ import { DesignService } from '../../../services/design';
 import { AuthService } from '../../../services/auth';
 import { OrgsService } from '../../../services/orgs';
 import { PublicDisplayService } from '../../../services/public-display';
-import { FontFamily, PrayerTimesDto, PublicDisplay } from '../../../models';
-import { forkJoin } from 'rxjs';
+import { IqamaService } from '../../../services/iqama';
+import { TimingsService } from '../../../services/timings';
+import { FontFamily, IqamaEntry, Organization, PrayerTimesDto, PublicDisplay } from '../../../models';
+import { catchError, forkJoin, map, of } from 'rxjs';
 
 @Component({
   selector: 'app-design',
@@ -30,6 +32,8 @@ export class DesignComponent implements OnInit {
   private auth  = inject(AuthService);
   private orgs  = inject(OrgsService);
   private publicDisplay = inject(PublicDisplayService);
+  private iqama = inject(IqamaService);
+  private timings = inject(TimingsService);
   private snack = inject(MatSnackBar);
   private fb    = inject(FormBuilder);
 
@@ -40,6 +44,7 @@ export class DesignComponent implements OnInit {
   previewLoading = signal(true);
   previewError = signal(false);
   display = signal<PublicDisplay | null>(null);
+  organization = signal<Organization | null>(null);
   orgSlug = signal('');
   selectedFile: File | null = null;
 
@@ -101,23 +106,87 @@ export class DesignComponent implements OnInit {
 
     this.orgs.get(this.orgId).subscribe({
       next: organization => {
+        this.organization.set(organization);
         this.orgSlug.set(organization.slug);
-        this.publicDisplay.get(organization.slug).subscribe({
-          next: display => {
-            this.display.set(display);
-            this.previewLoading.set(false);
-          },
-          error: () => {
-            this.previewError.set(true);
-            this.previewLoading.set(false);
-          }
-        });
+        this.loadPreview(organization);
       },
       error: () => {
         this.previewError.set(true);
         this.previewLoading.set(false);
       }
     });
+  }
+
+  private loadPreview(organization: Organization) {
+    this.previewLoading.set(true);
+    this.previewError.set(false);
+    this.previewFor(organization).subscribe({
+      next: display => {
+        this.display.set(display);
+        this.previewLoading.set(false);
+      },
+      error: () => {
+        this.previewError.set(true);
+        this.previewLoading.set(false);
+      }
+    });
+  }
+
+  private previewFor(organization: Organization) {
+    const date = this.todayForTimezone(organization.criteria?.timezoneId);
+    return forkJoin({
+      published: this.publicDisplay.get(organization.slug).pipe(catchError(() => of<PublicDisplay | null>(null))),
+      timings: this.timings.getForDate(this.orgId, date).pipe(catchError(() => of<PrayerTimesDto | null>(null))),
+      iqama: this.iqama.current(this.orgId, date).pipe(catchError(() => of<IqamaEntry[]>([])))
+    }).pipe(map(result => result.published ?? this.fallbackDisplay(organization, date, result.timings, result.iqama)));
+  }
+
+  private fallbackDisplay(organization: Organization, date: string, timings: PrayerTimesDto | null, iqama: IqamaEntry[]): PublicDisplay {
+    const khutbahMinutes = organization.criteria?.khutbahTimeMinutes ?? 30;
+    return {
+      organization: {
+        name: organization.name,
+        slug: organization.slug,
+        addressLine: organization.addressLine,
+        city: organization.city,
+        state: organization.state
+      },
+      date,
+      timezoneId: organization.criteria?.timezoneId ?? 'UTC',
+      timings: timings ?? undefined,
+      iqama: iqama.map(entry => ({
+        salah: entry.salah,
+        time: entry.offsetMinutes == null ? entry.time : undefined,
+        salahTime: entry.salah.startsWith('Jumuah') && entry.offsetMinutes == null
+          ? this.addMinutes(entry.time, khutbahMinutes)
+          : undefined,
+        offsetMinutes: entry.offsetMinutes,
+        note: entry.note,
+        effectiveDate: entry.date
+      }))
+    };
+  }
+
+  private todayForTimezone(timezoneId?: string): string {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezoneId,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date());
+      const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+      return `${values['year']}-${values['month']}-${values['day']}`;
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  private addMinutes(value: string, minutes: number): string {
+    const [hours, mins] = value.split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(mins)) return value;
+    const total = (hours * 60 + mins + minutes) % (24 * 60);
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
   }
 
   timeFor(key: string): string {
@@ -128,8 +197,12 @@ export class DesignComponent implements OnInit {
   iqamaFor(salah: string): string {
     if (!salah) return 'No Iqama';
     const entry = this.display()?.iqama.find(item => item.salah === salah);
-    return entry ? this.formatTime(entry.time) : 'Not set';
+    if (!entry) return 'Not set';
+    if (entry.time) return this.formatTime(entry.time);
+    return entry.offsetMinutes !== undefined ? `+${entry.offsetMinutes} min` : 'Not set';
   }
+
+  hasAdhanTimings() { return !!this.display()?.timings; }
 
   jumuahEntries() {
     const order = ['Jumuah', 'Jumuah2nd', 'Jumuah3rd', 'Jumuah4th'];
@@ -202,12 +275,13 @@ export class DesignComponent implements OnInit {
 
   private reloadSavedState(message: string) {
     const slug = this.orgSlug();
-    if (!slug) {
+    const organization = this.organization();
+    if (!slug || !organization) {
       this.uploading.set(false);
       this.saving.set(false);
       return;
     }
-    forkJoin({ design: this.svc.get(this.orgId), display: this.publicDisplay.get(slug) }).subscribe({
+    forkJoin({ design: this.svc.get(this.orgId), display: this.previewFor(organization) }).subscribe({
       next: ({ design, display }) => {
         this.form.patchValue({
           headerImageUrl: design.headerImageUrl ?? '',

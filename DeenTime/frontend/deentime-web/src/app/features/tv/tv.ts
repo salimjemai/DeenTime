@@ -56,7 +56,7 @@ export class TvComponent implements OnInit, OnDestroy {
     request.subscribe({
       next: display => {
         this.display.set(display);
-        this.timings.set(display.timings);
+        this.timings.set(display.timings ?? null);
         this.configureRefresh(display.tvConfig?.autoRefreshSeconds ?? 60);
         this.updateClock();
         this.loading.set(false);
@@ -106,7 +106,9 @@ export class TvComponent implements OnInit, OnDestroy {
   iqamaFor(salah: string | undefined): string {
     if (!salah) return '—';
     const entry = this.display()?.iqama.find(item => item.salah === salah);
-    return entry ? this.formatTime(entry.time) : 'Not set';
+    if (!entry) return 'Not set';
+    if (entry.time) return this.formatTime(entry.time);
+    return entry.offsetMinutes !== undefined ? `+${entry.offsetMinutes} min` : 'Not set';
   }
 
   hasIqama(salah: string | undefined): boolean {

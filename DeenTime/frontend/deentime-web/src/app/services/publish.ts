@@ -3,6 +3,45 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { PublishArtifact, PdfGenerateRequest, TvDisplayConfig } from '../models';
 
+export interface PublishEmbedCode {
+  widgetUrl: string;
+  compactWidgetUrl: string;
+  tvUrl: string;
+  iframe: string;
+  compactIframe: string;
+  script: string;
+}
+
+export function resolvePublishEmbedCode(code: PublishEmbedCode, publicOrigin: string): PublishEmbedCode {
+  const origin = new URL(publicOrigin).origin;
+  const moveToAppOrigin = (value: string) => {
+    const source = new URL(value, `${origin}/`);
+    return new URL(`${source.pathname}${source.search}${source.hash}`, `${origin}/`).toString();
+  };
+  const replaceAttribute = (markup: string, attribute: 'src' | 'href', value: string) => {
+    const encoded = value
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+    const pattern = new RegExp(`(${attribute}\\s*=\\s*")[^"]*(")`, 'i');
+    return markup.replace(pattern, (_match, start: string, end: string) => `${start}${encoded}${end}`);
+  };
+
+  const widgetUrl = moveToAppOrigin(code.widgetUrl);
+  const compactWidgetUrl = moveToAppOrigin(code.compactWidgetUrl);
+  const tvUrl = moveToAppOrigin(code.tvUrl);
+  return {
+    ...code,
+    widgetUrl,
+    compactWidgetUrl,
+    tvUrl,
+    iframe: replaceAttribute(code.iframe, 'src', widgetUrl),
+    compactIframe: replaceAttribute(code.compactIframe, 'src', compactWidgetUrl),
+    script: replaceAttribute(code.script, 'href', tvUrl)
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class PublishService {
   private http = inject(HttpClient);
@@ -20,8 +59,10 @@ export class PublishService {
     return this.http.get<PublishArtifact[]>(`${this.base}/api/v1/publish/artifacts`, { params: { orgId, year } });
   }
 
-  getEmbedCode(orgId: string) {
-    return this.http.get<{ widgetUrl: string; compactWidgetUrl: string; tvUrl: string; iframe: string; compactIframe: string; script: string }>(`${this.base}/api/v1/publish/embed-code/${orgId}`);
+  getEmbedCode(orgId: string, publicOrigin: string) {
+    return this.http.get<PublishEmbedCode>(`${this.base}/api/v1/publish/embed-code/${orgId}`, {
+      params: { publicOrigin }
+    });
   }
 
   getTvConfig(orgId: string) {

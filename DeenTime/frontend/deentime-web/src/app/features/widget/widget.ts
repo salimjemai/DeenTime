@@ -41,7 +41,7 @@ export class WidgetComponent implements OnInit {
     request.subscribe({
       next: display => {
         this.display.set(display);
-        this.timings.set(display.timings);
+        this.timings.set(display.timings ?? null);
         this.loading.set(false);
       },
       error: () => { this.error.set(true); this.loading.set(false); }
@@ -69,7 +69,9 @@ export class WidgetComponent implements OnInit {
   iqamaFor(salah: string): string {
     if (!salah) return '—';
     const entry = this.display()?.iqama.find(item => item.salah === salah);
-    return entry ? this.formatTime(entry.time) : '—';
+    if (!entry) return '—';
+    if (entry.time) return this.formatTime(entry.time);
+    return entry.offsetMinutes !== undefined ? `+${entry.offsetMinutes} min` : '—';
   }
 
   jumuahEntries() {

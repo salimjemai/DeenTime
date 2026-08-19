@@ -12,7 +12,7 @@
 
   @if (loading()) {
     <div class="loading-state"><mat-spinner diameter="72" /><span>Preparing today’s prayer display…</span></div>
-  } @else if (timings()) {
+  } @else if (display()) {
     <div class="tv-shell">
       <header class="topbar">
         <div class="identity">
