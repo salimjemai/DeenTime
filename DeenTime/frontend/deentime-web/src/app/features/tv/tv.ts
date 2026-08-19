@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { PrayerTimesDto, PublicDisplay } from '../../models';
-import { PublicDisplayService } from '../../services/public-display';
+import { PublicDisplayOptions, PublicDisplayService } from '../../services/public-display';
 
 type PrayerKey = 'fajr' | 'sunrise' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
 
@@ -49,7 +49,11 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   private loadTimings() {
-    this.displayService.get(this.slug, 'tv').subscribe({
+    const options = this.displayOptions();
+    const request = Object.keys(options).length
+      ? this.displayService.get(this.slug, 'tv', options)
+      : this.displayService.get(this.slug, 'tv');
+    request.subscribe({
       next: display => {
         this.display.set(display);
         this.timings.set(display.timings);
@@ -59,6 +63,19 @@ export class TvComponent implements OnInit, OnDestroy {
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  private displayOptions(): PublicDisplayOptions {
+    const query = this.route.snapshot.queryParamMap;
+    if (!query) return {};
+    const options: PublicDisplayOptions = {};
+    const locale = query.get('locale');
+    const theme = query.get('theme');
+    const fontScale = query.get('fontScale');
+    if (locale) options.locale = locale;
+    if (theme) options.theme = theme;
+    if (fontScale) options.fontScale = fontScale;
+    return options;
   }
 
   private updateClock() {

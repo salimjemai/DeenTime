@@ -21,6 +21,10 @@
 .code-row code { display: block; overflow: hidden; color: #ecfff0; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; }
 .code-row button { flex: 0 0 auto; color: #fff; border-color: #65876b; }
 .compact-code { margin-top: 8px; background: #293f4d; }
+.embed-options { display: flex; align-items: flex-start; gap: 9px; margin-top: 10px; padding: 11px 13px; border: 1px solid #d9e6dc; border-radius: 11px; background: #f4f9f5; color: #607067; font-size: .72rem; line-height: 1.5; }
+.embed-options mat-icon { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px; color: #43805a; font-size: 18px; }
+.embed-options strong { color: #31523a; }
+.embed-options code { padding: 2px 5px; border-radius: 5px; background: #e4efe6; color: #295336; font-size: .68rem; }
 .preview-card { overflow: hidden; background: linear-gradient(145deg, #f5f9fb, #fff); }
 .preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 20px 0 10px; }
 .preview-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #dce6e0; border-radius: 13px; background: #edf3ef; }

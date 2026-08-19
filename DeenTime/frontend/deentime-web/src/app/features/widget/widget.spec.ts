@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { PublicDisplay } from '../../models';
 import { PublicDisplayService } from '../../services/public-display';
@@ -33,13 +33,13 @@ describe('WidgetComponent typography', () => {
     }
   } as PublicDisplay;
 
-  function create(variant: 'full' | 'compact') {
+  function create(variant: 'full' | 'compact', query: Record<string, string> = {}) {
     const service = { get: jasmine.createSpy('get').and.returnValue(of(display)) };
     TestBed.configureTestingModule({
       imports: [WidgetComponent],
       providers: [
         provideZonelessChangeDetection(),
-        { provide: ActivatedRoute, useValue: { snapshot: { params: { slug: 'test' }, data: { variant } } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { params: { slug: 'test' }, data: { variant }, queryParamMap: convertToParamMap(query) } } },
         { provide: PublicDisplayService, useValue: service }
       ]
     });
@@ -60,5 +60,14 @@ describe('WidgetComponent typography', () => {
     expect(compact.component.fontScale()).toBe(160);
     expect(compact.component.fontFamily()).toBe('system');
     expect(compact.service.get).toHaveBeenCalledWith('test', 'compact');
+  });
+
+  it('forwards iframe display parameters to the public API', () => {
+    const compact = create('compact', { theme: 'classic', fontScale: '120', locale: 'ur' });
+    expect(compact.service.get).toHaveBeenCalledWith('test', 'compact', {
+      theme: 'classic',
+      fontScale: '120',
+      locale: 'ur'
+    });
   });
 });

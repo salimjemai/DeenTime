@@ -3,7 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { PrayerTimesDto, PublicDisplay } from '../../models';
-import { PublicDisplayService } from '../../services/public-display';
+import { PublicDisplayOptions, PublicDisplayService } from '../../services/public-display';
 
 @Component({
   selector: 'app-widget',
@@ -33,7 +33,12 @@ export class WidgetComponent implements OnInit {
   ];
 
   ngOnInit() {
-    this.displayService.get(this.slug, this.variant === 'compact' ? 'compact' : 'widget').subscribe({
+    const options = this.displayOptions();
+    const layout = this.variant === 'compact' ? 'compact' : 'widget';
+    const request = Object.keys(options).length
+      ? this.displayService.get(this.slug, layout, options)
+      : this.displayService.get(this.slug, layout);
+    request.subscribe({
       next: display => {
         this.display.set(display);
         this.timings.set(display.timings);
@@ -41,6 +46,19 @@ export class WidgetComponent implements OnInit {
       },
       error: () => { this.error.set(true); this.loading.set(false); }
     });
+  }
+
+  private displayOptions(): PublicDisplayOptions {
+    const query = this.route.snapshot.queryParamMap;
+    if (!query) return {};
+    const options: PublicDisplayOptions = {};
+    const locale = query.get('locale');
+    const theme = query.get('theme');
+    const fontScale = query.get('fontScale');
+    if (locale) options.locale = locale;
+    if (theme) options.theme = theme;
+    if (fontScale) options.fontScale = fontScale;
+    return options;
   }
 
   timeFor(key: string): string {
