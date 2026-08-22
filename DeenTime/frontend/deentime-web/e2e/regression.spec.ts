@@ -54,6 +54,17 @@ test.describe('IqamaTime browser regression matrix', () => {
     await signIn(page);
     await page.locator('mat-nav-list').getByRole('link', { name: 'Content', exact: true }).click();
 
+    await expect(page.getByRole('link', { name: 'Open Qibla metadata' })).toBeVisible();
+    await expect(page.locator('.qibla-live-card')).toBeVisible();
+    await expect(page.locator('.qibla-live-card .bearing-value')).toContainText(/°/);
+    await expect(page.locator('.qibla-live-card')).toContainText('PNG ready');
+    await expect(page.getByRole('button', { name: /Qibla bearing · This masjid/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Qibla compass PNG · This masjid/ })).toBeVisible();
+
+    const collection = page.getByLabel('Collection');
+    await expect(collection.locator('option').first()).toHaveText('Every book');
+    await expect(collection.locator('option').filter({ hasText: 'Sunan Abu Dawood' })).toHaveCount(1);
+
     const card = page.locator('.hadith-flip-card').first();
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute('aria-pressed', 'false');
@@ -80,8 +91,51 @@ test.describe('IqamaTime browser regression matrix', () => {
     await longText.evaluate(element => { element.scrollTop = element.scrollHeight; });
     await expect(longCard).not.toHaveClass(/flipped/);
 
+    await page.getByRole('button', { name: 'العربية', exact: true }).click();
+    await expect(page.locator('.hadith-front .face-language').first()).toHaveText('العربية');
+    await expect(collection.locator('option').first()).toHaveText('جميع الكتب');
+    await expect(collection.locator('option').filter({ hasText: 'سنن أبي داود' })).toHaveCount(1);
+
+    const arabicCard = page.locator('.hadith-flip-card').first();
+    await expect(arabicCard.locator('.hadith-front')).toHaveAttribute('dir', 'rtl');
+    await expect(arabicCard.locator('.hadith-front header')).toContainText('سنن أبي داود');
+    await expect(arabicCard.locator('.hadith-front header')).toContainText('الحديث رقم ١');
+    await expect(arabicCard.locator('.hadith-front .grade')).toHaveText('صحيح');
+    await expect(arabicCard.locator('.hadith-front .flip-hint')).toContainText('English');
+    const arabicFrontText = await arabicCard.locator('.hadith-front').innerText();
+    expect(arabicFrontText.match(/[A-Za-z]+(?:\s+[A-Za-z]+)*/g) ?? []).toEqual(['English']);
+
+    await arabicCard.locator('.hadith-front .flip-hint').click();
+    await expect(arabicCard).toHaveClass(/flipped/);
+    await expect(arabicCard.locator('.hadith-back .face-language')).toHaveText('English');
+    await expect(arabicCard.locator('.hadith-back header')).toContainText('Sunan Abu Dawood');
+    await expect(arabicCard.locator('.hadith-back header')).toContainText('No. 1 · Chapter 1');
+
+    await longCard.locator('.hadith-front .flip-hint').click();
+    await expect(longCard).toHaveClass(/flipped/);
+    const longEnglishBack = longCard.locator('.hadith-back .hadith-scroll-area');
+    await expect(longEnglishBack).toHaveCSS('overflow-y', 'auto');
+    const englishBackMetrics = await longEnglishBack.evaluate(element => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight
+    }));
+    expect(englishBackMetrics.scrollHeight).toBeGreaterThan(englishBackMetrics.clientHeight);
+    await longEnglishBack.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    expect(await longEnglishBack.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    await expect(longCard).toHaveClass(/flipped/);
+
     await page.getByRole('button', { name: 'اردو', exact: true }).click();
     await expect(page.locator('.hadith-front .face-language').first()).toHaveText('اردو');
+    await expect(collection.locator('option').first()).toHaveText('تمام کتب');
+    await expect(collection.locator('option').filter({ hasText: 'سنن ابو داؤد' })).toHaveCount(1);
+    await expect(page.locator('.hadith-front header').first()).toContainText('سنن ابو داؤد');
+    await expect(page.locator('.hadith-front header').first()).toContainText('حدیث نمبر ۱');
+    await expect(page.locator('.hadith-front .grade').first()).toHaveText('صحیح');
+
+    await page.getByRole('button', { name: 'English', exact: true }).click();
+    await expect(page.locator('.hadith-front .face-language').first()).toHaveText('English');
+    await expect(collection.locator('option').first()).toHaveText('Every book');
+    await expect(collection.locator('option').filter({ hasText: 'Sunan Abu Dawood' })).toHaveCount(1);
 
     const reciter = page.getByLabel('Qur’an reciter');
     await expect(reciter).toBeVisible();
@@ -152,22 +206,127 @@ test.describe('IqamaTime browser regression matrix', () => {
     await expect(page.locator('.prayer-card').first()).toBeVisible();
     await expect(page.getByText(/Adhan and congregational Iqama times update automatically/)).toBeVisible();
     await expect(page.getByText('Adhan', { exact: true }).first()).toBeVisible();
+    await expect(page.locator('.identity-mark mat-icon')).toHaveText('mosque');
+    await expect(page.locator('.hero-clock')).toHaveText(/^\d{2}:\d{2}(?::\d{2})? (?:AM|PM)$/);
+    await expect(page.locator('.prayer-card.featured')).toHaveCount(1);
 
     await page.goto(`/w/${org.slug}`);
-    await expect(page.getByText('DAILY PRAYER TIMES')).toBeVisible();
+    await expect(page.getByText('DAILY + FRIDAY PRAYERS')).toBeVisible();
     await expect(page.locator('.daily-schedule .prayer-row').first()).toBeVisible();
+    await expect(page.locator('.jumuah-section')).toBeVisible();
     await expect(page.getByText('Powered by IqamaTime')).toBeVisible();
 
-    await page.goto(`/w2/${org.slug}`);
+    await page.goto(`/w/${org.slug}/daily`);
     await expect(page.getByText('DAILY PRAYER TIMES')).toBeVisible();
+    await expect(page.locator('.daily-schedule')).toBeVisible();
+    await expect(page.locator('.jumuah-section')).toHaveCount(0);
+
+    await page.goto(`/w/${org.slug}/jumuah`);
+    await expect(page.getByText('FRIDAY PRAYERS')).toBeVisible();
+    await expect(page.locator('.daily-schedule')).toHaveCount(0);
+    await expect(page.locator('.jumuah-section')).toBeVisible();
+
+    await page.goto(`/w2/${org.slug}`);
+    await expect(page.getByText('DAILY + FRIDAY PRAYERS')).toBeVisible();
     await expect(page.locator('.widget.compact')).toBeVisible();
     await expect(page.locator('.daily-schedule .prayer-row').first()).toBeVisible();
 
     const externalUrl = `http://127.0.0.1:4300/?src=${encodeURIComponent(`${webOrigin}/w/${org.slug}`)}`;
     await page.goto(externalUrl);
     const externalFrame = page.frameLocator('iframe[title="IqamaTime external-origin test"]');
-    await expect(externalFrame.getByText('DAILY PRAYER TIMES')).toBeVisible();
+    await expect(externalFrame.getByText('DAILY + FRIDAY PRAYERS')).toBeVisible();
     await expect(externalFrame.getByText('Powered by IqamaTime')).toBeVisible();
+  });
+
+  test('Publish has responsive previews and the Content API has a live Qibla compass', async ({ page }) => {
+    test.setTimeout(90_000);
+    await useApi(page);
+    await signIn(page);
+    await page.locator('mat-nav-list').getByRole('link', { name: 'Publish', exact: true }).click();
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await expect(page.getByLabel('Local time font size')).toBeVisible();
+    const publishUrl = page.url();
+    const tvUrl = await page.locator('.display-link').filter({ hasText: 'TV display' }).getAttribute('href');
+    expect(tvUrl).toBeTruthy();
+    const clockScale = page.getByLabel('Local time font size');
+    const originalClockScale = await clockScale.inputValue();
+    const savedClockScale = originalClockScale === '200' ? '195' : '200';
+    await clockScale.fill(savedClockScale);
+    await page.getByRole('button', { name: 'Save TV settings', exact: true }).click();
+    await expect(page.getByText('TV display settings saved')).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel('Local time font size')).toHaveValue(savedClockScale);
+
+    await page.goto(tvUrl!);
+    await expect(page.locator('.hero-clock')).toHaveText(/^\d{2}:\d{2}(?::\d{2})? (?:AM|PM)$/);
+    await expect.poll(async () => page.locator('.hero-clock').evaluate(clock => {
+      const value = clock.querySelector<HTMLElement>('.clock-value');
+      if (!value) return Number.POSITIVE_INFINITY;
+      const clockBounds = clock.getBoundingClientRect();
+      const valueBounds = value.getBoundingClientRect();
+      return Math.max(clockBounds.left - valueBounds.left, valueBounds.right - clockBounds.right);
+    })).toBeLessThanOrEqual(1);
+
+    await page.goto(publishUrl);
+    await expect(page.getByLabel('Local time font size')).toBeVisible();
+    await page.getByLabel('Local time font size').fill(originalClockScale);
+    await page.getByRole('button', { name: 'Save TV settings', exact: true }).click();
+    await expect(page.getByText('TV display settings saved')).toBeVisible();
+    const desktopWidth = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      pageWidth: document.querySelector<HTMLElement>('.page')?.clientWidth ?? 0,
+      pageScrollWidth: document.querySelector<HTMLElement>('.page')?.scrollWidth ?? 0
+    }));
+    expect(desktopWidth.scrollWidth).toBeLessThanOrEqual(desktopWidth.clientWidth + 1);
+    expect(desktopWidth.pageScrollWidth).toBeLessThanOrEqual(desktopWidth.pageWidth + 1);
+
+    for (const mode of ['Combined', 'Daily', 'Friday', 'Compact']) {
+      await page.getByRole('button', { name: mode, exact: true }).click();
+      const frameElement = page.locator('.preview-frame-shell iframe');
+      const widget = page.frameLocator('.preview-frame-shell iframe').locator('.widget');
+      await expect(widget).toBeVisible();
+      await expect.poll(async () => {
+        const frameHeight = await frameElement.evaluate(element => element.clientHeight);
+        const widgetHeight = await widget.evaluate(element => element.getBoundingClientRect().height);
+        return Math.abs(frameHeight - widgetHeight - 24);
+      }).toBeLessThanOrEqual(2);
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileWidth = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth
+    }));
+    expect(mobileWidth.scrollWidth).toBeLessThanOrEqual(mobileWidth.clientWidth + 1);
+
+    await page.evaluate(() => {
+      if (typeof globalThis.DeviceOrientationEvent === 'undefined') {
+        Object.defineProperty(globalThis, 'DeviceOrientationEvent', {
+          configurable: true,
+          value: class TestDeviceOrientationEvent extends Event {}
+        });
+      }
+    });
+    await page.locator('mat-nav-list a[href$="/content"]').click();
+    await expect(page.locator('.qibla-live-card')).toBeVisible();
+    await expect(page.locator('.qibla-live-card .bearing-value')).toContainText(/°/);
+    await expect(page.locator('.qibla-live-card')).toContainText('PNG ready');
+
+    const needle = page.getByTestId('qibla-needle');
+    const initialNeedleRotation = await needle.evaluate(element => (element as HTMLElement).style.transform);
+    await page.evaluate(() => {
+      const orientation = new Event('deviceorientationabsolute');
+      Object.defineProperties(orientation, {
+        alpha: { value: 340 },
+        absolute: { value: true }
+      });
+      window.dispatchEvent(orientation);
+    });
+    await expect(page.getByTestId('qibla-live-status')).toContainText('Facing 20.0° NNE');
+    await expect.poll(() => needle.evaluate(element => (element as HTMLElement).style.transform))
+      .not.toBe(initialNeedleRotation);
   });
 
   test('Design controls rehydrate from the server and propagate to every public layout', async ({ page }) => {
@@ -238,8 +397,38 @@ test.describe('IqamaTime browser regression matrix', () => {
       }
     }
 
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${webOrigin}/org/${payload.orgId}/publish`);
     await expect(page.locator('code').filter({ hasText: `${webOrigin}/w/` }).first()).toBeVisible();
     await expect(page.locator('code').filter({ hasText: 'src="/w/' })).toHaveCount(0);
+    await expect(page.getByLabel('Local time font size')).toBeVisible();
+
+    const publishWidth = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      pageWidth: document.querySelector<HTMLElement>('.page')?.clientWidth ?? 0,
+      pageScrollWidth: document.querySelector<HTMLElement>('.page')?.scrollWidth ?? 0
+    }));
+    expect(publishWidth.scrollWidth).toBeLessThanOrEqual(publishWidth.clientWidth + 1);
+    expect(publishWidth.pageScrollWidth).toBeLessThanOrEqual(publishWidth.pageWidth + 1);
+
+    for (const mode of ['Combined', 'Daily', 'Friday', 'Compact']) {
+      await page.getByRole('button', { name: mode, exact: true }).click();
+      const frameElement = page.locator('.preview-frame-shell iframe');
+      const widget = page.frameLocator('.preview-frame-shell iframe').locator('.widget');
+      await expect(widget).toBeVisible();
+      await expect.poll(async () => {
+        const frameHeight = await frameElement.evaluate(element => element.clientHeight);
+        const widgetHeight = await widget.evaluate(element => element.getBoundingClientRect().height);
+        return Math.abs(frameHeight - widgetHeight - 24);
+      }).toBeLessThanOrEqual(2);
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobilePublishWidth = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth
+    }));
+    expect(mobilePublishWidth.scrollWidth).toBeLessThanOrEqual(mobilePublishWidth.clientWidth + 1);
   });
 });

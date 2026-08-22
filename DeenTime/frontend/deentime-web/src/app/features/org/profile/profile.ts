@@ -14,6 +14,15 @@ import { OrgsService } from '../../../services/orgs';
 import { AuthService } from '../../../services/auth';
 import { PostalCodeLocation } from '../../../models';
 
+interface ApiFailure {
+  error?: {
+    errors?: Record<string, string[]>;
+    detail?: string;
+    title?: string;
+    message?: string;
+  };
+}
+
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -120,10 +129,11 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  private apiErrorMessage(error: any, fallback: string): string {
-    const validationErrors = error?.error?.errors as Record<string, string[]> | undefined;
+  private apiErrorMessage(error: unknown, fallback: string): string {
+    const response = error as ApiFailure;
+    const validationErrors = response.error?.errors;
     const firstValidationError = validationErrors ? Object.values(validationErrors).flat()[0] : undefined;
-    return firstValidationError ?? error?.error?.detail ?? error?.error?.title ?? fallback;
+    return firstValidationError ?? response.error?.detail ?? response.error?.title ?? fallback;
   }
 
   saveCriteria() {
@@ -171,7 +181,8 @@ export class ProfileComponent implements OnInit {
       error: error => {
         this.resolvingLocation.set(false);
         this.saving.set(false);
-        const message = error?.error?.message ?? error?.error?.title ?? 'Could not verify that ZIP code.';
+        const response = error as ApiFailure;
+        const message = response.error?.message ?? response.error?.title ?? 'Could not verify that ZIP code.';
         this.locationError.set(message);
         this.snack.open(message, 'Dismiss', { duration: 4000 });
       }

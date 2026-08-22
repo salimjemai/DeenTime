@@ -88,6 +88,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         b.Entity<DesignSettings>().Property(d => d.WidgetFontFamily).HasDefaultValue("system");
         b.Entity<DesignSettings>().Property(d => d.CompactFontFamily).HasDefaultValue("system");
         b.Entity<TvDisplayConfig>().HasIndex(t => new { t.OrganizationId }).IsUnique();
+        b.Entity<TvDisplayConfig>().Property(t => t.ClockFontScale).HasDefaultValue(160);
         b.Entity<HijriMonthMap>().HasIndex(h => new { h.OrganizationId, h.Year, h.Month }).IsUnique();
         b.Entity<PublishArtifact>().HasIndex(p => new { p.OrganizationId, p.Year, p.Month });
 

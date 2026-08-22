@@ -1,44 +1,119 @@
-<mat-sidenav-container class="shell-container">
+<mat-sidenav-container
+  class="shell-container"
+  [class.theme-light]="resolvedTheme() === 'light'"
+  [class.theme-dark]="resolvedTheme() === 'dark'"
+  [class.nav-collapsed]="navCollapsed() && !isMobileNavigation()"
+  [autosize]="true">
 
-  <mat-sidenav mode="side" opened class="sidenav">
-    <div class="sidenav-header">
-      <span class="brand">IqamaTime</span>
-      <span class="org-id">{{ email() }}</span>
-    </div>
+  <mat-sidenav
+    class="sidenav"
+    [class.collapsed]="navCollapsed() && !isMobileNavigation()"
+    [mode]="isMobileNavigation() ? 'over' : 'side'"
+    [opened]="sidenavOpened()"
+    (openedChange)="sidenavOpened.set($event)">
+    <div class="sidenav-layout">
+      <div class="sidenav-header">
+        <span class="brand-mark" aria-hidden="true"><app-icon name="brand" /></span>
+        <span class="brand-copy">
+          <strong>IqamaTime</strong>
+          <small>Masjid operations</small>
+        </span>
+        @if (!isMobileNavigation()) {
+          <button
+            type="button"
+            class="rail-toggle"
+            [attr.aria-label]="navigationLabel()"
+            [attr.aria-expanded]="!navCollapsed()"
+            [matTooltip]="navigationLabel()"
+            matTooltipPosition="right"
+            (click)="toggleNavigation()">
+            <app-icon [name]="navCollapsed() ? 'expand' : 'collapse'" />
+          </button>
+        }
+      </div>
 
-    <mat-nav-list>
-      @for (item of navItems; track item.path) {
-        <a mat-list-item
-           [routerLink]="['/org', orgId(), item.path]"
-           routerLinkActive="active-link">
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ item.label }}</span>
-        </a>
-      }
-    </mat-nav-list>
+      <nav class="nav-list" aria-label="IqamaTime sections">
+        @for (item of navItems; track item.path) {
+          <a
+            class="nav-link"
+            [routerLink]="['/org', orgId(), item.path]"
+            routerLinkActive="active-link"
+            ariaCurrentWhenActive="page"
+            [attr.aria-label]="item.label"
+            [matTooltip]="navCollapsed() && !isMobileNavigation() ? item.label : ''"
+            matTooltipPosition="right"
+            (click)="closeMobileNavigation()">
+            <span class="nav-icon-shell" aria-hidden="true"><app-icon [name]="item.icon" /></span>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
+        }
+      </nav>
 
-    <div class="sidenav-footer">
-      <button mat-button (click)="logout()">
-        <mat-icon>logout</mat-icon> Sign out
-      </button>
+      <div class="sidenav-footer">
+        <button
+          mat-button
+          type="button"
+          aria-label="Sign out"
+          (click)="logout()"
+          [matTooltip]="navCollapsed() && !isMobileNavigation() ? 'Sign out' : ''"
+          matTooltipPosition="right">
+          <app-icon name="logout" />
+          <span class="signout-label">Sign out</span>
+        </button>
+      </div>
     </div>
   </mat-sidenav>
 
   <mat-sidenav-content class="main-content">
     <header class="content-header">
-      <div>
+      @if (isMobileNavigation()) {
+        <button
+          mat-icon-button
+          type="button"
+          class="mobile-navigation-toggle"
+          [attr.aria-label]="navigationLabel()"
+          [attr.aria-expanded]="sidenavOpened()"
+          (click)="toggleNavigation()">
+          <app-icon name="menu" />
+        </button>
+      }
+
+      <span class="mobile-brand">IqamaTime</span>
+
+      <div class="header-copy">
         <div class="content-kicker">MOSQUE OPERATIONS · {{ todayLabel }}</div>
         <h1>{{ orgName() }}</h1>
         <p>Keep your prayer schedule accurate, consistent, and ready to publish.</p>
       </div>
+
       <div class="header-actions">
-        <a mat-stroked-button class="help-shortcut" [routerLink]="['/org', orgId(), 'help']">
-          <mat-icon>tips_and_updates</mat-icon> Help & tips
-        </a>
-        <div class="account-chip">
-          <span class="status-dot"></span>
-          <span>{{ email() }}</span>
+        <div class="theme-switcher" role="group" aria-label="Application appearance">
+          @for (theme of themeOptions; track theme.value) {
+            <button
+              type="button"
+              [class.active]="themePreference() === theme.value"
+              [attr.aria-pressed]="themePreference() === theme.value"
+              [attr.aria-label]="theme.label + ' theme'"
+              [matTooltip]="theme.label + ' theme'"
+              (click)="setTheme(theme.value)">
+              <mat-icon>{{ theme.icon }}</mat-icon>
+              <span>{{ theme.label }}</span>
+            </button>
+          }
         </div>
+
+        <a mat-stroked-button class="help-shortcut" [routerLink]="['/org', orgId(), 'help']">
+          <mat-icon>tips_and_updates</mat-icon> Help
+        </a>
+
+        <a
+          class="account-chip"
+          [routerLink]="['/org', orgId(), 'profile']"
+          aria-label="Open organization profile">
+          <span class="account-avatar"><mat-icon>person</mat-icon></span>
+          <span class="account-email">{{ email() }}</span>
+          <mat-icon class="account-arrow">chevron_right</mat-icon>
+        </a>
       </div>
     </header>
 

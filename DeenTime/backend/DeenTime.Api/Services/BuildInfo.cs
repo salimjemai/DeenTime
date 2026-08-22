@@ -10,7 +10,7 @@ public sealed record BuildInfo(
 
 public static class BuildInfoProvider
 {
-    public const string CurrentSchemaVersion = "20260819050000_RenameDefaultBranding";
+    public const string CurrentSchemaVersion = "20260819061000_EnlargeDefaultTvClock";
 
     public static BuildInfo Create(IConfiguration configuration)
     {

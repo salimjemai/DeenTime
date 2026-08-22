@@ -17,6 +17,12 @@ namespace DeenTime.Api.Controllers
 	public sealed class PublishController : ControllerBase
 	{
 		public record RamadanPdfGenerateRequest(Guid OrgId, int Year, PdfSize Size, PdfOrientation Orientation);
+		public record TvDisplayConfigUpdateRequest(
+			bool ShowSeconds,
+			bool ShowHijri,
+			string? AccentColor,
+			int ClockFontScale = 160,
+			int AutoRefreshSeconds = 30);
 		private readonly AppDbContext _db;
 		private readonly IConfiguration _configuration;
 		private readonly IWebHostEnvironment _environment;
@@ -30,15 +36,35 @@ namespace DeenTime.Api.Controllers
 			if (org is null) return NotFound();
 
 			var origin = PublicOrigin(publicOrigin);
-			var widgetUrl = PublicUrl(origin, $"/w/{Uri.EscapeDataString(org.Slug)}");
+			var combinedWidgetUrl = PublicUrl(origin, $"/w/{Uri.EscapeDataString(org.Slug)}");
+			var dailyWidgetUrl = PublicUrl(origin, $"/w/{Uri.EscapeDataString(org.Slug)}/daily");
+			var jumuahWidgetUrl = PublicUrl(origin, $"/w/{Uri.EscapeDataString(org.Slug)}/jumuah");
+			var widgetUrl = combinedWidgetUrl;
 			var compactWidgetUrl = PublicUrl(origin, $"/w2/{Uri.EscapeDataString(org.Slug)}");
 			var tvUrl = PublicUrl(origin, $"/tv/{Uri.EscapeDataString(org.Slug)}");
 			var encodedName = WebUtility.HtmlEncode(org.Name);
 			var encodedTitle = WebUtility.HtmlEncode($"IqamaTime · {org.Name} prayer times");
-			var iframe = $"<iframe src=\"{WebUtility.HtmlEncode(widgetUrl)}\" title=\"{encodedTitle}\" width=\"420\" height=\"900\" loading=\"lazy\" style=\"max-width:100%;border:0\"></iframe>";
-			var compactIframe = $"<iframe src=\"{WebUtility.HtmlEncode(compactWidgetUrl)}\" title=\"{WebUtility.HtmlEncode($"IqamaTime · {org.Name} compact prayer times")}\" width=\"360\" height=\"800\" loading=\"lazy\" style=\"max-width:100%;border:0\"></iframe>";
+			var combinedIframe = WidgetIframe(origin, combinedWidgetUrl, encodedTitle, "420", "900");
+			var dailyIframe = WidgetIframe(origin, dailyWidgetUrl, WebUtility.HtmlEncode($"IqamaTime · {org.Name} daily prayer times"), "420", "720");
+			var jumuahIframe = WidgetIframe(origin, jumuahWidgetUrl, WebUtility.HtmlEncode($"IqamaTime · {org.Name} Friday prayer times"), "420", "560");
+			var iframe = combinedIframe;
+			var compactIframe = WidgetIframe(origin, compactWidgetUrl, WebUtility.HtmlEncode($"IqamaTime · {org.Name} compact prayer times"), "360", "800");
 			var script = $"<a href=\"{WebUtility.HtmlEncode(tvUrl)}\">Open {encodedName} IqamaTime TV display</a>";
-			return Ok(new { widgetUrl, compactWidgetUrl, tvUrl, iframe, compactIframe, script });
+			return Ok(new
+			{
+				widgetUrl,
+				combinedWidgetUrl,
+				dailyWidgetUrl,
+				jumuahWidgetUrl,
+				compactWidgetUrl,
+				tvUrl,
+				iframe,
+				combinedIframe,
+				dailyIframe,
+				jumuahIframe,
+				compactIframe,
+				script
+			});
 		}
 
 		[HttpGet("tv-config/{orgId:guid}")]
@@ -52,7 +78,7 @@ namespace DeenTime.Api.Controllers
 
 		[HttpPut("tv-config/{orgId:guid}")]
 		[Authorize(Roles = "Admin,Editor")]
-		public async Task<IActionResult> UpdateTvConfig(Guid orgId, [FromBody] TvDisplayConfig req)
+		public async Task<IActionResult> UpdateTvConfig(Guid orgId, [FromBody] TvDisplayConfigUpdateRequest req)
 		{
 			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			var cfg = await _db.TvDisplayConfigs.FirstOrDefaultAsync(t => t.OrganizationId == orgId);
@@ -65,6 +91,7 @@ namespace DeenTime.Api.Controllers
 			cfg.ShowSeconds = req.ShowSeconds;
 			cfg.ShowHijri = req.ShowHijri;
 			cfg.AccentColor = string.IsNullOrWhiteSpace(req.AccentColor) ? "#00AEEF" : req.AccentColor;
+			cfg.ClockFontScale = Math.Clamp(req.ClockFontScale, 80, 200);
 			cfg.AutoRefreshSeconds = Math.Clamp(req.AutoRefreshSeconds, 15, 3600);
 			await _db.SaveChangesAsync();
 			return Ok(cfg);
@@ -140,5 +167,11 @@ namespace DeenTime.Api.Controllers
 
 		private static string PublicUrl(Uri origin, string path) =>
 			new Uri(origin, path.TrimStart('/')).AbsoluteUri;
+
+		private static string WidgetIframe(Uri origin, string url, string title, string width, string height)
+		{
+			var scriptUrl = PublicUrl(origin, "/iqamatime-embed.js");
+			return $"<iframe src=\"{WebUtility.HtmlEncode(url)}\" title=\"{title}\" width=\"{WebUtility.HtmlEncode(width)}\" height=\"{WebUtility.HtmlEncode(height)}\" loading=\"lazy\" data-iqamatime-auto-height style=\"display:block;max-width:100%;border:0;overflow:hidden\"></iframe><script async src=\"{WebUtility.HtmlEncode(scriptUrl)}\"></script>";
+		}
 	}
 }

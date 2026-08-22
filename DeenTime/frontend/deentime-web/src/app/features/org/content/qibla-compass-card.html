@@ -1,0 +1,63 @@
+<section class="qibla-live-card" aria-labelledby="qibla-live-title">
+  <div class="qibla-visual">
+    <div
+      class="qibla-dial"
+      [class.live]="deviceHeading() !== null"
+      [class.aligned]="qiblaAligned()"
+      role="img"
+      [attr.aria-label]="deviceHeading() === null ? 'Qibla bearing ' + qiblaBearingLabel() : liveCompassGuidance() + '. Device heading ' + deviceHeadingLabel()">
+      <span class="device-forward" aria-hidden="true"></span>
+      <div class="compass-rose" [style.transform]="compassRoseRotation()" aria-hidden="true">
+        <span class="cardinal north">N</span><span class="cardinal east">E</span>
+        <span class="cardinal south">S</span><span class="cardinal west">W</span>
+      </div>
+      <div class="bearing-arm" data-testid="qibla-needle" [style.transform]="qiblaRotation()">
+        <span class="kaaba-marker" aria-hidden="true"><i></i></span>
+        <span class="bearing-line"></span>
+      </div>
+      <span class="dial-pin"></span>
+    </div>
+  </div>
+  <div class="qibla-copy">
+    <span class="qibla-kicker"><i></i> LIVE QIBLA API</span>
+    <h4 id="qibla-live-title">Qibla compass</h4>
+    @if (loading()) {
+      <p>Calculating the direction from your saved masjid location…</p>
+    } @else if (error()) {
+      <p class="qibla-error">{{ error() }}</p>
+      <button type="button" (click)="retryRequested.emit()">Try again</button>
+    } @else if (qibla(); as result) {
+      <strong class="bearing-value">{{ qiblaBearingLabel() }}</strong>
+      <p>{{ location() }}<br />Clockwise from true north toward Al-Kaaba in Makkah.</p>
+      <div
+        class="live-compass-readout"
+        [class.is-live]="deviceHeading() !== null"
+        [class.is-aligned]="qiblaAligned()"
+        [class.has-error]="liveCompassState() === 'denied' || liveCompassState() === 'unsupported' || liveCompassState() === 'insecure'"
+        data-testid="qibla-live-status">
+        <mat-icon>{{ qiblaAligned() ? 'check_circle' : deviceHeading() !== null ? 'explore' : 'screen_rotation' }}</mat-icon>
+        <span>
+          <strong>{{ liveCompassGuidance() }}</strong>
+          @if (deviceHeading() !== null) {
+            <small>Facing {{ deviceHeadingLabel() }}{{ compassAccuracyLabel() }}</small>
+          } @else {
+            <small>{{ liveCompassStatusMessage() }}</small>
+          }
+        </span>
+      </div>
+      <div class="qibla-statuses">
+        <span><mat-icon>cloud_done</mat-icon> {{ result.meta.source === 'cache' ? 'Verified cache' : 'Live provider' }}</span>
+        <span [class.pending]="!compassUrl()"><mat-icon>{{ compassUrl() ? 'image' : 'hourglass_top' }}</mat-icon> {{ compassUrl() ? 'PNG ready' : 'PNG loading' }}</span>
+      </div>
+      <div class="qibla-actions">
+        @if (liveCompassState() === 'permission-required' || liveCompassState() === 'denied') {
+          <button type="button" class="live-compass-button" (click)="enableLiveCompass()" [disabled]="liveCompassState() === 'requesting'">
+            <mat-icon>screen_rotation</mat-icon> {{ liveCompassState() === 'denied' ? 'Try live compass again' : 'Enable live compass' }}
+          </button>
+        }
+        <button type="button" (click)="copyApiRequested.emit()"><mat-icon>content_copy</mat-icon> Copy API request</button>
+        @if (compassUrl()) { <a [href]="compassUrl()" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon> Open API compass</a> }
+      </div>
+    }
+  </div>
+</section>

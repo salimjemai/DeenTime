@@ -1,99 +1,151 @@
-<div class="page">
-  <h2 class="page-title">Organization Profile</h2>
+<div class="page profile-page">
+  <section class="profile-hero">
+    <span class="profile-hero-icon" aria-hidden="true"><mat-icon>domain</mat-icon></span>
+    <div class="profile-hero-copy">
+      <span class="eyebrow">ORGANIZATION SETTINGS</span>
+      <h2>Organization profile</h2>
+      <p>Keep your public identity and prayer calculation location accurate across every IqamaTime output.</p>
+    </div>
+    <div class="profile-summary" aria-label="Current profile summary">
+      @if (orgForm.controls.city.value || orgForm.controls.state.value) {
+        <span><mat-icon>location_on</mat-icon>{{ orgForm.controls.city.value }}{{ orgForm.controls.city.value && orgForm.controls.state.value ? ', ' : '' }}{{ orgForm.controls.state.value }}</span>
+      }
+      <span><mat-icon>calculate</mat-icon>{{ criteriaForm.controls.method.value }}</span>
+      <span><mat-icon>schedule</mat-icon>{{ criteriaForm.controls.timezoneId.value }}</span>
+    </div>
+  </section>
 
   @if (loading()) {
     <div class="center"><mat-spinner diameter="48" /></div>
   } @else {
-    <mat-card class="section-card">
-      <mat-card-header><mat-card-title>Mosque Info</mat-card-title></mat-card-header>
+    <mat-card class="section-card identity-card">
+      <div class="section-heading">
+        <span class="section-icon"><mat-icon>mosque</mat-icon></span>
+        <div>
+          <span class="section-kicker">PUBLIC IDENTITY</span>
+          <h3>Mosque information</h3>
+          <p>This information identifies your masjid on displays, widgets, downloads, and developer responses.</p>
+        </div>
+      </div>
+
       <mat-card-content>
-        <form [formGroup]="orgForm" class="form-grid">
-          <mat-form-field appearance="outline"><mat-label>Name</mat-label>
-            <input matInput formControlName="name" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Address</mat-label>
-            <input matInput formControlName="addressLine" /></mat-form-field>
+        <form [formGroup]="orgForm" class="form-grid" aria-label="Mosque information">
+          <mat-form-field appearance="outline"><mat-label>Mosque name</mat-label>
+            <input matInput formControlName="name" autocomplete="organization" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Street address</mat-label>
+            <input matInput formControlName="addressLine" autocomplete="street-address" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>City</mat-label>
-            <input matInput formControlName="city" /></mat-form-field>
+            <input matInput formControlName="city" autocomplete="address-level2" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>State</mat-label>
-            <input matInput formControlName="state" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Zip Code</mat-label>
-            <input matInput formControlName="zipCode" /></mat-form-field>
+            <input matInput formControlName="state" autocomplete="address-level1" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>ZIP code</mat-label>
+            <input matInput formControlName="zipCode" inputmode="numeric" autocomplete="postal-code" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Phone</mat-label>
-            <input matInput formControlName="phone" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Email</mat-label>
-            <input matInput formControlName="email" /></mat-form-field>
+            <input matInput formControlName="phone" type="tel" autocomplete="tel" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Public email</mat-label>
+            <input matInput formControlName="email" type="email" autocomplete="email" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Website</mat-label>
-            <input matInput formControlName="websiteUrl" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Facebook / Social URL</mat-label>
-            <input matInput formControlName="socialUrl" /></mat-form-field>
+            <input matInput formControlName="websiteUrl" type="url" autocomplete="url" /></mat-form-field>
+          <mat-form-field appearance="outline" class="full-span"><mat-label>Facebook or social page</mat-label>
+            <input matInput formControlName="socialUrl" type="url" /></mat-form-field>
         </form>
       </mat-card-content>
-      <mat-card-actions align="end">
-        <button mat-flat-button color="primary" (click)="saveOrg()" [disabled]="saving()">Save</button>
-      </mat-card-actions>
+
+      <div class="card-actions">
+        <span><mat-icon>public</mat-icon>Used on public-facing IqamaTime pages</span>
+        <button mat-flat-button color="primary" type="button" (click)="saveOrg()" [disabled]="saving()">
+          <mat-icon>save</mat-icon> Save mosque information
+        </button>
+      </div>
     </mat-card>
 
-    <mat-card class="section-card">
-      <mat-card-header><mat-card-title>Prayer Time Criteria</mat-card-title></mat-card-header>
+    <mat-card class="section-card criteria-card">
+      <div class="section-heading">
+        <span class="section-icon gold"><mat-icon>schedule</mat-icon></span>
+        <div>
+          <span class="section-kicker gold">PRAYER CALCULATION</span>
+          <h3>Prayer time criteria</h3>
+          <p>Set the exact location, calculation convention, and local adjustments used for Adhan times.</p>
+        </div>
+      </div>
+
       <mat-card-content>
-        <form [formGroup]="criteriaForm" class="form-grid">
+        <div class="criteria-note">
+          <mat-icon>verified</mat-icon>
+          <div><strong>ZIP-based location verification</strong><span>For U.S. masjids, verify the ZIP before saving so coordinates and timezone stay aligned.</span></div>
+        </div>
+
+        <form [formGroup]="criteriaForm" class="form-grid criteria-grid" aria-label="Prayer time criteria">
           <div class="postal-lookup">
             <mat-form-field appearance="outline"><mat-label>Prayer calculation ZIP</mat-label>
               <input matInput formControlName="zipCode" inputmode="numeric" autocomplete="postal-code" />
-              <mat-hint>For U.S. mosques, this safely fills the calculation coordinates.</mat-hint>
+              <mat-hint>Five-digit U.S. ZIP code</mat-hint>
             </mat-form-field>
             <button mat-stroked-button type="button" (click)="lookupPostalCode()" [disabled]="resolvingLocation() || saving()">
-              @if (resolvingLocation()) { <mat-spinner diameter="18" /> } @else { <mat-icon>location_searching</mat-icon> }
-              Find location
+              @if (resolvingLocation()) { <mat-spinner diameter="18" /> } @else { <mat-icon>my_location</mat-icon> }
+              Verify location
             </button>
           </div>
+
           @if (resolvedLocation(); as location) {
             <div class="location-status success">
-              <mat-icon>location_on</mat-icon>
+              <mat-icon>check_circle</mat-icon>
               <span><strong>{{ location.city }}, {{ location.stateAbbreviation }}</strong> · {{ location.latitude }}, {{ location.longitude }}</span>
             </div>
           } @else if (locationError()) {
             <div class="location-status error"><mat-icon>error_outline</mat-icon><span>{{ locationError() }}</span></div>
           }
+
           <mat-form-field appearance="outline">
-            <mat-label>Calculation Method</mat-label>
+            <mat-label>Calculation method</mat-label>
             <mat-select formControlName="method">
               @for (m of methods; track m) { <mat-option [value]="m">{{ m }}</mat-option> }
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Asr Juristic Method</mat-label>
+            <mat-label>Asr juristic method</mat-label>
             <mat-select formControlName="juristicMethodAsr">
               @for (j of juristicMethods; track j.value) { <mat-option [value]="j.value">{{ j.label }}</mat-option> }
             </mat-select>
           </mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Latitude (resolved)</mat-label>
+          <mat-form-field appearance="outline"><mat-label>Latitude</mat-label>
             <input matInput type="number" formControlName="latitude" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Longitude (resolved)</mat-label>
+          <mat-form-field appearance="outline"><mat-label>Longitude</mat-label>
             <input matInput type="number" formControlName="longitude" />
-            <mat-hint>Locations west of Greenwich use a negative value.</mat-hint>
+            <mat-hint>Western longitudes use a negative value.</mat-hint>
           </mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Timezone (IANA)</mat-label>
+          <mat-form-field appearance="outline"><mat-label>Timezone</mat-label>
             <mat-select formControlName="timezoneId">
               @for (timezone of timezones; track timezone.value) { <mat-option [value]="timezone.value">{{ timezone.label }} · {{ timezone.value }}</mat-option> }
             </mat-select></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Minutes After Zawal</mat-label>
+          <mat-form-field appearance="outline"><mat-label>Minutes after Zawal</mat-label>
             <input matInput type="number" formControlName="minutesAfterZawal" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Minutes After Maghrib</mat-label>
+          <mat-form-field appearance="outline"><mat-label>Minutes after Maghrib</mat-label>
             <input matInput type="number" formControlName="minutesAfterMaghrib" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Khutbah Duration (min)</mat-label>
-            <input matInput type="number" formControlName="khutbahTimeMinutes" /></mat-form-field>
-          <mat-checkbox formControlName="dstObserved">Observe daylight saving time</mat-checkbox>
+          <mat-form-field appearance="outline"><mat-label>Khutbah duration</mat-label>
+            <input matInput type="number" formControlName="khutbahTimeMinutes" />
+            <span matTextSuffix>min</span>
+          </mat-form-field>
+
+          <div class="setting-toggle full-span">
+            <mat-checkbox formControlName="dstObserved">Observe daylight saving time</mat-checkbox>
+            <span>Use seasonal clock changes for this masjid’s timezone.</span>
+          </div>
           <mat-form-field appearance="outline"><mat-label>DST begins</mat-label>
             <input matInput type="date" formControlName="dstBegins" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>DST ends</mat-label>
             <input matInput type="date" formControlName="dstEnds" /></mat-form-field>
         </form>
       </mat-card-content>
-      <mat-card-actions align="end">
-        <button mat-button class="danger-action" (click)="resetCriteria()" [disabled]="saving()">Remove criteria</button>
-        <button mat-flat-button color="primary" (click)="saveCriteria()" [disabled]="saving() || resolvingLocation()">Save Criteria</button>
-      </mat-card-actions>
+
+      <div class="card-actions criteria-actions">
+        <button mat-button class="danger-action" type="button" (click)="resetCriteria()" [disabled]="saving()">
+          <mat-icon>delete_outline</mat-icon> Remove criteria
+        </button>
+        <button mat-flat-button color="primary" type="button" (click)="saveCriteria()" [disabled]="saving() || resolvingLocation()">
+          <mat-icon>save</mat-icon> Save prayer criteria
+        </button>
+      </div>
     </mat-card>
   }
 </div>

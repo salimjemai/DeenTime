@@ -732,6 +732,10 @@ namespace DeenTime.Infrastructure.Migrations
                     b.Property<int>("AutoRefreshSeconds")
                         .HasColumnType("integer");
 
+                    b.Property<int>("ClockFontScale")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(160);
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 

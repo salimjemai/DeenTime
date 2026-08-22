@@ -1,27 +1,49 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { NgStyle } from '@angular/common';
+import { AfterViewInit, Component, computed, ElementRef, HostListener, inject, signal, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { PrayerTimesDto, PublicDisplay } from '../../models';
 import { PublicDisplayOptions, PublicDisplayService } from '../../services/public-display';
+import {
+  effectivePrayerDisplayAccent,
+  prayerDisplayThemeCssVars,
+  resolvePrayerDisplayTheme
+} from '../../shared/prayer-display-theme';
+
+type WidgetVariant = 'full' | 'compact';
+type WidgetContent = 'combined' | 'daily' | 'jumuah';
 
 @Component({
   selector: 'app-widget',
   standalone: true,
-  imports: [MatProgressSpinnerModule, MatIconModule],
+  imports: [NgStyle, MatProgressSpinnerModule, MatIconModule],
   templateUrl: './widget.html',
   styleUrl: './widget.scss'
 })
-export class WidgetComponent implements OnInit {
+export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private displayService = inject(PublicDisplayService);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private resizeObserver?: ResizeObserver;
 
   slug = this.route.snapshot.params['slug'];
-  variant = this.route.snapshot.data['variant'] ?? 'full';
+  variant = (this.route.snapshot.data['variant'] ?? 'full') as WidgetVariant;
+  contentMode = (this.route.snapshot.data['content'] ?? 'combined') as WidgetContent;
   display = signal<PublicDisplay | null>(null);
   timings = signal<PrayerTimesDto | null>(null);
   loading = signal(true);
   error = signal(false);
+  backgroundImageUrl = computed(() => this.display()?.design?.backgroundImageUrl ?? this.display()?.design?.headerImageUrl ?? '');
+  displayTheme = computed(() => resolvePrayerDisplayTheme(
+    this.backgroundImageUrl(),
+    this.display()?.design?.theme,
+    'light'
+  ));
+  displayThemeStyles = computed(() => prayerDisplayThemeCssVars(
+    this.displayTheme(),
+    this.display()?.tvConfig?.accentColor
+  ));
 
   prayers = [
     { key: 'fajr', salah: 'Fajr', label: 'Fajr', detail: 'Dawn' },
@@ -46,6 +68,25 @@ export class WidgetComponent implements OnInit {
       },
       error: () => { this.error.set(true); this.loading.set(false); }
     });
+  }
+
+  ngAfterViewInit() {
+    if (typeof ResizeObserver === 'undefined' || typeof window === 'undefined') return;
+    const widget = this.host.nativeElement.querySelector<HTMLElement>('.widget');
+    if (!widget) return;
+    this.resizeObserver = new ResizeObserver(() => this.publishHeight());
+    this.resizeObserver.observe(widget);
+    window.requestAnimationFrame(() => this.publishHeight());
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver?.disconnect();
+  }
+
+  @HostListener('window:message', ['$event'])
+  onMeasurementRequest(event: MessageEvent) {
+    if (event.data?.type !== 'iqamatime:measure-widget') return;
+    this.publishHeight(event.source as WindowProxy | null, event.origin);
   }
 
   private displayOptions(): PublicDisplayOptions {
@@ -85,7 +126,19 @@ export class WidgetComponent implements OnInit {
     return ({ Jumuah: 'First', Jumuah2nd: 'Second', Jumuah3rd: 'Third', Jumuah4th: 'Fourth' } as Record<string, string>)[salah] ?? salah;
   }
 
-  accentColor() { return this.display()?.tvConfig?.accentColor || '#3d8b63'; }
+  showDaily() { return this.contentMode !== 'jumuah'; }
+
+  showJumuah() { return this.contentMode !== 'daily'; }
+
+  widgetEyebrow() {
+    if (this.contentMode === 'daily') return 'DAILY PRAYER TIMES';
+    if (this.contentMode === 'jumuah') return 'FRIDAY PRAYERS';
+    return 'DAILY + FRIDAY PRAYERS';
+  }
+
+  accentColor() {
+    return effectivePrayerDisplayAccent(this.displayTheme(), this.display()?.tvConfig?.accentColor);
+  }
 
   fontScale() {
     const design = this.display()?.design;
@@ -98,7 +151,7 @@ export class WidgetComponent implements OnInit {
   }
 
   backgroundImage() {
-    const image = this.display()?.design?.backgroundImageUrl ?? this.display()?.design?.headerImageUrl;
+    const image = this.backgroundImageUrl();
     return image ? `url("${image}")` : '';
   }
 
@@ -117,5 +170,19 @@ export class WidgetComponent implements OnInit {
     const [hours, minutes] = value.split(':').map(Number);
     if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
     return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  private publishHeight(target: WindowProxy | null = window.parent, targetOrigin = '*') {
+    if (!target || typeof window === 'undefined') return;
+    const widget = this.host.nativeElement.querySelector<HTMLElement>('.widget');
+    if (!widget) return;
+    const height = Math.ceil(widget.getBoundingClientRect().height + 24);
+    target.postMessage({
+      type: 'iqamatime:widget-resize',
+      slug: this.slug,
+      variant: this.variant,
+      content: this.contentMode,
+      height
+    }, targetOrigin || '*');
   }
 }

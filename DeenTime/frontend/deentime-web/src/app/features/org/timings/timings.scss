@@ -112,6 +112,38 @@
   mat-icon { width: 16px; height: 16px; font-size: 16px; }
 }
 
+:host-context(.theme-dark) {
+  .page-title { color: var(--app-heading); }
+  .eyebrow { color: var(--app-primary); }
+  .page-subtitle,
+  .schedule-note { color: var(--app-muted); }
+
+  .next-prayer-card {
+    border-color: var(--app-border);
+    background: linear-gradient(145deg, var(--app-surface-muted), var(--app-surface));
+    color: var(--app-text);
+
+    .next-label { color: var(--app-primary); }
+    span:last-child { color: var(--app-muted); }
+  }
+
+  .prayer-card {
+    border-color: var(--app-border);
+    background: var(--app-surface);
+
+    .prayer-icon,
+    .prayer-time { color: var(--app-primary); }
+    .prayer-label { color: var(--app-text); }
+  }
+
+  .setup-card {
+    border-color: var(--app-border);
+    background: linear-gradient(135deg, var(--app-surface-muted), var(--app-surface));
+  }
+  .setup-card h3 { color: var(--app-heading); }
+  .setup-card p { color: var(--app-muted); }
+}
+
 @media (max-width: 700px) {
   .page-heading { flex-direction: column; }
   .next-prayer-card { width: 100%; }

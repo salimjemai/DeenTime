@@ -1,71 +1,100 @@
 <div class="login-page">
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>{{ isRegister() ? 'Create Account' : 'Sign In' }}</mat-card-title>
-      <mat-card-subtitle>IqamaTime</mat-card-subtitle>
-    </mat-card-header>
+  <main class="login-shell">
+    <section class="welcome-panel" aria-labelledby="welcome-heading">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true"><app-icon name="brand" /></span>
+        <span class="brand-copy">
+          <strong>IqamaTime</strong>
+          <small>Masjid operations</small>
+        </span>
+      </div>
 
-    <mat-card-content>
-      @if (reason === 'organization-unavailable') {
-        <p class="login-notice">Your session no longer has access to that organization. Sign in again or ask an administrator to restore access.</p>
-      } @else if (reason === 'session-expired') {
-        <p class="login-notice">Your session expired. Sign in again to continue.</p>
-      } @else if (reason === 'forbidden') {
-        <p class="login-notice">This area requires an administrator account.</p>
+      <div class="welcome-copy">
+        <span class="welcome-kicker">PRAYER TIMES, BEAUTIFULLY SHARED</span>
+        <h1 id="welcome-heading">Keep every prayer within reach.</h1>
+        <p>Manage accurate Adhan and Iqama schedules, then share them across screens, websites, and your whole community.</p>
+      </div>
+
+      <div class="welcome-features" aria-label="IqamaTime capabilities">
+        <span><app-icon name="timings" /> Accurate schedules</span>
+        <span><app-icon name="design" /> Beautiful displays</span>
+        <span><app-icon name="publish" /> Effortless publishing</span>
+      </div>
+    </section>
+
+    <div class="auth-column">
+      <mat-card class="login-card">
+        <div class="login-card-header">
+          <span class="form-kicker">{{ isRegister() ? 'WELCOME TO IQAMATIME' : 'WELCOME BACK' }}</span>
+          <h2>{{ isRegister() ? 'Create Account' : 'Sign In' }}</h2>
+          <p>
+            {{ isRegister() ? 'Create your masjid workspace.' : 'Continue to your masjid dashboard.' }}
+          </p>
+        </div>
+
+        <mat-card-content>
+          @if (reason === 'organization-unavailable') {
+            <p class="login-notice">Your session no longer has access to that organization. Sign in again or ask an administrator to restore access.</p>
+          } @else if (reason === 'session-expired') {
+            <p class="login-notice">Your session expired. Sign in again to continue.</p>
+          } @else if (reason === 'forbidden') {
+            <p class="login-notice">This area requires an administrator account.</p>
+          }
+          <form [formGroup]="form" (ngSubmit)="submit()">
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" formControlName="email" autocomplete="email" />
+              @if (form.controls.email.hasError('required')) {
+                <mat-error>Email is required</mat-error>
+              } @else if (form.controls.email.hasError('email')) {
+                <mat-error>Enter a valid email</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input matInput type="password" formControlName="password" autocomplete="current-password" />
+              @if (form.controls.password.hasError('minlength')) {
+                <mat-error>At least 6 characters</mat-error>
+              }
+            </mat-form-field>
+
+            @if (isRegister()) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Mosque / Organization Name</mat-label>
+                <input matInput formControlName="organizationName" />
+              </mat-form-field>
+            }
+
+            <button mat-flat-button color="primary" type="submit" class="full-width submit-btn"
+                    [disabled]="loading()">
+              @if (loading()) {
+                <mat-spinner diameter="20" />
+              } @else {
+                {{ isRegister() ? 'Create Account' : 'Sign In' }}
+              }
+            </button>
+
+          </form>
+        </mat-card-content>
+
+        <mat-card-actions>
+          <button mat-button (click)="toggle()">
+            {{ isRegister() ? 'Already have an account? Sign in' : 'New mosque? Create account' }}
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+      @if (devSuperUser) {
+        <div class="dev-banner">
+          <span>DEV</span>
+          <button mat-flat-button (click)="quickLogin()" [disabled]="loading()">
+            Quick Login (Super User)
+          </button>
+          <code>{{ devSuperUser.email }}</code>
+        </div>
       }
-      <form [formGroup]="form" (ngSubmit)="submit()">
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" autocomplete="email" />
-          @if (form.controls.email.hasError('required')) {
-            <mat-error>Email is required</mat-error>
-          } @else if (form.controls.email.hasError('email')) {
-            <mat-error>Enter a valid email</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Password</mat-label>
-          <input matInput type="password" formControlName="password" autocomplete="current-password" />
-          @if (form.controls.password.hasError('minlength')) {
-            <mat-error>At least 6 characters</mat-error>
-          }
-        </mat-form-field>
-
-        @if (isRegister()) {
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Mosque / Organization Name</mat-label>
-            <input matInput formControlName="organizationName" />
-          </mat-form-field>
-        }
-
-        <button mat-flat-button color="primary" type="submit" class="full-width submit-btn"
-                [disabled]="loading()">
-          @if (loading()) {
-            <mat-spinner diameter="20" />
-          } @else {
-            {{ isRegister() ? 'Create Account' : 'Sign In' }}
-          }
-        </button>
-
-      </form>
-    </mat-card-content>
-
-    <mat-card-actions>
-      <button mat-button (click)="toggle()">
-        {{ isRegister() ? 'Already have an account? Sign in' : 'New mosque? Create account' }}
-      </button>
-    </mat-card-actions>
-  </mat-card>
-
-  @if (devSuperUser) {
-    <div class="dev-banner">
-      <span>DEV</span>
-      <button mat-flat-button (click)="quickLogin()" [disabled]="loading()">
-        Quick Login (Super User)
-      </button>
-      <code>{{ devSuperUser.email }}</code>
     </div>
-  }
+  </main>
 </div>

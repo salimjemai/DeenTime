@@ -5,8 +5,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Testcontainers.PostgreSql;
 using Xunit;
 using Xunit.Sdk;
@@ -14,6 +16,7 @@ using DeenTime.Core.Entities;
 using DeenTime.Core.Enums;
 using DeenTime.Infrastructure;
 using DeenTime.Api.Services;
+using DeenTime.Api.Services.IslamicContent;
 
 namespace DeenTime.Api.Tests;
 
@@ -77,6 +80,14 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
                 {
                     BaseAddress = new Uri("https://postal.test/")
                 }));
+                services.RemoveAll<QiblaProviderClient>();
+                services.AddSingleton(new QiblaProviderClient(
+                    new HttpClient(new QiblaLookupHandler())
+                    {
+                        BaseAddress = new Uri(IslamicContentOptions.RequiredAlAdhanBaseUrl)
+                    },
+                    new MemoryCache(new MemoryCacheOptions { SizeLimit = 100 }),
+                    Options.Create(new IslamicContentOptions())));
             });
         });
         client = factory.CreateClient();
@@ -107,7 +118,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal("ready", readinessBody.RootElement.GetProperty("status").GetString());
 
         var version = await client.GetFromJsonAsync<JsonElement>("/api/version");
-        Assert.Equal("20260819050000_RenameDefaultBranding", version.GetProperty("schemaVersion").GetString());
+        Assert.Equal("20260819061000_EnlargeDefaultTvClock", version.GetProperty("schemaVersion").GetString());
         Assert.False(string.IsNullOrWhiteSpace(version.GetProperty("apiVersion").GetString()));
     }
 
@@ -147,12 +158,45 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Contains("title=\"IqamaTime", iframe);
         Assert.Contains("Integration Mosque prayer times", iframe);
         Assert.Contains("Integration Mosque", WebUtility.HtmlDecode(iframe));
+        Assert.Contains($"/w/{organizationSlug}/daily", embed.GetProperty("dailyWidgetUrl").GetString());
+        Assert.Contains($"/w/{organizationSlug}/jumuah", embed.GetProperty("jumuahWidgetUrl").GetString());
+        Assert.Contains($"/w/{organizationSlug}/daily", WebUtility.HtmlDecode(embed.GetProperty("dailyIframe").GetString()!));
+        Assert.Contains($"/w/{organizationSlug}/jumuah", WebUtility.HtmlDecode(embed.GetProperty("jumuahIframe").GetString()!));
+        Assert.Contains("data-iqamatime-auto-height", iframe);
+        Assert.Contains("/iqamatime-embed.js", iframe);
 
         var dynamicEmbed = await client!.GetFromJsonAsync<JsonElement>(
             $"/api/v1/publish/embed-code/{organizationId}?publicOrigin=https%3A%2F%2Fiqamatime.example");
         var dynamicIframe = dynamicEmbed.GetProperty("iframe").GetString()!;
         Assert.Contains("src=\"https://iqamatime.example/w/", dynamicIframe);
         Assert.DoesNotContain("public.deentime.test", dynamicIframe);
+        Assert.StartsWith("https://iqamatime.example/w/", dynamicEmbed.GetProperty("dailyWidgetUrl").GetString());
+        Assert.StartsWith("https://iqamatime.example/w/", dynamicEmbed.GetProperty("jumuahWidgetUrl").GetString());
+        Assert.Contains("https://iqamatime.example/iqamatime-embed.js", dynamicIframe);
+    }
+
+    [Fact]
+    public async Task Tv_clock_scale_is_saved_independently_and_bounded()
+    {
+        var defaults = await client!.GetFromJsonAsync<JsonElement>($"/api/v1/publish/tv-config/{organizationId}");
+        Assert.Equal(160, defaults.GetProperty("clockFontScale").GetInt32());
+
+        var savedResponse = await client!.PutAsJsonAsync($"/api/v1/publish/tv-config/{organizationId}", new
+        {
+            id = "",
+            organizationId,
+            showSeconds = true,
+            showHijri = true,
+            accentColor = "#00AEEF",
+            clockFontScale = 250,
+            autoRefreshSeconds = 30
+        });
+        savedResponse.EnsureSuccessStatusCode();
+        using var savedBody = JsonDocument.Parse(await savedResponse.Content.ReadAsStringAsync());
+        Assert.Equal(200, savedBody.RootElement.GetProperty("clockFontScale").GetInt32());
+
+        var display = await client!.GetFromJsonAsync<JsonElement>($"/public/display/{organizationSlug}?layout=tv");
+        Assert.Equal(200, display.GetProperty("tvConfig").GetProperty("clockFontScale").GetInt32());
     }
 
     [Fact]
@@ -236,6 +280,8 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Contains("&lt;East&gt;", iframe);
         Assert.Contains("&amp; Community", iframe);
         Assert.DoesNotContain("src=\"/w/", iframe);
+        Assert.EndsWith("/daily", discovery.GetProperty("displays").GetProperty("daily").GetProperty("url").GetString());
+        Assert.EndsWith("/jumuah", discovery.GetProperty("displays").GetProperty("jumuah").GetProperty("url").GetString());
         Assert.Equal(75, discovery.GetProperty("supportedParameters").GetProperty("fontScale").GetProperty("min").GetInt32());
         Assert.Equal(HttpStatusCode.OK, (await publicClient.GetAsync($"/public/display/{organizationSlug}")).StatusCode);
     }
@@ -288,8 +334,47 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal(
             "/public/content/quran/showcase/ayah/{number}/recitation/{edition}",
             capabilities.GetProperty("quran").GetProperty("showcaseRecitation").GetString());
+        var qiblaCapabilities = capabilities.GetProperty("qibla");
+        Assert.Equal(
+            "https://api.aladhan.com/v1",
+            qiblaCapabilities.GetProperty("selectedUpstreamServer").GetString());
+        Assert.Equal("3.1.0", qiblaCapabilities.GetProperty("openApiVersion").GetString());
+        Assert.Equal(2, qiblaCapabilities.GetProperty("routes").GetArrayLength());
+        Assert.Equal(HttpStatusCode.OK, (await publicClient.GetAsync("/public/content/qibla/metadata")).StatusCode);
+        using (var preflight = new HttpRequestMessage(HttpMethod.Options, "/public/content/qibla/30.5052/-97.8203"))
+        {
+            preflight.Headers.Add("Origin", "https://masjid.example");
+            preflight.Headers.Add("Access-Control-Request-Method", "GET");
+            preflight.Headers.Add("Access-Control-Request-Headers", "Authorization, X-IqamaTime-Client-Key");
+            var preflightResponse = await publicClient.SendAsync(preflight);
+            Assert.Equal(HttpStatusCode.NoContent, preflightResponse.StatusCode);
+            Assert.Contains("*", preflightResponse.Headers.GetValues("Access-Control-Allow-Origin"));
+            Assert.Contains(
+                "X-IqamaTime-Client-Key",
+                preflightResponse.Headers.GetValues("Access-Control-Allow-Headers").Single(),
+                StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(
+                "Authorization",
+                preflightResponse.Headers.GetValues("Access-Control-Allow-Headers").Single(),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await publicClient.GetAsync("/public/content/qibla/30.5052/-97.8203")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await publicClient.GetAsync("/public/content/hadith/books")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client!.GetAsync("/public/content/hadith/books")).StatusCode);
+        var qibla = await client.GetFromJsonAsync<JsonElement>("/public/content/qibla/30.5052/-97.8203");
+        Assert.Equal(43.36991455214116, qibla.GetProperty("data").GetProperty("direction").GetDouble(), 10);
+        Assert.Equal("degrees", qibla.GetProperty("data").GetProperty("directionUnit").GetString());
+        Assert.EndsWith(
+            "/public/content/qibla/30.5052/-97.8203/compass",
+            qibla.GetProperty("data").GetProperty("compassUrl").GetString());
+        var compass = await client.GetAsync("/public/content/qibla/30.5052/-97.8203/compass");
+        Assert.Equal(HttpStatusCode.OK, compass.StatusCode);
+        Assert.Equal("image/png", compass.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await client.GetAsync("/public/content/qibla/91/0")).StatusCode);
         Assert.Equal(
             HttpStatusCode.BadRequest,
             (await client.GetAsync("/public/content/quran/showcase/ayah/0/recitation/ar.alafasy")).StatusCode);
@@ -341,6 +426,38 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
                     "latitude": "30.5052",
                     "longitude": "-97.8203"
                   }]
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(response, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class QiblaLookupHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith("/compass", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                byte[] png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+                var image = new ByteArrayContent(png);
+                image.Headers.ContentType = new("image/png");
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = image });
+            }
+
+            const string response = """
+                {
+                  "code": 200,
+                  "status": "OK",
+                  "data": {
+                    "latitude": 30.5052,
+                    "longitude": -97.8203,
+                    "direction": 43.36991455214116
+                  }
                 }
                 """;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)

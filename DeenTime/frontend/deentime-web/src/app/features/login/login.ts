@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../services/auth';
 import { environment } from '../../../environments/environment';
+import { AppIconComponent } from '../../shared/app-icon';
 
 @Component({
   selector: 'app-login',
@@ -17,7 +18,8 @@ import { environment } from '../../../environments/environment';
   imports: [
     ReactiveFormsModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule
+    MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule,
+    AppIconComponent
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss'

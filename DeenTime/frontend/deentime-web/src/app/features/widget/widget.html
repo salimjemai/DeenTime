@@ -1,22 +1,26 @@
 <article
   class="widget"
   [class.compact]="variant === 'compact'"
+  [class.daily-only]="contentMode === 'daily'"
+  [class.jumuah-only]="contentMode === 'jumuah'"
   [class.dark]="display()?.design?.theme === 'dark'"
   [class.classic]="display()?.design?.theme === 'classic'"
   [class.default]="!display()?.design?.theme || display()?.design?.theme === 'default' || display()?.design?.theme === 'light'"
+  [class.display-light]="displayTheme().mode === 'light'"
+  [class.display-dark]="displayTheme().mode === 'dark'"
   [class.font-system]="fontFamily() === 'system'"
   [class.font-modern-sans]="fontFamily() === 'modern-sans'"
   [class.font-classic-serif]="fontFamily() === 'classic-serif'"
   [style.--font-scale]="fontScale() / 100"
   [class.has-background]="!!backgroundImage()"
-  [style.--accent]="accentColor()"
+  [ngStyle]="displayThemeStyles()"
   [style.--background-image]="backgroundImage()">
   <div class="widget-background" aria-hidden="true"></div>
   <header class="widget-hero">
-    @if (display()?.design?.backgroundImageUrl ?? display()?.design?.headerImageUrl; as headerImage) { <img class="hero-image" [src]="headerImage" alt="" /> }
+    @if (backgroundImageUrl(); as headerImage) { <img class="hero-image" [src]="headerImage" alt="" /> }
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <div class="brand-line"><span class="brand-mark"></span><span>DAILY PRAYER TIMES</span></div>
+      <div class="brand-line"><span class="brand-mark"></span><span>{{ widgetEyebrow() }}</span></div>
       <h1>{{ display()?.organization?.name ?? 'Prayer Times' }}</h1>
       @if (locationLabel()) { <p>{{ locationLabel() }}</p> }
       <div class="date-card">
@@ -32,33 +36,37 @@
     } @else if (error()) {
       <div class="empty-state"><mat-icon>schedule</mat-icon><span>Prayer times are not available for this organization.</span></div>
     } @else {
-      <section class="daily-schedule">
-        <div class="column-head"><span>Prayer</span><span>Adhan</span><span>Iqama</span></div>
-        @for (prayer of prayers; track prayer.key) {
-          <div class="prayer-row" [class.sunrise]="!prayer.salah">
-            <span class="prayer-name"><strong>{{ prayer.label }}</strong><small>{{ prayer.detail }}</small></span>
-            <span class="start-time">{{ timeFor(prayer.key) }}</span>
-            <span class="iqama-time">{{ prayer.salah ? iqamaFor(prayer.salah) : 'Shuruq' }}</span>
-          </div>
-        }
-      </section>
+      @if (showDaily()) {
+        <section class="daily-schedule">
+          <div class="column-head"><span>Prayer</span><span>Adhan</span><span>Iqama</span></div>
+          @for (prayer of prayers; track prayer.key) {
+            <div class="prayer-row" [class.sunrise]="!prayer.salah">
+              <span class="prayer-name"><strong>{{ prayer.label }}</strong><small>{{ prayer.detail }}</small></span>
+              <span class="start-time">{{ timeFor(prayer.key) }}</span>
+              <span class="iqama-time">{{ prayer.salah ? iqamaFor(prayer.salah) : 'Shuruq' }}</span>
+            </div>
+          }
+        </section>
+      }
 
-      <section class="jumuah-section">
-        <div class="section-heading"><div><small>FRIDAY</small><strong>Jumu’ah</strong></div><span>Khutbah & Salah</span></div>
-        @if (jumuahEntries().length > 0) {
-          <div class="jumuah-grid">
-            @for (entry of jumuahEntries(); track entry.salah) {
-              <div class="jumuah-card">
-                <strong>{{ jumuahLabel(entry.salah) }}</strong>
-                <div><span>Khutbah</span><b>{{ formatTime(entry.time) }}</b></div>
-                <div><span>Salah</span><b>{{ formatTime(entry.salahTime) }}</b></div>
-              </div>
-            }
-          </div>
-        } @else {
-          <p class="jumuah-empty">Friday prayer times are not scheduled yet.</p>
-        }
-      </section>
+      @if (showJumuah()) {
+        <section class="jumuah-section">
+          <div class="section-heading"><div><small>FRIDAY</small><strong>Jumu’ah</strong></div><span>Khutbah & Salah</span></div>
+          @if (jumuahEntries().length > 0) {
+            <div class="jumuah-grid">
+              @for (entry of jumuahEntries(); track entry.salah) {
+                <div class="jumuah-card">
+                  <strong>{{ jumuahLabel(entry.salah) }}</strong>
+                  <div><span>Khutbah</span><b>{{ formatTime(entry.time) }}</b></div>
+                  <div><span>Salah</span><b>{{ formatTime(entry.salahTime) }}</b></div>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="jumuah-empty">Friday prayer times are not scheduled yet.</p>
+          }
+        </section>
+      }
 
       @if (display()?.monthlyPdfUrl; as pdfUrl) {
         <a class="pdf-link" [href]="pdfUrl" target="_blank"><mat-icon>download</mat-icon><span><strong>Monthly timetable</strong><small>Download the printable PDF</small></span><mat-icon>arrow_forward</mat-icon></a>

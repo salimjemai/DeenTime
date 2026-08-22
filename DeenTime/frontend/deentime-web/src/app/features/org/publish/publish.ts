@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, HostListener, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,13 +11,16 @@ import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { PublishEmbedCode, PublishService, resolvePublishEmbedCode } from '../../../services/publish';
+import { PublishEmbedCode, PublishService, TvDisplayConfigUpdate, resolvePublishEmbedCode } from '../../../services/publish';
 import { AuthService } from '../../../services/auth';
 import { PublishArtifact, PdfSize, PdfOrientation, TvDisplayConfig } from '../../../models';
 import { OrganizationReadiness } from '../../../models';
 import { OrgsService } from '../../../services/orgs';
 import { apiErrorMessage } from '../../../services/api-error';
 import { concatMap, finalize, from, toArray } from 'rxjs';
+
+type PreviewMode = 'tv' | 'combined' | 'daily' | 'jumuah' | 'compact';
+type WidgetPreviewMode = Exclude<PreviewMode, 'tv'>;
 
 @Component({
   selector: 'app-publish',
@@ -47,14 +50,21 @@ export class PublishComponent implements OnInit {
   savingTv   = signal(false);
   generatingKey = signal('');
   generatingYear = signal(false);
-  previewMode = signal<'tv' | 'widget' | 'compact'>('tv');
-  previewSources = signal<Record<'tv' | 'widget' | 'compact', SafeResourceUrl> | null>(null);
+  previewMode = signal<PreviewMode>('tv');
+  previewSources = signal<Record<PreviewMode, SafeResourceUrl> | null>(null);
+  widgetPreviewHeights = signal<Record<WidgetPreviewMode, number>>({
+    combined: 900,
+    daily: 720,
+    jumuah: 560,
+    compact: 800
+  });
   readiness = signal<OrganizationReadiness | null>(null);
   readinessError = signal('');
 
   showSeconds = true;
   showHijri = true;
   accentColor = '#00AEEF';
+  clockFontScale = 160;
   autoRefreshSeconds = 30;
 
   genYear        = new Date().getFullYear();
@@ -77,11 +87,7 @@ export class PublishComponent implements OnInit {
       next: response => {
         const code = resolvePublishEmbedCode(response, this.publicAppOrigin);
         this.embedCode.set(code);
-        this.previewSources.set({
-          tv: this.sanitizer.bypassSecurityTrustResourceUrl(code.tvUrl),
-          widget: this.sanitizer.bypassSecurityTrustResourceUrl(code.widgetUrl),
-          compact: this.sanitizer.bypassSecurityTrustResourceUrl(code.compactWidgetUrl)
-        });
+        this.setPreviewSources(code);
       }
     });
     this.svc.getTvConfig(this.orgId).subscribe({
@@ -162,28 +168,72 @@ export class PublishComponent implements OnInit {
     this.showSeconds = config.showSeconds;
     this.showHijri = config.showHijri;
     this.accentColor = config.accentColor || '#00AEEF';
+    this.clockFontScale = config.clockFontScale ?? 160;
     this.autoRefreshSeconds = config.autoRefreshSeconds || 30;
   }
 
   saveTvConfig() {
     this.savingTv.set(true);
-    const config: TvDisplayConfig = {
-      id: '', organizationId: this.orgId, showSeconds: this.showSeconds,
+    const config: TvDisplayConfigUpdate = {
+      showSeconds: this.showSeconds,
       showHijri: this.showHijri, accentColor: this.accentColor,
+      clockFontScale: Math.min(200, Math.max(80, Number(this.clockFontScale) || 160)),
       autoRefreshSeconds: this.autoRefreshSeconds
     };
     this.svc.updateTvConfig(this.orgId, config).subscribe({
-      next: saved => { this.setTvFields(saved); this.savingTv.set(false); this.snack.open('TV display settings saved', '', { duration: 2500 }); },
+      next: saved => {
+        this.setTvFields(saved);
+        const code = this.embedCode();
+        if (code) this.setPreviewSources(code, true);
+        this.savingTv.set(false);
+        this.snack.open('TV display settings saved', '', { duration: 2500 });
+      },
       error: () => { this.savingTv.set(false); this.snack.open('Could not save TV settings', 'Dismiss', { duration: 3000 }); }
     });
   }
 
   previewUrl() { return this.previewSources()?.[this.previewMode()] ?? null; }
 
+  previewFrameHeight(): number | null {
+    const mode = this.previewMode();
+    return mode === 'tv' ? null : this.widgetPreviewHeights()[mode];
+  }
+
+  @HostListener('window:message', ['$event'])
+  onWidgetResize(event: MessageEvent) {
+    if (event.origin !== this.publicAppOrigin || event.data?.type !== 'iqamatime:widget-resize') return;
+    const frame = document.querySelector<HTMLIFrameElement>('.preview-frame-shell iframe');
+    if (!frame || event.source !== frame.contentWindow) return;
+
+    const mode = this.previewMode();
+    if (mode === 'tv') return;
+    const expected = {
+      combined: { variant: 'full', content: 'combined' },
+      daily: { variant: 'full', content: 'daily' },
+      jumuah: { variant: 'full', content: 'jumuah' },
+      compact: { variant: 'compact', content: 'combined' }
+    } satisfies Record<WidgetPreviewMode, { variant: string; content: string }>;
+    if (event.data?.variant !== expected[mode].variant || event.data?.content !== expected[mode].content) return;
+
+    const height = Math.round(Number(event.data?.height));
+    if (!Number.isFinite(height)) return;
+    this.widgetPreviewHeights.update(values => ({
+      ...values,
+      [mode]: Math.min(1400, Math.max(320, height))
+    }));
+  }
+
   previewHref() {
     const code = this.embedCode();
     if (!code) return '#';
-    return this.previewMode() === 'tv' ? code.tvUrl : this.previewMode() === 'compact' ? code.compactWidgetUrl : code.widgetUrl;
+    const urls: Record<PreviewMode, string> = {
+      tv: code.tvUrl,
+      combined: code.combinedWidgetUrl,
+      daily: code.dailyWidgetUrl,
+      jumuah: code.jumuahWidgetUrl,
+      compact: code.compactWidgetUrl
+    };
+    return urls[this.previewMode()];
   }
 
   copy(value: string) {
@@ -191,5 +241,20 @@ export class PublishComponent implements OnInit {
       () => this.snack.open('Copied to clipboard', '', { duration: 1800 }),
       () => this.snack.open('Copy failed', 'Dismiss', { duration: 2500 })
     );
+  }
+
+  private setPreviewSources(code: PublishEmbedCode, cacheBust = false) {
+    const source = (value: string) => {
+      const url = new URL(value);
+      if (cacheBust) url.searchParams.set('_preview', Date.now().toString());
+      return this.sanitizer.bypassSecurityTrustResourceUrl(url.toString());
+    };
+    this.previewSources.set({
+      tv: source(code.tvUrl),
+      combined: source(code.combinedWidgetUrl),
+      daily: source(code.dailyWidgetUrl),
+      jumuah: source(code.jumuahWidgetUrl),
+      compact: source(code.compactWidgetUrl)
+    });
   }
 }

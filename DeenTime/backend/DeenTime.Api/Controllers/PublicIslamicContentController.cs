@@ -16,6 +16,7 @@ namespace DeenTime.Api.Controllers;
 [Route("public/content")]
 public sealed class PublicIslamicContentController(
     QuranProviderClient quranClient,
+    QiblaProviderClient qiblaClient,
     IDbContextFactory<AppDbContext> dbFactory,
     ApiClientCredentialService credentials) : ControllerBase
 {
@@ -33,6 +34,14 @@ public sealed class PublicIslamicContentController(
             scope = "content:read",
             note = "Administrators may use their IqamaTime session token; external masjid apps must send a client key."
         },
+        browserAccess = new
+        {
+            crossOrigin = true,
+            methods = new[] { "GET", "OPTIONS" },
+            allowedHeaders = new[] { "Authorization", "X-IqamaTime-Client-Key", "X-DeenTime-Client-Key", "Accept", "Content-Type" },
+            credentials = false,
+            note = "Masjid websites may call read-only content APIs from their own domain with a revocable client key."
+        },
         quran = new
         {
             provider = "AlQuran Cloud",
@@ -44,6 +53,7 @@ public sealed class PublicIslamicContentController(
             showcaseRecitation = "/public/content/quran/showcase/ayah/{number}/recitation/{edition}",
             behavior = "Provider-compatible JSON with local caching and stale-data fallback"
         },
+        qibla = BuildQiblaMetadata(),
         hadith = new
         {
             endpointBase = "/public/content/hadith",
@@ -58,6 +68,103 @@ public sealed class PublicIslamicContentController(
             }
         }
         });
+    }
+
+    [HttpGet("qibla/metadata")]
+    public IActionResult QiblaMetadata()
+    {
+        return Ok(new { data = BuildQiblaMetadata() });
+    }
+
+    [HttpGet("qibla/{latitude:double}/{longitude:double}")]
+    public async Task<IActionResult> QiblaDirection(
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken)
+    {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
+        if (!QiblaProviderClient.AreValidCoordinates(latitude, longitude))
+            return BadRequest(new
+            {
+                error = "Latitude must be between -90 and 90, and longitude must be between -180 and 180."
+            });
+
+        try
+        {
+            var payload = await qiblaClient.GetDirectionAsync(latitude, longitude, cancellationToken);
+            var latitudePath = QiblaProviderClient.FormatCoordinate(payload.Data.Latitude);
+            var longitudePath = QiblaProviderClient.FormatCoordinate(payload.Data.Longitude);
+            var compassPath = $"{Request.PathBase}/public/content/qibla/{latitudePath}/{longitudePath}/compass";
+            var source = payload.FromCache ? "cache" : "provider";
+            SetSourceHeader(source);
+            Response.Headers["X-IqamaTime-Retrieved"] = payload.RetrievedAtUtc.ToString("O");
+            Response.Headers["Cache-Control"] = "private, max-age=86400";
+
+            return Ok(new
+            {
+                code = 200,
+                status = "OK",
+                data = new
+                {
+                    payload.Data.Latitude,
+                    payload.Data.Longitude,
+                    payload.Data.Direction,
+                    directionUnit = "degrees",
+                    bearingConvention = "clockwise from north",
+                    destination = new
+                    {
+                        name = "Al-Kaaba",
+                        city = "Makkah",
+                        country = "Saudi Arabia"
+                    },
+                    compassUrl = compassPath
+                },
+                meta = new
+                {
+                    provider = QiblaProviderClient.ProviderName,
+                    providerOrganization = QiblaProviderClient.ProviderOrganization,
+                    apiVersion = "v1",
+                    openApiVersion = QiblaProviderClient.OpenApiVersion,
+                    upstreamServer = IslamicContentOptions.RequiredAlAdhanBaseUrl.TrimEnd('/'),
+                    source,
+                    retrievedAtUtc = payload.RetrievedAtUtc
+                }
+            });
+        }
+        catch (IslamicContentProviderException exception)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = exception.Message });
+        }
+    }
+
+    [HttpGet("qibla/{latitude:double}/{longitude:double}/compass")]
+    [Produces("image/png")]
+    public async Task<IActionResult> QiblaCompass(
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken)
+    {
+        var denied = await ValidateClientAsync(cancellationToken);
+        if (denied is not null) return denied;
+        if (!QiblaProviderClient.AreValidCoordinates(latitude, longitude))
+            return BadRequest(new
+            {
+                error = "Latitude must be between -90 and 90, and longitude must be between -180 and 180."
+            });
+
+        try
+        {
+            var payload = await qiblaClient.GetCompassAsync(latitude, longitude, cancellationToken);
+            SetSourceHeader("provider");
+            Response.Headers["X-IqamaTime-Retrieved"] = payload.RetrievedAtUtc.ToString("O");
+            Response.Headers["Cache-Control"] = "private, max-age=86400";
+            return File(payload.Content, payload.ContentType);
+        }
+        catch (IslamicContentProviderException exception)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = exception.Message });
+        }
     }
 
     [HttpGet("quran/showcase/random")]
@@ -392,6 +499,51 @@ public sealed class PublicIslamicContentController(
         Response.Headers["X-IqamaTime-Source"] = source;
         Response.Headers["X-DeenTime-Source"] = source;
     }
+
+    private static object BuildQiblaMetadata() => new
+    {
+        provider = QiblaProviderClient.ProviderName,
+        providerOrganization = QiblaProviderClient.ProviderOrganization,
+        selectedUpstreamServer = IslamicContentOptions.RequiredAlAdhanBaseUrl.TrimEnd('/'),
+        officialServers = QiblaProviderClient.OfficialServers,
+        serverSelection = "The first server in the official AlAdhan OpenAPI document is required.",
+        apiVersion = "v1",
+        openApiVersion = QiblaProviderClient.OpenApiVersion,
+        openApiDocument = QiblaProviderClient.OpenApiDocumentUrl,
+        endpointBase = "/public/content/qibla",
+        routes = new object[]
+        {
+            new
+            {
+                method = "GET",
+                path = "/public/content/qibla/{latitude}/{longitude}",
+                mediaType = "application/json",
+                description = "Qibla bearing plus IqamaTime metadata and a related compass URL."
+            },
+            new
+            {
+                method = "GET",
+                path = "/public/content/qibla/{latitude}/{longitude}/compass",
+                mediaType = "image/png",
+                description = "Generated compass image marking the Qibla direction."
+            }
+        },
+        coordinates = new
+        {
+            latitude = new { minimum = -90, maximum = 90 },
+            longitude = new { minimum = -180, maximum = 180 },
+            precision = "Up to 6 decimal places are forwarded to the provider."
+        },
+        direction = new
+        {
+            unit = "degrees",
+            range = "0 <= direction < 360",
+            convention = "clockwise from north"
+        },
+        upstreamCompression = QiblaProviderClient.UpstreamCompression,
+        authentication = new { required = true, header = "X-IqamaTime-Client-Key", scope = "content:read" },
+        browserAccess = new { crossOrigin = true, methods = new[] { "GET", "OPTIONS" }, credentials = false }
+    };
 
     private static JsonObject? FindAyah(string json, int number)
     {

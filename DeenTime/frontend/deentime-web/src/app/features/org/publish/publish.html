@@ -36,8 +36,14 @@
     <mat-card-content>
       @if (embedCode(); as code) {
         <div class="display-links">
-          <a class="display-link" [href]="code.widgetUrl" target="_blank">
-            <span class="link-icon"><mat-icon>web</mat-icon></span><span><strong>Website widget</strong><small>{{ code.widgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
+          <a class="display-link" [href]="code.combinedWidgetUrl" target="_blank">
+            <span class="link-icon"><mat-icon>dashboard</mat-icon></span><span><strong>Combined widget</strong><small>{{ code.combinedWidgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
+          </a>
+          <a class="display-link" [href]="code.dailyWidgetUrl" target="_blank">
+            <span class="link-icon daily"><mat-icon>calendar_view_day</mat-icon></span><span><strong>Daily prayer widget</strong><small>{{ code.dailyWidgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
+          </a>
+          <a class="display-link" [href]="code.jumuahWidgetUrl" target="_blank">
+            <span class="link-icon jumuah"><mat-icon>mosque</mat-icon></span><span><strong>Friday prayer widget</strong><small>{{ code.jumuahWidgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
           </a>
           <a class="display-link" [href]="code.compactWidgetUrl" target="_blank">
             <span class="link-icon compact"><mat-icon>view_agenda</mat-icon></span><span><strong>Compact widget</strong><small>{{ code.compactWidgetUrl }}</small></span><mat-icon>open_in_new</mat-icon>
@@ -46,13 +52,27 @@
             <span class="link-icon tv"><mat-icon>tv</mat-icon></span><span><strong>TV display</strong><small>{{ code.tvUrl }}</small></span><mat-icon>open_in_new</mat-icon>
           </a>
         </div>
-        <div class="code-row">
-          <div><span class="code-label">Embed this widget</span><code>{{ code.iframe }}</code></div>
-          <button mat-stroked-button (click)="copy(code.iframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+        <div class="embed-code-heading">
+          <strong>Website embed codes</strong>
+          <span>Choose the exact prayer information needed on each masjid page.</span>
         </div>
-        <div class="code-row compact-code">
-          <div><span class="code-label">Embed compact widget</span><code>{{ code.compactIframe }}</code></div>
-          <button mat-stroked-button (click)="copy(code.compactIframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+        <div class="embed-code-list">
+          <div class="code-row combined-code">
+            <div><span class="code-label">Daily + Friday prayers</span><code>{{ code.combinedIframe }}</code></div>
+            <button mat-stroked-button (click)="copy(code.combinedIframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+          </div>
+          <div class="code-row daily-code">
+            <div><span class="code-label">Daily prayer times only</span><code>{{ code.dailyIframe }}</code></div>
+            <button mat-stroked-button (click)="copy(code.dailyIframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+          </div>
+          <div class="code-row jumuah-code">
+            <div><span class="code-label">Friday prayers only</span><code>{{ code.jumuahIframe }}</code></div>
+            <button mat-stroked-button (click)="copy(code.jumuahIframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+          </div>
+          <div class="code-row compact-code">
+            <div><span class="code-label">Compact combined widget</span><code>{{ code.compactIframe }}</code></div>
+            <button mat-stroked-button (click)="copy(code.compactIframe)"><mat-icon>content_copy</mat-icon> Copy</button>
+          </div>
         </div>
         <div class="dynamic-origin-note">
           <mat-icon>language</mat-icon>
@@ -77,15 +97,18 @@
       <div class="preview-toolbar">
         <div class="preview-tabs" role="tablist" aria-label="Display preview">
           <button mat-button [class.active]="previewMode() === 'tv'" (click)="previewMode.set('tv')"><mat-icon>tv</mat-icon> TV display</button>
-          <button mat-button [class.active]="previewMode() === 'widget'" (click)="previewMode.set('widget')"><mat-icon>web</mat-icon> Website widget</button>
+          <button mat-button [class.active]="previewMode() === 'combined'" (click)="previewMode.set('combined')"><mat-icon>dashboard</mat-icon> Combined</button>
+          <button mat-button [class.active]="previewMode() === 'daily'" (click)="previewMode.set('daily')"><mat-icon>calendar_view_day</mat-icon> Daily</button>
+          <button mat-button [class.active]="previewMode() === 'jumuah'" (click)="previewMode.set('jumuah')"><mat-icon>mosque</mat-icon> Friday</button>
           <button mat-button [class.active]="previewMode() === 'compact'" (click)="previewMode.set('compact')"><mat-icon>view_agenda</mat-icon> Compact</button>
         </div>
         <a mat-stroked-button [href]="previewHref()" target="_blank"><mat-icon>open_in_new</mat-icon> Open full view</a>
       </div>
       <div class="preview-note"><span></span> Live data from today’s schedule</div>
-      <div class="preview-frame-shell" [class.widget-preview]="previewMode() !== 'tv'" [class.compact-preview]="previewMode() === 'compact'">
+      <div class="preview-frame-shell" [class.widget-preview]="previewMode() !== 'tv'" [class.daily-preview]="previewMode() === 'daily'"
+           [class.jumuah-preview]="previewMode() === 'jumuah'" [class.compact-preview]="previewMode() === 'compact'">
         @if (previewUrl(); as source) {
-          <iframe [src]="source" [title]="previewMode() + ' prayer display preview'"></iframe>
+          <iframe [src]="source" [title]="previewMode() + ' prayer display preview'" [style.height.px]="previewFrameHeight()"></iframe>
         } @else {
           <div class="center"><mat-spinner diameter="32" /></div>
         }
@@ -105,6 +128,11 @@
         <div class="settings-grid">
           <mat-checkbox [(ngModel)]="showSeconds">Show seconds on clock</mat-checkbox>
           <mat-checkbox [(ngModel)]="showHijri">Show Hijri date</mat-checkbox>
+          <label class="clock-size-field">
+            <span><strong>Local time size</strong><small>Changes only the large TV clock.</small></span>
+            <input type="range" min="80" max="200" step="5" [(ngModel)]="clockFontScale" aria-label="Local time font size" />
+            <output>{{ clockFontScale }}%</output>
+          </label>
           <label class="color-field">Accent color <input type="color" [(ngModel)]="accentColor" /></label>
           <mat-form-field appearance="outline">
             <mat-label>Auto-refresh (seconds)</mat-label>

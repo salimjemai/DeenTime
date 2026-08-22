@@ -200,6 +200,7 @@ export interface TvDisplayConfig {
   showSeconds: boolean;
   showHijri: boolean;
   accentColor: string;
+  clockFontScale: number;
   autoRefreshSeconds: number;
 }
 
@@ -235,6 +236,7 @@ export interface PublicDisplay {
     showSeconds: boolean;
     showHijri: boolean;
     accentColor: string;
+    clockFontScale: number;
     autoRefreshSeconds: number;
   };
 }
@@ -294,10 +296,20 @@ export interface IslamicContentSummary {
     languages: string[];
     languageCoverage: { ar: number; en: number; ur: number };
   };
+  qibla: {
+    provider: string;
+    providerOrganization: string;
+    upstreamServer: string;
+    endpointCount: number;
+    endpointTemplates: string[];
+    responseFormats: string[];
+    metadata: string;
+  };
   publicApi: {
     capabilities: string;
     quranBase: string;
     hadithBase: string;
+    qiblaBase: string;
   };
   syncStates: IslamicContentSyncState[];
 }
@@ -329,6 +341,29 @@ export interface QuranApiResponse<T> {
   code: number;
   status: string;
   data: T;
+}
+
+export interface QiblaDirectionResponse {
+  code: number;
+  status: string;
+  data: {
+    latitude: number;
+    longitude: number;
+    direction: number;
+    directionUnit: 'degrees' | string;
+    bearingConvention: string;
+    destination: { name: string; city: string; country: string };
+    compassUrl: string;
+  };
+  meta: {
+    provider: string;
+    providerOrganization: string;
+    apiVersion: string;
+    openApiVersion: string;
+    upstreamServer: string;
+    source: string;
+    retrievedAtUtc: string;
+  };
 }
 
 export interface ApiClientAccess {

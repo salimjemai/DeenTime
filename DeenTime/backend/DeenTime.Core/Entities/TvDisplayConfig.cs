@@ -13,6 +13,7 @@ namespace DeenTime.Core.Entities
         public bool ShowSeconds { get; set; } = true;
         public bool ShowHijri { get; set; } = true;
         public string AccentColor { get; set; } = "#00AEEF";
+        public int ClockFontScale { get; set; } = 160;
         public int AutoRefreshSeconds { get; set; } = 30;
     }
 }

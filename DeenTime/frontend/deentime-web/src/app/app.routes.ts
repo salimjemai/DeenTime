@@ -5,8 +5,10 @@ import { adminGuard } from './core/admin.guard';
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./features/login/login').then(m => m.LoginComponent) },
   { path: 'tv/:slug',  loadComponent: () => import('./features/tv/tv').then(m => m.TvComponent) },
-  { path: 'w/:slug',   loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
-  { path: 'w2/:slug',  data: { variant: 'compact' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
+  { path: 'w/:slug/daily', data: { content: 'daily' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
+  { path: 'w/:slug/jumuah', data: { content: 'jumuah' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
+  { path: 'w/:slug', data: { content: 'combined' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
+  { path: 'w2/:slug', data: { variant: 'compact', content: 'combined' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
   {
     path: '',
     canActivate: [authGuard],

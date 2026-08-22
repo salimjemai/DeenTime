@@ -33,13 +33,13 @@ describe('WidgetComponent typography', () => {
     }
   } as PublicDisplay;
 
-  function create(variant: 'full' | 'compact', query: Record<string, string> = {}) {
+  function create(variant: 'full' | 'compact', query: Record<string, string> = {}, content = 'combined') {
     const service = { get: jasmine.createSpy('get').and.returnValue(of(display)) };
     TestBed.configureTestingModule({
       imports: [WidgetComponent],
       providers: [
         provideZonelessChangeDetection(),
-        { provide: ActivatedRoute, useValue: { snapshot: { params: { slug: 'test' }, data: { variant }, queryParamMap: convertToParamMap(query) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { params: { slug: 'test' }, data: { variant, content }, queryParamMap: convertToParamMap(query) } } },
         { provide: PublicDisplayService, useValue: service }
       ]
     });
@@ -69,6 +69,24 @@ describe('WidgetComponent typography', () => {
       fontScale: '120',
       locale: 'ur'
     });
+  });
+
+  it('renders combined, daily-only, and Friday-only widget content independently', () => {
+    const daily = create('full', {}, 'daily');
+    daily.fixture.detectChanges();
+    expect(daily.component.showDaily()).toBeTrue();
+    expect(daily.component.showJumuah()).toBeFalse();
+    expect(daily.fixture.nativeElement.querySelector('.daily-schedule')).not.toBeNull();
+    expect(daily.fixture.nativeElement.querySelector('.jumuah-section')).toBeNull();
+
+    TestBed.resetTestingModule();
+
+    const jumuah = create('full', {}, 'jumuah');
+    jumuah.fixture.detectChanges();
+    expect(jumuah.component.showDaily()).toBeFalse();
+    expect(jumuah.component.showJumuah()).toBeTrue();
+    expect(jumuah.fixture.nativeElement.querySelector('.daily-schedule')).toBeNull();
+    expect(jumuah.fixture.nativeElement.querySelector('.jumuah-section')).not.toBeNull();
   });
 
   it('keeps fixed and offset Iqama values visible while Adhan criteria are incomplete', () => {

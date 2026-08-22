@@ -13,6 +13,82 @@
   @if (loading()) {
     <div class="center"><mat-spinner diameter="48" /></div>
   } @else {
+    <mat-card class="wallpaper-gallery-card" [class.expanded]="galleryExpanded()">
+      <button
+        type="button"
+        class="gallery-toggle"
+        [attr.aria-expanded]="galleryExpanded()"
+        aria-controls="wallpaper-gallery-content"
+        (click)="toggleWallpaperGallery()">
+        <span class="gallery-heading">
+          <span class="gallery-icon"><mat-icon>wallpaper</mat-icon></span>
+          <span class="gallery-heading-copy">
+            <strong>Prayer display wallpaper gallery</strong>
+            <small>Choose a text-free 4K background for every TV screen and website widget.</small>
+          </span>
+        </span>
+        <span class="gallery-toggle-action">
+          <span>{{ galleryExpanded() ? 'Hide gallery' : 'Browse 24 wallpapers' }}</span>
+          <mat-icon>{{ galleryExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </span>
+      </button>
+      @if (galleryExpanded()) {
+      <mat-card-content id="wallpaper-gallery-content" class="gallery-content">
+        <div class="gallery-summary">
+          <div>
+            <strong>24 original 4K backgrounds</strong>
+            <span>One selection is saved to your TV, combined, daily, Friday, and compact views.</span>
+          </div>
+          <div class="gallery-quality" aria-label="Wallpaper quality">
+            <span><mat-icon>hd</mat-icon> 3840 × 2160</span>
+            <span><mat-icon>text_fields</mat-icon> No words</span>
+          </div>
+        </div>
+
+        <div class="wallpaper-filters" aria-label="Filter wallpaper gallery">
+          @for (category of wallpaperCategories; track category) {
+            <button
+              type="button"
+              class="filter-button"
+              [class.active]="wallpaperFilter() === category"
+              [attr.aria-pressed]="wallpaperFilter() === category"
+              (click)="setWallpaperFilter(category)">
+              {{ category }}
+            </button>
+          }
+        </div>
+
+        <div class="wallpaper-grid" role="list" aria-label="Prayer display wallpapers">
+          @for (wallpaper of visibleWallpapers(); track wallpaper.id) {
+            <button
+              type="button"
+              class="wallpaper-tile"
+              role="listitem"
+              [class.selected]="isWallpaperSelected(wallpaper)"
+              [disabled]="saving() || uploading()"
+              [attr.aria-label]="'Apply ' + wallpaper.name + ' to all published views'"
+              [attr.aria-pressed]="isWallpaperSelected(wallpaper)"
+              (click)="applyWallpaper(wallpaper)">
+              <span class="wallpaper-image-wrap">
+                <img [src]="wallpaper.thumbnail" alt="" loading="lazy" width="480" height="270" />
+                <span class="resolution-badge">4K</span>
+                @if (applyingWallpaper() === wallpaper.id) {
+                  <span class="wallpaper-applying"><mat-spinner diameter="26" /> Applying…</span>
+                } @else if (isWallpaperSelected(wallpaper)) {
+                  <span class="wallpaper-active"><mat-icon>check_circle</mat-icon> Active</span>
+                }
+              </span>
+              <span class="wallpaper-copy">
+                <strong>{{ wallpaper.name }}</strong>
+                <small>{{ wallpaper.category }}</small>
+              </span>
+            </button>
+          }
+        </div>
+      </mat-card-content>
+      }
+    </mat-card>
+
     <div class="design-grid">
       <mat-card>
         <mat-card-header>
@@ -96,7 +172,14 @@
               <a mat-stroked-button [href]="'/w2/' + orgSlug()" target="_blank"><mat-icon>view_compact</mat-icon> Compact</a>
             </div>
           }
-          <div class="preview-shell" [class.dark]="form.controls.theme.value === 'dark'" [class.classic]="form.controls.theme.value === 'classic'" [class.default]="form.controls.theme.value === 'default'">
+          <div
+            class="preview-shell"
+            [class.dark]="form.controls.theme.value === 'dark'"
+            [class.classic]="form.controls.theme.value === 'classic'"
+            [class.default]="form.controls.theme.value === 'default'"
+            [class.display-light]="previewDisplayTheme().mode === 'light'"
+            [class.display-dark]="previewDisplayTheme().mode === 'dark'"
+            [ngStyle]="previewThemeStyles()">
             @if (form.controls.headerImageUrl.value) {
               <img class="preview-banner" [src]="form.controls.headerImageUrl.value" alt="" />
             }

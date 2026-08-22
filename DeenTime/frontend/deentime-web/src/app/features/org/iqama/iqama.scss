@@ -72,6 +72,52 @@
 .pattern-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .pattern-actions mat-spinner { display: inline-block; }
 
+:host-context(.theme-dark) {
+  .page-title,
+  .quick-header h3,
+  .quick-prayer-title strong,
+  .pattern-intro strong,
+  .empty strong { color: var(--app-heading); }
+  .eyebrow,
+  .quick-kicker { color: var(--app-primary); }
+  .page-subtitle,
+  .quick-header p,
+  .effective-date,
+  .quick-prayer label,
+  .quick-prayer-title small,
+  .quick-prayer .time-field.offset b,
+  .quick-footer > span,
+  .quick-loading,
+  .pattern-intro span,
+  .pattern-form label,
+  .empty { color: var(--app-muted); }
+
+  .quick-header,
+  .quick-footer {
+    border-color: var(--app-border);
+    background: var(--app-surface-muted);
+  }
+  .quick-grid { background: var(--app-surface); }
+  .quick-prayer {
+    border-color: var(--app-border);
+    background: var(--app-surface-solid);
+    box-shadow: none;
+  }
+  .quick-prayer-title > span,
+  .pattern-icon { background: color-mix(in srgb, var(--app-primary) 14%, var(--app-surface-solid)); color: var(--app-primary); }
+  .effective-date input,
+  .quick-prayer select,
+  .quick-prayer input,
+  .pattern-form select,
+  .pattern-form input {
+    border-color: var(--app-border-strong);
+    background: var(--app-field);
+    color: var(--app-text);
+  }
+  .quick-prayer .time-field input { color: var(--app-primary); }
+  .pattern-card { background: linear-gradient(135deg, var(--app-surface-muted), var(--app-surface)); }
+}
+
 @media (max-width: 700px) {
   .page-header { align-items: flex-start; flex-wrap: wrap; }
   .page-header > div:first-child { flex-basis: 100%; }

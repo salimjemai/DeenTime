@@ -9,6 +9,7 @@ import {
   IslamicContentSyncState,
   IssuedApiClient,
   PagedResult,
+  QiblaDirectionResponse,
   QuranApiResponse,
   QuranAyah,
   QuranEdition
@@ -83,6 +84,17 @@ export class IslamicContentService {
     });
     return this.http.get<{ data: HadithRecord }>(
       `${this.base}/public/content/hadith/hadiths/random`, { params });
+  }
+
+  qiblaDirection(latitude: number, longitude: number) {
+    return this.http.get<QiblaDirectionResponse>(
+      `${this.base}/public/content/qibla/${latitude}/${longitude}`);
+  }
+
+  qiblaCompass(latitude: number, longitude: number) {
+    return this.http.get(
+      `${this.base}/public/content/qibla/${latitude}/${longitude}/compass`,
+      { responseType: 'blob' });
   }
 
   apiClients(organizationId: string) {

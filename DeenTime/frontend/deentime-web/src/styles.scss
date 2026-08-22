@@ -27,6 +27,111 @@ html, body {
   background: #f5f5f5;
 }
 
+html[data-app-theme='light'],
+html[data-app-theme='light'] body {
+  background: #f5f7f3;
+  color: #1e2e23;
+}
+
+html[data-app-theme='dark'] {
+  --mat-sys-background: #0d1512;
+  --mat-sys-surface: #17221d;
+  --mat-sys-surface-container: #1c2a23;
+  --mat-sys-surface-container-low: #17221d;
+  --mat-sys-surface-container-high: #223129;
+  --mat-sys-surface-container-highest: #283930;
+  --mat-sys-on-background: #eaf2ed;
+  --mat-sys-on-surface: #eaf2ed;
+  --mat-sys-on-surface-variant: #a9b8af;
+  --mat-sys-outline: #607568;
+  --mat-sys-outline-variant: #31453a;
+  --mat-sys-primary: #6bc58d;
+  --mat-sys-on-primary: #0c2817;
+  --mat-app-background-color: #0d1512;
+  --mat-app-text-color: #eaf2ed;
+  --mat-option-label-text-color: #eaf2ed;
+  --mat-option-selected-state-label-text-color: #84d7a2;
+  --mat-option-hover-state-layer-color: rgba(255,255,255,.06);
+  --mat-option-focus-state-layer-color: rgba(255,255,255,.1);
+  --mat-select-panel-background-color: #1c2a23;
+  --mat-menu-container-color: #1c2a23;
+  --mat-menu-item-label-text-color: #eaf2ed;
+  --mat-tooltip-container-color: #e7f2ea;
+  --mat-tooltip-supporting-text-color: #14231a;
+  color-scheme: dark;
+}
+
+html[data-app-theme='dark'] body {
+  background: #0d1512;
+  color: #eaf2ed;
+}
+
+html[data-app-theme='dark'] app-content {
+  --ink: var(--app-heading);
+  --muted: var(--app-muted);
+  --paper: var(--app-surface-solid);
+  --sand: var(--app-surface-muted);
+  --line: var(--app-border);
+
+  .metric-card,
+  .provider-card,
+  .studio-card,
+  .hadith-browser,
+  .api-access,
+  .key-create-row,
+  .client-list article {
+    border-color: var(--app-border);
+    background: var(--app-surface);
+    color: var(--app-text);
+  }
+  .metric-card div span,
+  .metric-card > small,
+  .provider-name,
+  .provider-facts span,
+  .sync-progress > div,
+  .key-state,
+  .browser-heading p,
+  .result-summary,
+  .client-list small { color: var(--app-muted); }
+  .provider-facts,
+  .provider-facts span + span { border-color: var(--app-border); }
+  .studio-header button,
+  .arabic-verse,
+  .translation,
+  .hadith-face h4,
+  .hadith-copy,
+  .client-list strong { color: var(--app-text); }
+  .reciter-picker,
+  .audio-player,
+  .search-strip {
+    border-color: var(--app-border);
+    background: var(--app-surface-muted);
+  }
+  .reciter-picker label span,
+  .reciter-select-shell select,
+  .book-select select,
+  .search-box input { color: var(--app-text); }
+  .reciter-picker label small,
+  .reciter-count,
+  .attribution { color: var(--app-muted); }
+  .reciter-select-shell,
+  .book-select select,
+  .search-box,
+  .key-create-row input {
+    border-color: var(--app-border-strong);
+    background: var(--app-field);
+    color: var(--app-text);
+  }
+  .language-switch { background: var(--app-surface-muted); }
+  .language-switch button { color: var(--app-muted); }
+  .language-switch button.active { background: var(--app-surface-solid); color: var(--app-text); }
+  .language-cloud span,
+  .corpus-note { border-color: var(--app-border); background: var(--app-surface-muted); color: var(--app-muted); }
+  .api-access code { background: var(--app-surface-muted); color: var(--app-primary); }
+  .client-list article.revoked { background: var(--app-surface-muted); }
+  .client-empty { border-color: var(--app-border); color: var(--app-muted); }
+}
+
 /* Self-hosted so navigation and controls never depend on Google Fonts at runtime. */
 .material-icons, .material-symbols-outlined {
   font-family: 'IqamaTime Material Symbols';

@@ -1,4 +1,5 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { NgStyle } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,12 +17,19 @@ import { IqamaService } from '../../../services/iqama';
 import { TimingsService } from '../../../services/timings';
 import { FontFamily, IqamaEntry, Organization, PrayerTimesDto, PublicDisplay } from '../../../models';
 import { catchError, forkJoin, map, of } from 'rxjs';
+import {
+  PRAYER_WALLPAPERS,
+  PRAYER_WALLPAPER_CATEGORIES,
+  PrayerWallpaper,
+  PrayerWallpaperFilter
+} from './prayer-wallpapers';
+import { prayerDisplayThemeCssVars, resolvePrayerDisplayTheme } from '../../../shared/prayer-display-theme';
 
 @Component({
   selector: 'app-design',
   standalone: true,
   imports: [
-    ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
+    NgStyle, ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatSelectModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule
   ],
   templateUrl: './design.html',
@@ -41,12 +49,21 @@ export class DesignComponent implements OnInit {
   loading = signal(false);
   saving  = signal(false);
   uploading = signal(false);
+  applyingWallpaper = signal<string | null>(null);
+  galleryExpanded = signal(false);
   previewLoading = signal(true);
   previewError = signal(false);
   display = signal<PublicDisplay | null>(null);
   organization = signal<Organization | null>(null);
   orgSlug = signal('');
   selectedFile: File | null = null;
+  wallpapers = PRAYER_WALLPAPERS;
+  wallpaperCategories = PRAYER_WALLPAPER_CATEGORIES;
+  wallpaperFilter = signal<PrayerWallpaperFilter>('All');
+  visibleWallpapers = computed(() => {
+    const filter = this.wallpaperFilter();
+    return filter === 'All' ? this.wallpapers : this.wallpapers.filter(item => item.category === filter);
+  });
 
   prayers = [
     { key: 'fajr', label: 'Fajr', salah: 'Fajr' },
@@ -229,6 +246,18 @@ export class DesignComponent implements OnInit {
     return `${criteria.method} · ${postalCode} · ${criteria.timezoneId}`;
   }
 
+  previewDisplayTheme() {
+    return resolvePrayerDisplayTheme(
+      this.form.controls.headerImageUrl.value ?? '',
+      this.form.controls.theme.value ?? 'default',
+      'light'
+    );
+  }
+
+  previewThemeStyles() {
+    return prayerDisplayThemeCssVars(this.previewDisplayTheme(), this.display()?.tvConfig?.accentColor);
+  }
+
   formatTime(value: string | undefined): string {
     if (!value) return '—';
     const [hours, minutes] = value.split(':').map(Number);
@@ -237,7 +266,7 @@ export class DesignComponent implements OnInit {
     return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${period}`;
   }
 
-  save() {
+  save(successMessage = 'Design updated across every published view') {
     this.saving.set(true);
     const value = this.form.getRawValue();
     this.svc.put(this.orgId, {
@@ -253,10 +282,40 @@ export class DesignComponent implements OnInit {
       compactFontFamily: value.compactFontFamily as FontFamily
     }).subscribe({
       next: () => {
-        this.reloadSavedState('Design updated across every published view');
+        this.reloadSavedState(successMessage);
       },
-      error: () => { this.saving.set(false); this.snack.open('Save failed', 'Dismiss', { duration: 3000 }); }
+      error: () => {
+        this.applyingWallpaper.set(null);
+        this.saving.set(false);
+        this.snack.open('Save failed', 'Dismiss', { duration: 3000 });
+      }
     });
+  }
+
+  setWallpaperFilter(filter: PrayerWallpaperFilter) {
+    this.wallpaperFilter.set(filter);
+  }
+
+  toggleWallpaperGallery() {
+    this.galleryExpanded.update(expanded => !expanded);
+  }
+
+  applyWallpaper(wallpaper: PrayerWallpaper) {
+    if (this.saving() || this.uploading() || this.isWallpaperSelected(wallpaper)) return;
+    const publicUrl = new URL(wallpaper.src, window.location.origin).toString();
+    this.form.controls.headerImageUrl.setValue(publicUrl);
+    this.applyingWallpaper.set(wallpaper.id);
+    this.save(`${wallpaper.name} applied to TV and website widgets`);
+  }
+
+  isWallpaperSelected(wallpaper: PrayerWallpaper): boolean {
+    const current = this.form.controls.headerImageUrl.value;
+    if (!current) return false;
+    try {
+      return new URL(current, window.location.origin).pathname === wallpaper.src;
+    } catch {
+      return false;
+    }
   }
 
   onFileSelected(event: Event) {
@@ -303,11 +362,13 @@ export class DesignComponent implements OnInit {
           compactFontFamily: design.compactFontFamily ?? 'system'
         });
         this.display.set(display);
+        this.applyingWallpaper.set(null);
         this.uploading.set(false);
         this.saving.set(false);
         this.snack.open(message, '', { duration: 2600 });
       },
       error: () => {
+        this.applyingWallpaper.set(null);
         this.uploading.set(false);
         this.saving.set(false);
         this.snack.open('Saved, but the public preview could not be refreshed.', 'Retry', { duration: 4000 });

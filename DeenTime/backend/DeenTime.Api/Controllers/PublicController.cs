@@ -130,6 +130,7 @@ public sealed class PublicController : ControllerBase
                 tvConfig.ShowSeconds,
                 tvConfig.ShowHijri,
                 tvConfig.AccentColor,
+                tvConfig.ClockFontScale,
                 tvConfig.AutoRefreshSeconds
             }
         });
@@ -145,6 +146,8 @@ public sealed class PublicController : ControllerBase
         var origin = PublicOrigin();
         var tvUrl = AbsoluteRoute(origin, $"/tv/{Uri.EscapeDataString(org.Slug)}");
         var widgetUrl = AbsoluteRoute(origin, $"/w/{Uri.EscapeDataString(org.Slug)}");
+        var dailyWidgetUrl = AbsoluteRoute(origin, $"/w/{Uri.EscapeDataString(org.Slug)}/daily");
+        var jumuahWidgetUrl = AbsoluteRoute(origin, $"/w/{Uri.EscapeDataString(org.Slug)}/jumuah");
         var compactUrl = AbsoluteRoute(origin, $"/w2/{Uri.EscapeDataString(org.Slug)}");
         var encodedTitle = WebUtility.HtmlEncode($"IqamaTime · {org.Name} prayer times");
 
@@ -153,9 +156,12 @@ public sealed class PublicController : ControllerBase
             organization = new { org.Name, org.Slug },
             displays = new
             {
-                tv = new { url = tvUrl, iframe = Iframe(tvUrl, encodedTitle, "100%", "720") },
-                widget = new { url = widgetUrl, iframe = Iframe(widgetUrl, encodedTitle, "390", "920") },
-                compact = new { url = compactUrl, iframe = Iframe(compactUrl, encodedTitle, "330", "820") }
+                tv = new { url = tvUrl, iframe = Iframe(tvUrl, encodedTitle, "100%", "720", false) },
+                widget = new { url = widgetUrl, iframe = Iframe(widgetUrl, encodedTitle, "390", "920", true) },
+                combined = new { url = widgetUrl, iframe = Iframe(widgetUrl, encodedTitle, "390", "920", true) },
+                daily = new { url = dailyWidgetUrl, iframe = Iframe(dailyWidgetUrl, WebUtility.HtmlEncode($"IqamaTime · {org.Name} daily prayer times"), "390", "720", true) },
+                jumuah = new { url = jumuahWidgetUrl, iframe = Iframe(jumuahWidgetUrl, WebUtility.HtmlEncode($"IqamaTime · {org.Name} Friday prayer times"), "390", "560", true) },
+                compact = new { url = compactUrl, iframe = Iframe(compactUrl, encodedTitle, "330", "820", true) }
             },
             supportedParameters = new
             {
@@ -171,6 +177,12 @@ public sealed class PublicController : ControllerBase
 
     [HttpGet("widget/{slug}")]
     public IActionResult Widget(string slug) => RedirectToFrontend($"/w/{Uri.EscapeDataString(slug)}");
+
+    [HttpGet("widget/{slug}/daily")]
+    public IActionResult DailyWidget(string slug) => RedirectToFrontend($"/w/{Uri.EscapeDataString(slug)}/daily");
+
+    [HttpGet("widget/{slug}/jumuah")]
+    public IActionResult JumuahWidget(string slug) => RedirectToFrontend($"/w/{Uri.EscapeDataString(slug)}/jumuah");
 
     [HttpGet("tv/{slug}")]
     public IActionResult Tv(string slug) => RedirectToFrontend($"/tv/{Uri.EscapeDataString(slug)}");
@@ -268,8 +280,14 @@ public sealed class PublicController : ControllerBase
     private static string NormalizeFontFamily(string? family) =>
         family is "modern-sans" or "classic-serif" ? family : "system";
 
-    private static string Iframe(string url, string title, string width, string height) =>
-        $"<iframe src=\"{WebUtility.HtmlEncode(url)}\" title=\"{title}\" width=\"{WebUtility.HtmlEncode(width)}\" height=\"{WebUtility.HtmlEncode(height)}\" loading=\"lazy\" style=\"border:0;max-width:100%;\"></iframe>";
+    private static string Iframe(string url, string title, string width, string height, bool autoHeight)
+    {
+        var marker = autoHeight ? " data-iqamatime-auto-height" : "";
+        var iframe = $"<iframe src=\"{WebUtility.HtmlEncode(url)}\" title=\"{title}\" width=\"{WebUtility.HtmlEncode(width)}\" height=\"{WebUtility.HtmlEncode(height)}\" loading=\"lazy\"{marker} style=\"display:block;border:0;max-width:100%;overflow:hidden\"></iframe>";
+        if (!autoHeight) return iframe;
+        var scriptUrl = new Uri(new Uri(url).GetLeftPart(UriPartial.Authority) + "/iqamatime-embed.js").AbsoluteUri;
+        return $"{iframe}<script async src=\"{WebUtility.HtmlEncode(scriptUrl)}\"></script>";
+    }
 
     private static object? BuildHijriDate(HijriMonthMap? map, DateOnly gregorianDate)
     {

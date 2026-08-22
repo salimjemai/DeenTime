@@ -40,9 +40,17 @@ b.Services.AddOptions<IslamicContentOptions>()
       string.Equals(
           options.QuranBaseUrl.TrimEnd('/') + "/",
           IslamicContentOptions.RequiredQuranBaseUrl,
-          StringComparison.OrdinalIgnoreCase),
+      StringComparison.OrdinalIgnoreCase),
       $"IslamicContent:QuranBaseUrl must use the primary server {IslamicContentOptions.RequiredQuranBaseUrl}")
+  .Validate(options =>
+      string.Equals(
+          options.AlAdhanBaseUrl.TrimEnd('/') + "/",
+          IslamicContentOptions.RequiredAlAdhanBaseUrl,
+          StringComparison.OrdinalIgnoreCase),
+      $"IslamicContent:AlAdhanBaseUrl must use the primary server {IslamicContentOptions.RequiredAlAdhanBaseUrl}")
   .ValidateOnStart();
+
+b.Services.AddMemoryCache(options => options.SizeLimit = 5_000);
 
 b.Services.AddHttpClient<QuranProviderClient>((services, client) =>
   {
@@ -50,6 +58,20 @@ b.Services.AddHttpClient<QuranProviderClient>((services, client) =>
     client.BaseAddress = new Uri(options.QuranBaseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromMinutes(3);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("DeenTime/1.0");
+  })
+  .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+  {
+    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+    PooledConnectionLifetime = TimeSpan.FromMinutes(10)
+  });
+
+b.Services.AddHttpClient<QiblaProviderClient>((services, client) =>
+  {
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<IslamicContentOptions>>().Value;
+    client.BaseAddress = new Uri(options.AlAdhanBaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("IqamaTime/1.0");
+    client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip");
   })
   .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
   {
@@ -157,9 +179,17 @@ else
   b.Services.AddSingleton<IStorageService, LocalStorageService>();
 }
 
-b.Services.AddCors(o => o.AddPolicy("DeenTimeCors", p => p
-  .WithOrigins(b.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
-  .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+b.Services.AddCors(o =>
+{
+  o.AddPolicy("DeenTimeCors", p => p
+    .WithOrigins(b.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+    .AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+  o.AddPolicy("PublicContentApiCors", p => p
+    .AllowAnyOrigin()
+    .WithMethods("GET", "OPTIONS")
+    .WithHeaders("Accept", "Authorization", "Content-Type", "X-IqamaTime-Client-Key", "X-DeenTime-Client-Key")
+    .WithExposedHeaders("X-IqamaTime-Source", "X-IqamaTime-Retrieved", "Warning"));
+});
 b.Services.AddRateLimiter(_ => _.AddFixedWindowLimiter("public", o => {
   o.Window = TimeSpan.FromSeconds(5); o.PermitLimit = 60;
 }));
@@ -218,7 +248,12 @@ app.Use(async (context, next) =>
   await next();
 });
 app.UseResponseCompression();
-app.UseCors("DeenTimeCors");
+app.UseWhen(
+  context => context.Request.Path.StartsWithSegments("/public/content"),
+  branch => branch.UseCors("PublicContentApiCors"));
+app.UseWhen(
+  context => !context.Request.Path.StartsWithSegments("/public/content"),
+  branch => branch.UseCors("DeenTimeCors"));
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

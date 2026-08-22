@@ -2,11 +2,15 @@
   class="tv-page"
   [class.classic]="display()?.design?.theme === 'classic'"
   [class.default]="!display()?.design?.theme || display()?.design?.theme === 'default' || display()?.design?.theme === 'light'"
+  [class.display-light]="displayTheme().mode === 'light'"
+  [class.display-dark]="displayTheme().mode === 'dark'"
+  [class.has-background]="!!heroBackground()"
   [class.font-system]="display()?.design?.tvFontFamily === 'system'"
   [class.font-modern-sans]="display()?.design?.tvFontFamily === 'modern-sans'"
   [class.font-classic-serif]="display()?.design?.tvFontFamily === 'classic-serif'"
   [style.--font-scale]="(display()?.design?.tvFontScale ?? 100) / 100"
-  [style.--accent]="accentColor()">
+  [style.--clock-scale]="(display()?.tvConfig?.clockFontScale ?? 160) / 100"
+  [ngStyle]="displayThemeStyles()">
   <div class="ambient-image" [style.background-image]="heroBackground()"></div>
   <div class="ambient-glow"></div>
 
@@ -16,7 +20,7 @@
     <div class="tv-shell">
       <header class="topbar">
         <div class="identity">
-          <span class="identity-mark"><span></span></span>
+          <span class="identity-mark" aria-hidden="true"><mat-icon>mosque</mat-icon></span>
           <div>
             <small>LIVE PRAYER DISPLAY</small>
             <h1>{{ display()?.organization?.name ?? 'Prayer Times' }}</h1>
@@ -25,7 +29,12 @@
         </div>
         <div class="calendar">
           <strong>{{ dateLabel() }}</strong>
-          @if (showHijri()) { <span>{{ display()?.hijri?.formatted }}</span> }
+          @if (showHijri()) {
+            <div class="hijri-date">
+              <span>{{ display()?.hijri?.formatted }}</span>
+              <b lang="ar" dir="rtl">{{ hijriArabicLabel() }}</b>
+            </div>
+          }
         </div>
       </header>
 
@@ -50,20 +59,26 @@
           }
         </aside>
 
-        <div class="clock-panel">
+        <div #clockPanel class="clock-panel">
           <span class="clock-label">LOCAL TIME</span>
-          <div class="hero-clock">
-            <strong>{{ clockTime() }}</strong>
-            <div class="clock-side"><span>{{ clockPeriod() }}</span>@if (clockSeconds()) { <b>{{ clockSeconds() }}</b> }</div>
-          </div>
+          <time class="hero-clock"><span #clockText class="clock-value">{{ clockDisplay() }}</span></time>
           <div class="timezone-note"><span class="pulse"></span> Live · {{ display()?.timezoneId }}</div>
         </div>
       </section>
 
       <section class="prayer-strip" aria-label="Today’s prayer and iqama times">
         @for (prayer of prayers; track prayer.key) {
-          <article class="prayer-card" [class.sunrise]="!prayer.salah" [class.unset]="prayer.salah && !hasIqama(prayer.salah)">
-            <div class="prayer-heading"><strong>{{ prayer.label }}</strong><span>{{ prayer.detail }}</span></div>
+          <article class="prayer-card" [class.sunrise]="!prayer.salah" [class.unset]="prayer.salah && !hasIqama(prayer.salah)"
+                   [class.featured]="!!prayerPhase(prayer.key)" [class.upcoming]="prayerPhase(prayer.key) === 'upcoming'"
+                   [attr.aria-current]="prayerPhase(prayer.key) === 'current' ? 'time' : null">
+            <div class="prayer-heading">
+              <strong>{{ prayer.label }}</strong>
+              @if (prayerPhase(prayer.key); as phase) {
+                <span class="prayer-state">{{ phase === 'current' ? 'Current' : 'Next' }}</span>
+              } @else {
+                <span>{{ prayer.detail }}</span>
+              }
+            </div>
             @if (prayer.salah) {
               <div class="primary-time"><small>IQAMA</small><strong>{{ iqamaFor(prayer.salah) }}</strong></div>
               <div class="start-time"><span>Adhan</span><b>{{ timeFor(prayer.key) }}</b></div>

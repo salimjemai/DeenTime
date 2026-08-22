@@ -3,7 +3,7 @@
     <div class="hero-copy">
       <span class="eyebrow"><span></span> CONTENT INFRASTRUCTURE</span>
       <h2>A living library for every masjid surface.</h2>
-      <p>One dependable source for Qur’an text, recitation, and multilingual Hadith—ready for websites, mobile apps, kiosks, and displays.</p>
+      <p>One dependable source for Qur’an text, recitation, multilingual Hadith, and Qibla direction—ready for websites, mobile apps, kiosks, and displays.</p>
       <div class="hero-badges">
         <span><mat-icon>verified_user</mat-icon> Server-side credentials</span>
         <span><mat-icon>cloud_done</mat-icon> Offline-ready cache</span>
@@ -187,18 +187,18 @@
       <div class="language-filter">
         <span>Search in</span>
         <div class="language-switch" aria-label="Hadith search language">
-          <button [class.active]="language === 'en'" (click)="language = 'en'; searchHadith()">English</button>
-          <button [class.active]="language === 'ar'" (click)="language = 'ar'; searchHadith()">العربية</button>
-          <button [class.active]="language === 'ur'" (click)="language = 'ur'; searchHadith()">اردو</button>
+          <button [class.active]="language === 'en'" (click)="changeHadithLanguage('en')">English</button>
+          <button [class.active]="language === 'ar'" (click)="changeHadithLanguage('ar')">العربية</button>
+          <button [class.active]="language === 'ur'" (click)="changeHadithLanguage('ur')">اردو</button>
         </div>
       </div>
     </header>
     <div class="search-strip">
-      <label class="book-select"><span>Collection</span><select [(ngModel)]="selectedBook" (change)="searchHadith()"><option value="">Every book</option>@for (book of books(); track book.slug) {<option [value]="book.slug">{{ book.name }}</option>}</select></label>
+      <label class="book-select"><span>Collection</span><select [(ngModel)]="selectedBook" (change)="searchHadith()" [dir]="language === 'en' ? 'ltr' : 'rtl'"><option value="">{{ hadithEveryBookLabel() }}</option>@for (book of books(); track book.slug) {<option [value]="book.slug">{{ hadithBookOptionName(book) }}</option>}</select></label>
       <label class="search-box"><mat-icon>search</mat-icon><input [(ngModel)]="hadithSearch" (keyup.enter)="searchHadith()" placeholder="Search text or narrator…" /><button (click)="searchHadith()">Search</button></label>
       <button mat-stroked-button class="surprise-button" (click)="randomHadith()"><mat-icon>casino</mat-icon> Surprise me</button>
     </div>
-    <div class="result-summary"><span>{{ formatNumber(hadithTotal()) }} matching records</span><small><mat-icon>360</mat-icon> Select a card to flip {{ hadithFrontLanguage() }} ↔ Arabic</small></div>
+    <div class="result-summary"><span>{{ formatNumber(hadithTotal()) }} matching records</span><small><mat-icon>360</mat-icon> {{ hadithFlipInstruction() }}</small></div>
 
     @if (hadithLoading()) {
       <div class="hadith-loading"><mat-progress-bar mode="indeterminate" /></div>
@@ -212,35 +212,36 @@
                    [attr.aria-label]="hadithCardLabel(hadith)" [attr.aria-pressed]="canFlipHadith(hadith) ? isHadithFlipped(hadith.id) : null"
                    (click)="flipHadith(hadith)" (keydown.enter)="flipHadith(hadith)" (keydown.space)="$event.preventDefault(); flipHadith(hadith)">
             <div class="hadith-card-inner">
-              <section class="hadith-face hadith-front" [attr.aria-hidden]="isHadithFlipped(hadith.id)">
-                <header><span>{{ hadith.bookSlug.replaceAll('-', ' ') }}</span><span>No. {{ hadith.hadithNumber }}@if (hadith.chapterNumber) { · Chapter {{ hadith.chapterNumber }}}</span></header>
-                <span class="face-language" [class.urdu]="hadithFrontIsRtl()">{{ hadithFrontLanguageNative() }}</span>
-                <div class="hadith-scroll-area" [class.rtl]="hadithFrontIsRtl()" [dir]="hadithFrontIsRtl() ? 'rtl' : 'ltr'" role="region" tabindex="0"
-                     [attr.aria-label]="hadithFrontLanguage() + ' Hadith text. Scroll to read the complete Hadith.'"
+              <section class="hadith-face hadith-front" [dir]="hadithFaceIsRtl('front') ? 'rtl' : 'ltr'" [attr.aria-hidden]="isHadithFlipped(hadith.id)">
+                <header [class.rtl-meta]="hadithFaceIsRtl('front')"><span>{{ hadithFaceBookName(hadith, 'front') }}</span><span>{{ hadithFaceNumber(hadith, 'front') }}</span></header>
+                <span class="face-language" [class.rtl]="hadithFaceIsRtl('front')" [class.arabic]="hadithFaceLanguage('front') === 'ar'">{{ hadithFaceLanguageNative('front') }}</span>
+                <div class="hadith-scroll-area" [class.rtl]="hadithFaceIsRtl('front')" role="region" [attr.tabindex]="isHadithFlipped(hadith.id) ? -1 : 0"
+                     [attr.aria-label]="hadithFaceScrollLabel('front')"
                      (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                  @if (hadithFrontHeading(hadith)) {<h4 [class.urdu]="hadithFrontIsRtl()">{{ hadithFrontHeading(hadith) }}</h4>}
-                  @if (hadithFrontNarrator(hadith)) {<p class="narrator">{{ hadithFrontNarrator(hadith) }}</p>}
-                  <div class="hadith-copy" [class.rtl]="hadithFrontIsRtl()" [innerHTML]="hadithFrontText(hadith) || 'This translation is not available for this record.'"></div>
+                  @if (hadithFaceHeading(hadith, 'front')) {<h4 [class.rtl]="hadithFaceIsRtl('front')" [class.arabic]="hadithFaceLanguage('front') === 'ar'">{{ hadithFaceHeading(hadith, 'front') }}</h4>}
+                  @if (hadithFaceNarrator(hadith, 'front')) {<p class="narrator">{{ hadithFaceNarrator(hadith, 'front') }}</p>}
+                  <div class="hadith-copy" [class.rtl]="hadithFaceIsRtl('front')" [innerHTML]="hadithFaceText(hadith, 'front') || hadithFaceUnavailable('front')"></div>
                 </div>
-                <footer>
-                  @if (hadith.status) {<span class="grade">{{ hadith.status }}</span>}
-                  @if (canFlipHadith(hadith)) {<span class="flip-hint"><mat-icon>360</mat-icon> العربية</span>} @else {<span>Source ID {{ hadith.id }}</span>}
+                <footer [class.rtl-footer]="hadithFaceIsRtl('front')">
+                  @if (hadith.status) {<span class="grade">{{ hadithFaceGrade(hadith.status, 'front') }}</span>}
+                  @if (canFlipHadith(hadith)) {<span class="flip-hint"><mat-icon>360</mat-icon> {{ hadithFaceFlipLabel('front') }}</span>} @else {<span>{{ hadithFaceSourceLabel(hadith, 'front') }}</span>}
                 </footer>
               </section>
-              <section class="hadith-face hadith-back" dir="rtl" [attr.aria-hidden]="!isHadithFlipped(hadith.id)">
-                <header class="arabic-meta">
-                  <span>{{ hadithArabicBookName(hadith.bookSlug) }}</span>
-                  <span>الحديث رقم {{ toArabicNumerals(hadith.hadithNumber) }}@if (hadith.chapterNumber) { · الباب {{ toArabicNumerals(hadith.chapterNumber) }}}</span>
+              <section class="hadith-face hadith-back" [dir]="hadithFaceIsRtl('back') ? 'rtl' : 'ltr'" [attr.aria-hidden]="!isHadithFlipped(hadith.id)">
+                <header [class.rtl-meta]="hadithFaceIsRtl('back')">
+                  <span>{{ hadithFaceBookName(hadith, 'back') }}</span>
+                  <span>{{ hadithFaceNumber(hadith, 'back') }}</span>
                 </header>
-                <span class="face-language">العربية</span>
-                <div class="hadith-scroll-area rtl" role="region" tabindex="0" aria-label="النص العربي الكامل للحديث. مرّر للقراءة."
+                <span class="face-language" [class.rtl]="hadithFaceIsRtl('back')" [class.arabic]="hadithFaceLanguage('back') === 'ar'">{{ hadithFaceLanguageNative('back') }}</span>
+                <div class="hadith-scroll-area" [class.rtl]="hadithFaceIsRtl('back')" role="region" [attr.tabindex]="isHadithFlipped(hadith.id) ? 0 : -1" [attr.aria-label]="hadithFaceScrollLabel('back')"
                      (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                  @if (hadith.headingArabic) {<h4>{{ hadith.headingArabic }}</h4>}
-                  <div class="hadith-copy rtl" [innerHTML]="hadith.hadithArabic || 'النص العربي غير متاح لهذا الحديث.'"></div>
+                  @if (hadithFaceHeading(hadith, 'back')) {<h4 [class.rtl]="hadithFaceIsRtl('back')" [class.arabic]="hadithFaceLanguage('back') === 'ar'">{{ hadithFaceHeading(hadith, 'back') }}</h4>}
+                  @if (hadithFaceNarrator(hadith, 'back')) {<p class="narrator">{{ hadithFaceNarrator(hadith, 'back') }}</p>}
+                  <div class="hadith-copy" [class.rtl]="hadithFaceIsRtl('back')" [innerHTML]="hadithFaceText(hadith, 'back') || hadithFaceUnavailable('back')"></div>
                 </div>
-                <footer class="arabic-footer">
-                  @if (hadith.status) {<span class="grade">{{ hadithArabicGrade(hadith.status) }}</span>}
-                  <span class="flip-hint"><mat-icon>360</mat-icon> {{ hadithArabicFlipLabel() }}</span>
+                <footer [class.rtl-footer]="hadithFaceIsRtl('back')">
+                  @if (hadith.status) {<span class="grade">{{ hadithFaceGrade(hadith.status, 'back') }}</span>}
+                  <span class="flip-hint"><mat-icon>360</mat-icon> {{ hadithFaceFlipLabel('back') }}</span>
                 </footer>
               </section>
             </div>
@@ -302,15 +303,29 @@
       <h3>Build once. Publish everywhere.</h3>
       <p>These client-key protected, rate-limited routes return clean JSON for masjid websites, native apps, signage, classroom tools, and community integrations.</p>
       <p class="auth-hint"><mat-icon>key</mat-icon> Send your key in the <code>X-IqamaTime-Client-Key</code> request header.</p>
-      <a [href]="apiUrl('/public/content/capabilities')" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon> Open capability manifest</a>
+      <div class="console-links">
+        <a [href]="apiUrl('/public/content/capabilities')" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon> Open capability manifest</a>
+        <a [href]="apiUrl('/public/content/qibla/metadata')" target="_blank" rel="noopener"><mat-icon>explore</mat-icon> Open Qibla metadata</a>
+      </div>
     </div>
-    <div class="endpoint-list">
-      @for (example of apiExamples; track example.path) {
-        <button (click)="copyApi(example.path)">
-          <span><small>{{ example.label }}</small><code>GET {{ example.path }}</code></span>
-          <mat-icon>content_copy</mat-icon>
-        </button>
-      }
+    <div class="console-tools">
+      <app-qibla-compass-card
+        [qibla]="qibla()"
+        [loading]="qiblaLoading()"
+        [error]="qiblaError()"
+        [location]="qiblaLocation()"
+        [compassUrl]="qiblaCompassUrl()"
+        (retryRequested)="loadQibla()"
+        (copyApiRequested)="copyApi(qiblaApiPath())" />
+
+      <div class="endpoint-list">
+        @for (example of apiExamples(); track example.path) {
+          <button (click)="copyApi(example.path)">
+            <span><small>{{ example.label }}</small><code>GET {{ example.path }}</code></span>
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        }
+      </div>
     </div>
   </section>
 </main>

@@ -74,11 +74,26 @@ public sealed class IslamicContentController(
                     ur = hadithUrduCount
                 }
             },
+            qibla = new
+            {
+                provider = QiblaProviderClient.ProviderName,
+                providerOrganization = QiblaProviderClient.ProviderOrganization,
+                upstreamServer = IslamicContentOptions.RequiredAlAdhanBaseUrl.TrimEnd('/'),
+                endpointCount = 2,
+                endpointTemplates = new[]
+                {
+                    QiblaProviderClient.DirectionEndpointTemplate,
+                    QiblaProviderClient.CompassEndpointTemplate
+                },
+                responseFormats = new[] { "application/json", "image/png" },
+                metadata = "/public/content/qibla/metadata"
+            },
             publicApi = new
             {
                 capabilities = "/public/content/capabilities",
                 quranBase = "/public/content/quran",
-                hadithBase = "/public/content/hadith"
+                hadithBase = "/public/content/hadith",
+                qiblaBase = "/public/content/qibla"
             },
             syncStates = states
         });

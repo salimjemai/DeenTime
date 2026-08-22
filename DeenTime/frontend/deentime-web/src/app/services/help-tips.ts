@@ -82,11 +82,11 @@ export const HELP_TABS: readonly HelpTab[] = [
     icon: 'auto_stories',
     phase: 'KEEP CURRENT',
     headline: 'Explore the shared Islamic library',
-    summary: 'Preview Qur’an text and recitation, search multilingual Hadith, and review developer API examples.',
+    summary: 'Preview Qur’an text and recitation, search multilingual Hadith, and share Qibla direction through the developer API.',
     proTip: 'Provider imports maintain the shared platform library; ordinary masjid work should focus on browsing and publishing content.',
     outcome: 'Reliable Islamic content ready for websites, apps, kiosks, and future display playlists.',
     tone: 'teal',
-    actions: ['Preview Qur’an', 'Search Hadith', 'Review API capabilities']
+    actions: ['Preview Qur’an', 'Search Hadith', 'Copy Qibla API examples']
   },
   {
     path: 'publish',
@@ -94,11 +94,11 @@ export const HELP_TABS: readonly HelpTab[] = [
     icon: 'campaign',
     phase: 'PUBLISH',
     headline: 'Send the finished experience everywhere',
-    summary: 'Open live views, copy embed code, configure the TV, and generate monthly, yearly, or Ramadan schedules.',
-    proTip: 'Check the live preview after changing Iqama or Design, then copy the widget code into the masjid website.',
+    summary: 'Open live views, choose a combined, daily-only, or Friday-only website embed, configure the TV, and generate printable schedules.',
+    proTip: 'Use the combined widget on a main prayer page, daily-only beside the regular schedule, or Friday-only on a Jumu\u2019ah page.',
     outcome: 'TV displays, widgets, PDFs, websites, and apps stay synchronized.',
     tone: 'navy',
-    actions: ['Review live previews', 'Copy website embeds', 'Generate printable PDFs']
+    actions: ['Review all live previews', 'Choose the right website embed', 'Generate printable PDFs']
   }
 ];
 
