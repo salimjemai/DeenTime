@@ -182,8 +182,16 @@ function classicOverride(source: PrayerDisplayTheme): PrayerDisplayTheme {
   return { ...base, typeScale: Math.max(source.typeScale, 1.02), clockWeight: source.mode === 'light' ? 430 : 340 };
 }
 
+function alignContentSurfaces(theme: PrayerDisplayTheme): PrayerDisplayTheme {
+  return {
+    ...theme,
+    contentSurfaceStrong: theme.panelStrong,
+    contentSurfaceAlt: theme.panelHeader
+  };
+}
+
 export function prayerDisplayThemeForWallpaperFile(fileName: string): PrayerDisplayTheme {
-  return WALLPAPER_THEMES[fileName.toLowerCase()] ?? DEFAULT_TV_THEME;
+  return alignContentSurfaces(WALLPAPER_THEMES[fileName.toLowerCase()] ?? DEFAULT_TV_THEME);
 }
 
 export function resolvePrayerDisplayTheme(
@@ -194,9 +202,9 @@ export function resolvePrayerDisplayTheme(
   const selected = WALLPAPER_THEMES[imageFileName(imageUrl)]
     ?? (fallback === 'light' ? DEFAULT_WIDGET_THEME : DEFAULT_TV_THEME);
   const normalized = requestedTheme?.toLowerCase();
-  if (normalized === 'dark') return darkOverride(selected);
-  if (normalized === 'classic') return classicOverride(selected);
-  return selected;
+  if (normalized === 'dark') return alignContentSurfaces(darkOverride(selected));
+  if (normalized === 'classic') return alignContentSurfaces(classicOverride(selected));
+  return alignContentSurfaces(selected);
 }
 
 export function effectivePrayerDisplayAccent(theme: PrayerDisplayTheme, configuredAccent?: string): string {

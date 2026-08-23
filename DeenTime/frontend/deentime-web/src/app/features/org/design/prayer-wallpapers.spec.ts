@@ -39,4 +39,24 @@ describe('PRAYER_WALLPAPERS', () => {
     expect(effectivePrayerDisplayAccent(theme, '#B4235A')).toBe('#B4235A');
     expect(prayerDisplayThemeCssVars(theme)['--display-page-text']).toBe('#3d2f48');
   });
+
+  it('keeps widget and TV content surfaces aligned with every selected theme', () => {
+    const resolvedThemes = [
+      resolvePrayerDisplayTheme(undefined, undefined, 'light'),
+      resolvePrayerDisplayTheme(undefined, undefined, 'dark'),
+      ...PRAYER_WALLPAPERS.flatMap(item => [
+        resolvePrayerDisplayTheme(item.src),
+        resolvePrayerDisplayTheme(item.src, 'dark'),
+        resolvePrayerDisplayTheme(item.src, 'classic')
+      ])
+    ];
+
+    for (const theme of resolvedThemes) {
+      const variables = prayerDisplayThemeCssVars(theme);
+      expect(theme.contentSurfaceStrong).toBe(theme.panelStrong);
+      expect(theme.contentSurfaceAlt).toBe(theme.panelHeader);
+      expect(variables['--display-content-strong']).toBe(variables['--display-panel-strong']);
+      expect(variables['--display-content-alt']).toBe(variables['--display-panel-header']);
+    }
+  });
 });
