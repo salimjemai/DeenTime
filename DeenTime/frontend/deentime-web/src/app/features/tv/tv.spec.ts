@@ -1,5 +1,5 @@
 import { PrayerTimesDto } from '../../models';
-import { featuredPrayerAt, fittedClockFontSize, formatArabicHijriDate, formatTvClock } from './tv';
+import { featuredPrayerAt, fittedClockFontSize, formatArabicHijriDate, formatTvClock, formatTvTime, visibleJumuahEntriesAt } from './tv';
 
 describe('TV display time presentation', () => {
   const timings = {
@@ -33,5 +33,28 @@ describe('TV display time presentation', () => {
 
   it('shows the Hijri date on a translated Arabic line', () => {
     expect(formatArabicHijriDate(6, 3, 1448)).toBe('٦ رَبِيع ٱلْأَوَّل ١٤٤٨ هـ');
+  });
+
+  it('includes AM or PM on every displayed prayer time', () => {
+    expect(formatTvTime('05:53')).toBe('5:53 AM');
+    expect(formatTvTime('13:20')).toBe('1:20 PM');
+  });
+
+  it('keeps only the current and future Friday services once Friday prayers begin', () => {
+    const services = [
+      { salah: 'Jumuah', time: '12:00', salahTime: '12:20' },
+      { salah: 'Jumuah2nd', time: '13:00', salahTime: '13:20' },
+      { salah: 'Jumuah3rd', time: '14:00', salahTime: '14:20' },
+      { salah: 'Jumuah4th', time: '15:00', salahTime: '15:20' }
+    ];
+
+    expect(visibleJumuahEntriesAt(services, false, 14 * 60).map(entry => entry.salah)).toHaveSize(4);
+    expect(visibleJumuahEntriesAt(services, true, 12 * 60 + 10).map(entry => entry.salah)).toEqual([
+      'Jumuah', 'Jumuah2nd', 'Jumuah3rd', 'Jumuah4th'
+    ]);
+    expect(visibleJumuahEntriesAt(services, true, 12 * 60 + 21).map(entry => entry.salah)).toEqual([
+      'Jumuah2nd', 'Jumuah3rd', 'Jumuah4th'
+    ]);
+    expect(visibleJumuahEntriesAt(services, true, 15 * 60 + 21)).toEqual([]);
   });
 });

@@ -63,14 +63,16 @@
 .panel-title span { color: var(--accent); font-size: .66em; font-weight: 800; letter-spacing: .17em; }
 .panel-title strong { font-size: clamp(1em, 1.25vw, 1.3em); }
 .service-count { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 17%, transparent); font-size: 1em !important; }
-.friday-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.friday-service { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; padding: 12px 14px; border: 1px solid var(--display-panel-border); border-radius: 15px; background: var(--display-panel-strong); }
-.friday-service > strong { grid-column: 1 / -1; color: var(--display-panel-muted); font-size: .74em; }
-.friday-service div { display: flex; flex-direction: column; gap: 2px; }
-.friday-service div:last-child { align-items: flex-end; }
-.friday-service span { color: var(--display-panel-muted); font-size: .57em; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-.friday-service b { color: var(--display-panel-text); font-size: clamp(1.05em, 1.55vw, 1.5em); }
-.friday-service div:last-child b { color: var(--accent); }
+.friday-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.friday-service { container-type: inline-size; display: grid; grid-template-columns: minmax(82px, .85fr) repeat(2, minmax(0, 1fr)); min-width: 0; overflow: hidden; align-items: end; gap: 8px; padding: 10px 12px; border: 1px solid var(--display-panel-border); border-radius: 15px; background: var(--display-panel-strong); }
+.friday-service.current { border-color: color-mix(in srgb, var(--accent) 70%, var(--display-panel-border)); background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 16%, var(--display-panel-strong)), var(--display-panel-strong)); box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 18%, transparent); }
+.service-heading { display: flex; min-width: 0; align-self: center; align-items: flex-start; justify-content: center; flex-direction: column; gap: 4px; }
+.service-heading strong { overflow: hidden; color: var(--display-panel-muted); font-size: clamp(12px, 4.8cqw, 16px); text-overflow: ellipsis; white-space: nowrap; }
+.service-heading span { padding: 3px 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); font-size: clamp(8px, 2.7cqw, 10px); font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.service-time { display: flex; min-width: 0; align-items: flex-start; flex-direction: column; gap: 2px; }
+.service-time span { color: var(--display-panel-muted); font-size: clamp(9px, 3.3cqw, 12px); font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.service-time b { flex: 0 0 auto; max-width: 100%; color: var(--display-panel-text); font-size: clamp(13px, 5.25cqw, 17px); font-variant-numeric: tabular-nums; letter-spacing: -.03em; white-space: nowrap; }
+.service-time:last-child b { color: var(--accent); }
 .friday-empty { padding: 24px 12px; border-radius: 14px; background: var(--display-panel-strong); color: var(--display-panel-muted); text-align: center; }
 .clock-panel { container-type: inline-size; display: flex; align-items: stretch; justify-content: center; flex-direction: column; min-width: 0; padding-inline: clamp(6px, 1vw, 20px); text-align: center; }
 .clock-label { margin-bottom: 8px; color: var(--display-page-faint); font-size: .7em; font-weight: 800; letter-spacing: .22em; }
@@ -79,20 +81,21 @@
 .timezone-note { display: flex; align-items: center; align-self: center; gap: 9px; margin-top: 22px; color: var(--display-page-muted); font-size: .74em; text-shadow: var(--display-text-shadow); }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 15%, transparent); }
 .prayer-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; gap: clamp(8px, 1.1vw, 16px); padding-top: clamp(12px, 1.5vw, 24px); }
-.prayer-card { position: relative; overflow: hidden; border: 1px solid var(--display-panel-border); border-radius: 18px; background: var(--display-panel-strong); color: var(--display-panel-text); box-shadow: var(--display-shadow); transform-origin: bottom center; transition: transform .45s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s, background .35s; backdrop-filter: blur(14px); }
-.prayer-card.featured { z-index: 2; border-color: color-mix(in srgb, var(--accent) 78%, var(--display-panel-text)); background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 16%, var(--display-panel-strong)), var(--display-panel-strong)); box-shadow: var(--display-shadow), 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); transform: translateY(clamp(-22px, -1.35vw, -13px)) scale(1.045); }
+.prayer-card { container-type: inline-size; position: relative; overflow: hidden; border: 1px solid var(--display-panel-border); border-radius: 18px; background: var(--display-panel-strong); color: var(--display-panel-text); box-shadow: var(--display-shadow); transform-origin: bottom center; transition: transform .45s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s, background .35s; backdrop-filter: blur(14px); }
+.prayer-card.featured { z-index: 2; border-color: color-mix(in srgb, var(--accent) 78%, var(--display-panel-text)); background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 16%, var(--display-panel-strong)), var(--display-panel-strong)); box-shadow: var(--display-shadow), 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); transform: translateY(clamp(-22px, -1.35vw, -13px)); }
 .prayer-card.featured .prayer-heading { background: color-mix(in srgb, var(--accent) 18%, var(--display-panel-header)); }
 .prayer-card.featured .primary-time strong { color: color-mix(in srgb, var(--accent) 82%, var(--display-panel-text)); }
 .prayer-card.upcoming { border-style: dashed; }
-.prayer-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 14px; background: var(--display-panel-header); }
-.prayer-heading strong { font-size: clamp(.72em, 1vw, .95em); letter-spacing: .055em; text-transform: uppercase; }
-.prayer-heading span { color: var(--display-panel-muted); font-size: .58em; text-transform: uppercase; }
+.prayer-heading { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; padding: 11px clamp(14px, 6.5cqw, 20px); background: var(--display-panel-header); }
+.prayer-heading strong { min-width: 0; font-size: clamp(12px, 7cqw, 18px); letter-spacing: .055em; text-transform: uppercase; white-space: nowrap; }
+.prayer-heading span { min-width: 0; color: var(--display-panel-muted); font-size: clamp(9px, 4.5cqw, 12px); text-align: right; text-transform: uppercase; white-space: nowrap; }
 .prayer-heading .prayer-state { color: color-mix(in srgb, var(--accent) 82%, var(--display-panel-text)); font-size: .52em; font-weight: 900; letter-spacing: .08em; }
-.primary-time { display: flex; flex-direction: column; gap: 3px; padding: 14px 14px 10px; }
+.primary-time { display: flex; flex-direction: column; gap: 3px; padding: 14px clamp(16px, 7cqw, 22px) 10px; }
 .primary-time small { color: color-mix(in srgb, var(--accent) 88%, var(--display-panel-text)); font-size: .55em; font-weight: 900; letter-spacing: .15em; }
-.primary-time strong { color: var(--accent); font-size: clamp(1.45em, 2.7vw, 2.75em); line-height: 1; letter-spacing: -.045em; }
-.start-time { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px 11px; border-top: 1px solid var(--display-row-border); color: var(--display-panel-muted); font-size: .62em; text-transform: uppercase; }
-.start-time b { color: var(--display-panel-text); font-size: clamp(.88em, 1.25vw, 1.2em); }
+.primary-time strong { max-width: 100%; color: var(--accent); font-size: min(2.4em, 17cqw); line-height: 1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.start-time { display: flex; align-items: stretch; flex-direction: column; gap: 4px; padding: 9px clamp(16px, 7cqw, 22px) 11px; border-top: 1px solid var(--display-row-border); color: var(--display-panel-muted); }
+.start-time span { font-size: clamp(10px, 4.5cqw, 13px); font-weight: 800; line-height: 1; letter-spacing: .09em; text-transform: uppercase; }
+.start-time b { align-self: flex-end; max-width: 100%; color: var(--display-panel-text); font-size: clamp(16px, 10cqw, 26px); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.025em; white-space: nowrap; }
 .prayer-card.sunrise .primary-time strong { color: var(--display-panel-text); }
 .prayer-card.sunrise { background: color-mix(in srgb, var(--display-panel-strong) 92%, var(--display-content-alt)); }
 .prayer-card.unset .primary-time strong { color: var(--display-panel-muted); font-size: clamp(.95em, 1.5vw, 1.3em); letter-spacing: 0; }
@@ -137,24 +140,26 @@
   .panel-title strong { font-size: .92em; }
   .service-count { width: 30px; height: 30px; border-radius: 9px; }
   .friday-list { gap: 6px; }
-  .friday-service { gap: 4px 9px; padding: 7px 9px; border-radius: 11px; }
-  .friday-service > strong { font-size: .62em; }
-  .friday-service span { font-size: .48em; }
-  .friday-service b { font-size: .9em; }
+  .friday-service { gap: 4px 7px; padding: 7px 9px; border-radius: 11px; }
+  .service-heading strong { font-size: clamp(10px, 4cqw, 13px); }
+  .service-heading span { font-size: 8px; }
+  .service-time span { font-size: 8px; }
+  .service-time b { font-size: clamp(11px, 4.8cqw, 14px); }
   .clock-label { margin-bottom: 5px; font-size: .58em; }
   .clock-value { font-size: clamp(5em, calc(12.5cqw * var(--clock-scale, 1.6)), 10em); }
   .timezone-note { margin-top: 10px; font-size: .62em; }
   .prayer-strip { gap: 8px; }
   .prayer-card { border-radius: 12px; }
-  .prayer-heading { padding: 7px 9px; }
-  .prayer-heading strong { font-size: .62em; }
-  .prayer-heading span { font-size: .48em; }
-  .primary-time { gap: 1px; padding: 8px 9px 6px; }
+  .prayer-heading { padding: 7px clamp(9px, 5cqw, 13px); }
+  .prayer-heading strong { font-size: clamp(10px, 6.5cqw, 14px); }
+  .prayer-heading span { font-size: clamp(8px, 4.2cqw, 10px); }
+  .primary-time { gap: 1px; padding: 8px clamp(10px, 6.5cqw, 14px) 6px; }
   .primary-time small { font-size: .48em; }
-  .primary-time strong { font-size: 1.45em; }
-  .start-time { padding: 5px 9px 6px; font-size: .5em; }
-  .start-time b { font-size: .76em; }
-  .prayer-card.featured { transform: translateY(-10px) scale(1.035); }
+  .primary-time strong { font-size: min(1.45em, 17cqw); }
+  .start-time { gap: 2px; padding: 5px clamp(10px, 6.5cqw, 14px) 6px; }
+  .start-time span { font-size: clamp(8px, 4cqw, 10px); }
+  .start-time b { font-size: clamp(13px, 8.5cqw, 18px); }
+  .prayer-card.featured { transform: translateY(-10px); }
   .tv-footer { font-size: .55em; }
 }
 

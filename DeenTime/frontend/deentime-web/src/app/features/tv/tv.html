@@ -47,13 +47,18 @@
           @if (jumuahEntries().length > 0) {
             <div class="friday-list">
               @for (entry of jumuahEntries(); track entry.salah) {
-                <div class="friday-service">
-                  <strong>{{ jumuahLabel(entry.salah) }}</strong>
-                  <div><span>Khutbah</span><b>{{ formatTime(entry.time) }}</b></div>
-                  <div><span>Salah</span><b>{{ formatTime(entry.salahTime) }}</b></div>
+                <div class="friday-service" [class.current]="isCurrentJumuah(entry)">
+                  <div class="service-heading">
+                    <strong>{{ jumuahLabel(entry.salah) }}</strong>
+                    @if (isCurrentJumuah(entry)) { <span>Current</span> }
+                  </div>
+                  <div class="service-time"><span>Adhan</span><b>{{ formatTime(entry.time) }}</b></div>
+                  <div class="service-time"><span>Iqama</span><b>{{ formatTime(entry.salahTime) }}</b></div>
                 </div>
               }
             </div>
+          } @else if (isLocalFriday() && allJumuahEntries().length > 0) {
+            <div class="friday-empty">Today’s Friday services have concluded.</div>
           } @else {
             <div class="friday-empty">Friday prayer times have not been scheduled yet.</div>
           }

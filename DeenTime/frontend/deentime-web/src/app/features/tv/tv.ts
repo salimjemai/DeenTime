@@ -15,6 +15,7 @@ export type PrayerKey = 'fajr' | 'sunrise' | 'dhuhr' | 'asr' | 'maghrib' | 'isha
 export type FeaturedPrayerPhase = 'current' | 'upcoming';
 
 const ACTIVE_PRAYERS: PrayerKey[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+const JUMUAH_ORDER = ['Jumuah', 'Jumuah2nd', 'Jumuah3rd', 'Jumuah4th'];
 const ARABIC_HIJRI_MONTHS = [
   'مُحَرَّم', 'صَفَر', 'رَبِيع ٱلْأَوَّل', 'رَبِيع ٱلْآخِر',
   'جُمَادَىٰ ٱلْأُولَىٰ', 'جُمَادَىٰ ٱلْآخِرَة', 'رَجَب', 'شَعْبَان',
@@ -26,6 +27,30 @@ function parsePrayerMinutes(value: string | undefined) {
   const [hours, minutes] = value.split(':').map(Number);
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
   return hours * 60 + minutes;
+}
+
+export function formatTvTime(value: string | undefined): string {
+  if (!value) return '—';
+  const [hours, minutes] = value.split(':').map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return value;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
+export function visibleJumuahEntriesAt(
+  entries: PublicDisplay['iqama'],
+  isFriday: boolean,
+  nowMinutes: number
+): PublicDisplay['iqama'] {
+  const scheduled = entries
+    .filter(item => JUMUAH_ORDER.includes(item.salah))
+    .sort((left, right) => JUMUAH_ORDER.indexOf(left.salah) - JUMUAH_ORDER.indexOf(right.salah));
+  if (!isFriday) return scheduled;
+
+  return scheduled.filter(entry => {
+    const serviceEnd = parsePrayerMinutes(entry.salahTime) ?? parsePrayerMinutes(entry.time);
+    return serviceEnd === null || serviceEnd >= nowMinutes;
+  });
 }
 
 export function featuredPrayerAt(timings: PrayerTimesDto | null, nowMinutes: number): { key: PrayerKey; phase: FeaturedPrayerPhase } | null {
@@ -87,6 +112,8 @@ export class TvComponent implements OnInit, OnDestroy {
   timings = signal<PrayerTimesDto | null>(null);
   clockDisplay = signal('');
   featuredPrayer = signal<{ key: PrayerKey; phase: FeaturedPrayerPhase } | null>(null);
+  localNowMinutes = signal(0);
+  isLocalFriday = signal(false);
   loading = signal(true);
   backgroundImageUrl = computed(() => this.display()?.design?.backgroundImageUrl ?? this.display()?.design?.headerImageUrl ?? '');
   displayTheme = computed(() => resolvePrayerDisplayTheme(
@@ -179,6 +206,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.scheduleClockFit();
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone,
+      weekday: 'short',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -188,6 +216,8 @@ export class TvComponent implements OnInit, OnDestroy {
     const nowMinutes = Number(value['hour'] ?? 0) * 60
       + Number(value['minute'] ?? 0)
       + Number(value['second'] ?? 0) / 60;
+    this.localNowMinutes.set(nowMinutes);
+    this.isLocalFriday.set(value['weekday'] === 'Fri');
     this.featuredPrayer.set(featuredPrayerAt(this.timings(), nowMinutes));
   }
 
@@ -249,10 +279,18 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   jumuahEntries() {
-    const order = ['Jumuah', 'Jumuah2nd', 'Jumuah3rd', 'Jumuah4th'];
-    return (this.display()?.iqama ?? [])
-      .filter(item => order.includes(item.salah))
-      .sort((a, b) => order.indexOf(a.salah) - order.indexOf(b.salah));
+    return visibleJumuahEntriesAt(this.display()?.iqama ?? [], this.isLocalFriday(), this.localNowMinutes());
+  }
+
+  allJumuahEntries() {
+    return visibleJumuahEntriesAt(this.display()?.iqama ?? [], false, this.localNowMinutes());
+  }
+
+  isCurrentJumuah(entry: PublicDisplay['iqama'][number]) {
+    if (!this.isLocalFriday()) return false;
+    const start = parsePrayerMinutes(entry.time);
+    const end = parsePrayerMinutes(entry.salahTime) ?? start;
+    return start !== null && end !== null && this.localNowMinutes() >= start && this.localNowMinutes() <= end;
   }
 
   jumuahLabel(salah: string) {
@@ -291,9 +329,6 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   formatTime(value: string | undefined): string {
-    if (!value) return '—';
-    const [hours, minutes] = value.split(':').map(Number);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
-    return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')}`;
+    return formatTvTime(value);
   }
 }
