@@ -9,9 +9,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Testcontainers.PostgreSql;
+using Npgsql;
 using Xunit;
-using Xunit.Sdk;
 using DeenTime.Core.Entities;
 using DeenTime.Core.Enums;
 using DeenTime.Infrastructure;
@@ -23,32 +22,45 @@ namespace DeenTime.Api.Tests;
 public sealed class ApiIntegrationTests : IAsyncLifetime
 {
     private const string Password = "TestOnly-Password-1234";
-    private readonly PostgreSqlContainer database = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .WithDatabase("deentime_test")
-        .WithUsername("postgres")
-        .WithPassword("postgres")
-        .Build();
+    private readonly string databaseName = $"deentime_test_{Guid.NewGuid():N}";
+    private string adminConnectionString = "";
+    private string databaseConnectionString = "";
     private WebApplicationFactory<Program>? factory;
     private HttpClient? client;
+    private readonly CapturingRegistrationEmailSender registrationEmailSender = new();
     private string organizationId = "";
     private string organizationSlug = "";
 
     public async Task InitializeAsync()
     {
-        try
+        adminConnectionString = Environment.GetEnvironmentVariable("DEENTIME_TEST_POSTGRES_ADMIN")
+            ?? "Host=127.0.0.1;Port=5432;Database=postgres;Username=postgres;Password=postgres;Pooling=false";
+        var adminBuilder = new NpgsqlConnectionStringBuilder(adminConnectionString)
         {
-            await database.StartAsync();
-        }
-        catch (Exception exception)
+            Database = "postgres",
+            Pooling = false
+        };
+        adminConnectionString = adminBuilder.ConnectionString;
+
+        await using (var admin = new NpgsqlConnection(adminConnectionString))
         {
-            throw SkipException.ForSkip($"PostgreSQL integration tests require Docker: {exception.Message}");
+            await admin.OpenAsync();
+            await using var create = admin.CreateCommand();
+            create.CommandText = $"CREATE DATABASE \"{databaseName}\"";
+            await create.ExecuteNonQueryAsync();
         }
+
+        var databaseBuilder = new NpgsqlConnectionStringBuilder(adminConnectionString)
+        {
+            Database = databaseName,
+            Pooling = false
+        };
+        databaseConnectionString = databaseBuilder.ConnectionString;
 
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
-            builder.UseSetting("ConnectionStrings:Default", database.GetConnectionString());
+            builder.UseSetting("ConnectionStrings:Default", databaseConnectionString);
             builder.UseSetting("Auth:Issuer", "deentime-test");
             builder.UseSetting("Auth:Audience", "deentime-api-test");
             builder.UseSetting("Auth:SigningKey", "test-signing-key-that-is-long-enough-123456");
@@ -61,7 +73,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
             builder.UseSetting("SuperUser:TimezoneId", "America/Chicago");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:Default"] = database.GetConnectionString(),
+                ["ConnectionStrings:Default"] = databaseConnectionString,
                 ["Auth:Issuer"] = "deentime-test",
                 ["Auth:Audience"] = "deentime-api-test",
                 ["Auth:SigningKey"] = "test-signing-key-that-is-long-enough-123456",
@@ -80,6 +92,8 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
                 {
                     BaseAddress = new Uri("https://postal.test/")
                 }));
+                services.RemoveAll<IRegistrationEmailSender>();
+                services.AddSingleton<IRegistrationEmailSender>(registrationEmailSender);
                 services.RemoveAll<QiblaProviderClient>();
                 services.AddSingleton(new QiblaProviderClient(
                     new HttpClient(new QiblaLookupHandler())
@@ -106,7 +120,23 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     {
         client?.Dispose();
         factory?.Dispose();
-        await database.DisposeAsync();
+
+        if (string.IsNullOrWhiteSpace(adminConnectionString)) return;
+
+        NpgsqlConnection.ClearAllPools();
+        await using var admin = new NpgsqlConnection(adminConnectionString);
+        await admin.OpenAsync();
+        await using (var terminate = admin.CreateCommand())
+        {
+            terminate.CommandText = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @databaseName AND pid <> pg_backend_pid()";
+            terminate.Parameters.AddWithValue("databaseName", databaseName);
+            await terminate.ExecuteNonQueryAsync();
+        }
+        await using (var drop = admin.CreateCommand())
+        {
+            drop.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\"";
+            await drop.ExecuteNonQueryAsync();
+        }
     }
 
     [Fact]
@@ -118,8 +148,176 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal("ready", readinessBody.RootElement.GetProperty("status").GetString());
 
         var version = await client.GetFromJsonAsync<JsonElement>("/api/version");
-        Assert.Equal("20260819061000_EnlargeDefaultTvClock", version.GetProperty("schemaVersion").GetString());
+        Assert.Equal("20260823092555_AddMasjidInvitations", version.GetProperty("schemaVersion").GetString());
         Assert.False(string.IsNullOrWhiteSpace(version.GetProperty("apiVersion").GetString()));
+    }
+
+    [Fact]
+    public async Task Registration_verifies_email_creates_one_admin_and_blocks_duplicate_masjid()
+    {
+        using var anonymous = factory!.CreateClient();
+        var registration = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "new-admin@masjid.test",
+            password = "A-strong-test-password-1234",
+            confirmPassword = "A-strong-test-password-1234",
+            organizationName = "Cedar Park Test Masjid",
+            websiteUrl = "https://www.cedar-park-test.example/about",
+            addressLine = "123 Masjid Way",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613"
+        });
+        Assert.Equal(HttpStatusCode.Accepted, registration.StatusCode);
+        Assert.NotNull(registrationEmailSender.LastVerificationUrl);
+
+        var verificationUri = new Uri(registrationEmailSender.LastVerificationUrl!);
+        var token = Uri.UnescapeDataString(verificationUri.Query["?token=".Length..]);
+        var verify = await anonymous.PostAsJsonAsync("/api/v1/auth/verify-email", new { token });
+        verify.EnsureSuccessStatusCode();
+        using var verifyBody = JsonDocument.Parse(await verify.Content.ReadAsStringAsync());
+        var adminToken = verifyBody.RootElement.GetProperty("token").GetString();
+
+        using var masjidAdmin = factory.CreateClient();
+        masjidAdmin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var organizations = await masjidAdmin.GetFromJsonAsync<JsonElement>("/api/v1/orgs?page=1");
+        Assert.Equal(1, organizations.GetProperty("total").GetInt32());
+        var ownOrganizationId = organizations.GetProperty("items")[0].GetProperty("id").GetGuid();
+        Assert.NotEqual(Guid.Parse(organizationId), ownOrganizationId);
+
+        var criteria = await masjidAdmin.GetFromJsonAsync<JsonElement>($"/api/v1/orgs/{ownOrganizationId}/criteria");
+        Assert.Equal("78613", criteria.GetProperty("zipCode").GetString());
+        Assert.Equal(30.5052m, criteria.GetProperty("latitude").GetDecimal());
+        Assert.Equal(-97.8203m, criteria.GetProperty("longitude").GetDecimal());
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync($"/api/v1/orgs/{organizationId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync($"/api/v1/orgs/{organizationId}/criteria")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync("/api/v1/islamic-content/summary")).StatusCode);
+
+        var duplicate = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "different-admin@masjid.test",
+            password = "A-different-test-password-1234",
+            confirmPassword = "A-different-test-password-1234",
+            organizationName = "Cedar Park Test Masjid",
+            websiteUrl = "https://cedar-park-test.example",
+            addressLine = "123 Masjid Way",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613"
+        });
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+    }
+
+    [Fact]
+    public async Task Registration_rejects_invalid_email_and_weak_password_and_allows_public_zip_lookup()
+    {
+        using var anonymous = factory!.CreateClient();
+        var location = await anonymous.GetFromJsonAsync<JsonElement>("/api/v1/locations/postal-code/78613");
+        Assert.Equal("Cedar Park", location.GetProperty("city").GetString());
+        Assert.Equal("TX", location.GetProperty("stateAbbreviation").GetString());
+
+        var invalidEmail = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "not-an-email",
+            password = "A-strong-test-password-1234",
+            confirmPassword = "A-strong-test-password-1234",
+            organizationName = "Invalid Email Masjid",
+            websiteUrl = "https://invalid-email.example",
+            addressLine = "100 Test Way",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, invalidEmail.StatusCode);
+
+        var weakPassword = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "weak-password@masjid.test",
+            password = "alllowercasepassword",
+            confirmPassword = "alllowercasepassword",
+            organizationName = "Weak Password Masjid",
+            websiteUrl = "https://weak-password.example",
+            addressLine = "101 Test Way",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, weakPassword.StatusCode);
+    }
+
+    [Fact]
+    public async Task Super_user_invites_masjid_and_tracks_registration_and_email_verification()
+    {
+        var invite = await client!.PostAsJsonAsync("/api/v1/admin/masjids/invitations", new
+        {
+            email = "invited-admin@masjid.test",
+            organizationName = "Invited Test Masjid",
+            websiteUrl = "https://invited-test.example",
+            addressLine = "456 Invitation Lane",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613"
+        });
+        Assert.Equal(HttpStatusCode.Created, invite.StatusCode);
+        Assert.NotNull(registrationEmailSender.LastInvitationUrl);
+
+        var invitationUri = new Uri(registrationEmailSender.LastInvitationUrl!);
+        var invitationToken = Uri.UnescapeDataString(invitationUri.Query["?invite=".Length..]);
+        using var anonymous = factory!.CreateClient();
+        var prefill = await anonymous.GetFromJsonAsync<JsonElement>($"/api/v1/auth/invitations/{Uri.EscapeDataString(invitationToken)}");
+        Assert.Equal("invited-admin@masjid.test", prefill.GetProperty("email").GetString());
+        Assert.Equal("Invited Test Masjid", prefill.GetProperty("organizationName").GetString());
+
+        var registration = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "invited-admin@masjid.test",
+            password = "An-invited-test-password-1234",
+            confirmPassword = "An-invited-test-password-1234",
+            organizationName = "Invited Test Masjid",
+            websiteUrl = "https://invited-test.example",
+            addressLine = "456 Invitation Lane",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613",
+            invitationToken
+        });
+        Assert.Equal(HttpStatusCode.Accepted, registration.StatusCode);
+
+        var dashboardBeforeVerification = await client!.GetFromJsonAsync<JsonElement>("/api/v1/admin/masjids");
+        var invitedBeforeVerification = dashboardBeforeVerification.GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("email").GetString() == "invited-admin@masjid.test");
+        Assert.Equal("AwaitingEmailVerification", invitedBeforeVerification.GetProperty("status").GetString());
+
+        var verificationUri = new Uri(registrationEmailSender.LastVerificationUrl!);
+        var verificationToken = Uri.UnescapeDataString(verificationUri.Query["?token=".Length..]);
+        var verify = await anonymous.PostAsJsonAsync("/api/v1/auth/verify-email", new { token = verificationToken });
+        verify.EnsureSuccessStatusCode();
+        using var verifyBody = JsonDocument.Parse(await verify.Content.ReadAsStringAsync());
+        var masjidAdminToken = verifyBody.RootElement.GetProperty("token").GetString();
+
+        var dashboardAfterVerification = await client!.GetFromJsonAsync<JsonElement>("/api/v1/admin/masjids");
+        var invitedAfterVerification = dashboardAfterVerification.GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("email").GetString() == "invited-admin@masjid.test");
+        Assert.Equal("Registered", invitedAfterVerification.GetProperty("status").GetString());
+        Assert.Equal("Invitation", invitedAfterVerification.GetProperty("source").GetString());
+        Assert.NotEqual(Guid.Empty, invitedAfterVerification.GetProperty("organizationId").GetGuid());
+
+        using var masjidAdmin = factory.CreateClient();
+        masjidAdmin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", masjidAdminToken);
+        Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync("/api/v1/admin/masjids")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Header_upload_rejects_spoofed_image_content()
+    {
+        using var content = new MultipartFormDataContent();
+        var fakeImage = new ByteArrayContent("<script>alert('not an image')</script>"u8.ToArray());
+        fakeImage.Headers.ContentType = new("image/png");
+        content.Add(fakeImage, "file", "header.png");
+
+        var response = await client!.PostAsync($"/api/v1/design/files/header-image?orgId={organizationId}", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -432,6 +630,24 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
             {
                 Content = new StringContent(response, System.Text.Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    private sealed class CapturingRegistrationEmailSender : IRegistrationEmailSender
+    {
+        public string? LastVerificationUrl { get; private set; }
+        public string? LastInvitationUrl { get; private set; }
+
+        public Task SendVerificationAsync(string email, string organizationName, string verificationUrl, CancellationToken cancellationToken)
+        {
+            LastVerificationUrl = verificationUrl;
+            return Task.CompletedTask;
+        }
+
+        public Task SendInvitationAsync(string email, string organizationName, string invitationUrl, CancellationToken cancellationToken)
+        {
+            LastInvitationUrl = invitationUrl;
+            return Task.CompletedTask;
         }
     }
 

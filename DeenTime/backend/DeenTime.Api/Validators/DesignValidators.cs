@@ -7,9 +7,15 @@ public sealed class DesignRequestValidator : AbstractValidator<DesignRequest>
 {
     public DesignRequestValidator()
     {
+		RuleFor(x => x.HeaderImageUrl)
+			.Must(IsSafeImageUrl)
+			.WithMessage("Header image URL must be an HTTPS/HTTP address or a local uploaded image.");
+		RuleFor(x => x.FooterHtml).MaximumLength(10_000);
+		RuleFor(x => x.IqamaHeadings).NotNull().Must(headings => headings.Length <= 20)
+			.WithMessage("At most 20 display headings are allowed.");
+		RuleForEach(x => x.IqamaHeadings).MaximumLength(80);
         RuleFor(x => x.Theme).Must(theme => theme is null or "default" or "light" or "dark" or "classic")
             .WithMessage("Theme must be default, dark, or classic.");
-        RuleFor(x => x.IqamaHeadings).NotNull();
         foreach (var scale in new[]
         {
             nameof(DesignRequest.TvFontScale),
@@ -30,5 +36,12 @@ public sealed class DesignRequestValidator : AbstractValidator<DesignRequest>
 
     private static bool IsSupportedFontFamily(string? value) =>
         value is null or "system" or "modern-sans" or "classic-serif";
-}
 
+	private static bool IsSafeImageUrl(string? value)
+	{
+		if (string.IsNullOrWhiteSpace(value)) return true;
+		if (value.StartsWith("/uploads/", StringComparison.Ordinal)) return true;
+		return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+			uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo);
+	}
+}

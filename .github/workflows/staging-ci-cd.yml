@@ -13,11 +13,8 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 env:
-  API_IMAGE: ghcr.io/${{ github.repository_owner }}/deentime-api
-  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/deentime-web
   DEPLOY_HOST: 165.227.175.2
   DEPLOY_USER: iqama6368
 
@@ -34,7 +31,19 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
+      - name: Start native PostgreSQL
+        run: |
+          if ! command -v pg_isready >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes postgresql postgresql-client
+          fi
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql --command "ALTER USER postgres WITH PASSWORD 'postgres';"
+          pg_isready --host 127.0.0.1 --port 5432
+
       - name: Test API
+        env:
+          DEENTIME_TEST_POSTGRES_ADMIN: Host=127.0.0.1;Port=5432;Database=postgres;Username=postgres;Password=postgres;Pooling=false
         run: dotnet test DeenTime/DeenTime.sln --configuration Release
 
       - name: Set up Node.js
@@ -54,76 +63,56 @@ jobs:
 
       - name: Build frontend
         working-directory: DeenTime/frontend/deentime-web
-        run: npm run build -- --configuration production
-
-  publish:
-    name: Publish immutable images
-    if: github.event_name != 'pull_request'
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Sign in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and publish API image
-        uses: docker/build-push-action@v6
-        with:
-          context: DeenTime
-          file: DeenTime/backend/DeenTime.Api/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.API_IMAGE }}:${{ github.sha }}
-            ${{ env.API_IMAGE }}:staging
-          cache-from: type=gha,scope=deentime-api
-          cache-to: type=gha,mode=max,scope=deentime-api
-
-      - name: Build and publish web image
-        uses: docker/build-push-action@v6
-        with:
-          context: DeenTime/frontend/deentime-web
-          file: DeenTime/frontend/deentime-web/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.WEB_IMAGE }}:${{ github.sha }}
-            ${{ env.WEB_IMAGE }}:staging
-          cache-from: type=gha,scope=deentime-web
-          cache-to: type=gha,mode=max,scope=deentime-web
+        run: |
+          npm run build -- --configuration production
+          if grep -R -a -q 'localhost:8080' dist/deentime-web/browser; then
+            echo 'Production frontend contains a localhost API URL.' >&2
+            exit 1
+          fi
 
   deploy:
     name: Deploy iqama.momyum.com
     if: github.event_name != 'pull_request'
-    needs: publish
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: staging
       url: https://iqama.momyum.com
     steps:
-      - name: Check out deployment files
+      - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Sign in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          dotnet-version: 9.0.x
 
-      - name: Pull immutable images onto the runner
+      - name: Publish self-contained API
         run: |
-          docker pull "$API_IMAGE:$GITHUB_SHA"
-          docker pull "$WEB_IMAGE:$GITHUB_SHA"
+          dotnet publish DeenTime/backend/DeenTime.Api/DeenTime.Api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output publish/api
+          tar -czf "deentime-api-$GITHUB_SHA.tar.gz" -C publish/api .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: DeenTime/frontend/deentime-web/package-lock.json
+
+      - name: Build frontend
+        working-directory: DeenTime/frontend/deentime-web
+        run: |
+          npm ci
+          npm run build -- --configuration production
+
+      - name: Package frontend
+        run: |
+          tar -czf "deentime-web-$GITHUB_SHA.tar.gz" \
+            -C DeenTime/frontend/deentime-web/dist/deentime-web/browser .
 
       - name: Configure pinned SSH identity
         env:
@@ -135,17 +124,13 @@ jobs:
           printf '%s\n' '165.227.175.2 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlGFaTKNS9P8kVfTvBbvBrqDmtxNDDUQoPKGMRjA/G6' > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
-      - name: Copy deployment definition
+      - name: Copy release to the server
         run: |
-          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p "$HOME/deentime"'
-          scp DeenTime/deploy/compose.staging.yml "$DEPLOY_USER@$DEPLOY_HOST:deentime/compose.staging.yml"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p "$HOME/deentime/incoming"'
           scp DeenTime/deploy/deploy-staging.sh "$DEPLOY_USER@$DEPLOY_HOST:deentime/deploy-staging.sh"
-
-      - name: Transfer images without storing a registry credential on the server
-        run: |
-          docker save "$API_IMAGE:$GITHUB_SHA" "$WEB_IMAGE:$GITHUB_SHA" \
-            | gzip -1 \
-            | ssh "$DEPLOY_USER@$DEPLOY_HOST" 'gunzip | docker load'
+          scp DeenTime/deploy/deentime-api.service "$DEPLOY_USER@$DEPLOY_HOST:deentime/deentime-api.service"
+          scp "deentime-api-$GITHUB_SHA.tar.gz" "deentime-web-$GITHUB_SHA.tar.gz" \
+            "$DEPLOY_USER@$DEPLOY_HOST:deentime/incoming/"
 
       - name: Start release and run local health checks
         run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "bash \"\$HOME/deentime/deploy-staging.sh\" \"$GITHUB_SHA\""

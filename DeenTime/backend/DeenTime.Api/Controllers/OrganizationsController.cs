@@ -28,6 +28,11 @@ namespace DeenTime.Api.Controllers
 		public async Task<IActionResult> List([FromQuery] string? search, [FromQuery] int page)
 		{
 			IQueryable<Organization> q = _db.Organizations.AsNoTracking();
+			if (!User.IsInRole("SuperUser"))
+			{
+				if (!Guid.TryParse(User.FindFirst("orgId")?.Value, out var organizationId)) return Forbid();
+				q = q.Where(o => o.Id == organizationId);
+			}
 			if (!string.IsNullOrWhiteSpace(search))
 				q = q.Where(o => EF.Functions.ILike(o.Name, $"%{search}%"));
 			if (page <= 0) page = 1;
@@ -45,6 +50,7 @@ namespace DeenTime.Api.Controllers
 				org = await _db.Organizations.Include(x => x.Criteria).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 			else
 				org = await _db.Organizations.Include(x => x.Criteria).AsNoTracking().FirstOrDefaultAsync(x => x.Slug == idOrSlug);
+			if (org is not null && !User.CanAccessOrganization(org.Id)) return Forbid();
 			return org is not null ? Ok(org) : NotFound();
 		}
 
@@ -52,24 +58,59 @@ namespace DeenTime.Api.Controllers
 		[HttpPut("{id:guid}")]
 		public async Task<IActionResult> Update(Guid id, [FromBody] OrganizationUpdateRequest input)
 		{
+			if (!User.CanAccessOrganization(id)) return Forbid();
 			var existing = await _db.Organizations.Include(x => x.Criteria).FirstOrDefaultAsync(x => x.Id == id);
 			if (existing is null) return NotFound();
+			if (!string.IsNullOrWhiteSpace(input.WebsiteUrl) &&
+				!string.IsNullOrWhiteSpace(input.AddressLine) &&
+				!string.IsNullOrWhiteSpace(input.City) &&
+				!string.IsNullOrWhiteSpace(input.State) &&
+				!string.IsNullOrWhiteSpace(input.ZipCode))
+			{
+				if (!RegistrationIdentityNormalizer.TryCreate(
+						existing.Email ?? string.Empty, input.Name, input.WebsiteUrl, input.AddressLine,
+						input.City, input.State, input.ZipCode, out var identity) || identity is null)
+				{
+					ModelState.AddModelError(nameof(input.WebsiteUrl), "Enter a valid masjid website address.");
+					return ValidationProblem(ModelState);
+				}
+				existing.NormalizedName = identity.Name;
+				existing.NormalizedWebsiteHost = identity.WebsiteHost;
+				existing.AddressFingerprint = identity.AddressFingerprint;
+				existing.MasjidIdentityKey = identity.MasjidIdentityKey;
+				existing.WebsiteUrl = identity.WebsiteUrl;
+			}
+			else
+			{
+				existing.NormalizedName = RegistrationIdentityNormalizer.NormalizeWords(input.Name);
+			}
 			existing.Name = input.Name; existing.AddressLine = input.AddressLine;
 			existing.City = input.City; existing.State = input.State; existing.ZipCode = input.ZipCode;
-			existing.Phone = input.Phone; existing.WebsiteUrl = input.WebsiteUrl; existing.Email = input.Email;
+			existing.Phone = input.Phone;
+			if (string.IsNullOrWhiteSpace(existing.WebsiteUrl)) existing.WebsiteUrl = input.WebsiteUrl;
+			existing.Email = input.Email;
 			existing.SocialUrl = input.SocialUrl; existing.UpdatedAtUtc = DateTime.UtcNow;
-			await _db.SaveChangesAsync();
+			try
+			{
+				await _db.SaveChangesAsync();
+			}
+			catch (DbUpdateException)
+			{
+				return Conflict(new { code = "masjid_already_registered", message = "This masjid website or address belongs to another registration." });
+			}
 			return NoContent();
 		}
 
 		[HttpGet("{id:guid}/criteria")]
 		public async Task<IActionResult> GetCriteria(Guid id)
 		{
+			if (!User.CanAccessOrganization(id)) return Forbid();
 			var existing = await _db.PrayerTimingCriteria.AsNoTracking().FirstOrDefaultAsync(c => c.OrganizationId == id);
 			return existing is not null ? Ok(existing) : NotFound();
 		}
 
 		[HttpPut("{id:guid}/criteria")]
+		[Authorize(Roles = "Admin,Editor")]
 		public async Task<IActionResult> PutCriteria(Guid id, [FromBody] PrayerTimingCriteria input, CancellationToken cancellationToken)
 		{
 			if (!User.CanAccessOrganization(id)) return Forbid();
@@ -136,6 +177,7 @@ namespace DeenTime.Api.Controllers
 		[Authorize(Roles = "Admin,Editor")]
 		public async Task<IActionResult> DeleteCriteria(Guid id)
 		{
+			if (!User.CanAccessOrganization(id)) return Forbid();
 			var existing = await _db.PrayerTimingCriteria.FirstOrDefaultAsync(c => c.OrganizationId == id);
 			if (existing is null) return NoContent();
 			_db.PrayerTimingCriteria.Remove(existing);

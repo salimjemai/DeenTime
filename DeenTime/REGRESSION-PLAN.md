@@ -148,7 +148,7 @@ Acceptance:
 
 Backend:
 
-- Add xUnit integration tests with a disposable PostgreSQL fixture/Testcontainers.
+- Add xUnit integration tests with a disposable database on native PostgreSQL.
 - Cover login/session, criteria/timings, current and yearly Iqama, Hijri generation/update, design/public display, publish/embed code, Content summary, Qur’an proxy, Hadith import/search, authorization, and real readiness.
 
 Frontend:
@@ -160,7 +160,7 @@ Frontend:
 
 CI gate:
 
-1. Build a fresh API image from the checked-out commit.
+1. Publish a fresh self-contained API executable from the checked-out commit.
 2. Start PostgreSQL and run migrations.
 3. Run backend tests, Angular unit tests, lint, production build, and browser E2E.
 4. Fail on console errors, API contract drift, missing migrations, unhealthy readiness, or frontend/backend version mismatch.

@@ -1,0 +1,20 @@
+<main class="verify-page">
+  <mat-card class="verify-card">
+    <span class="brand-mark" aria-hidden="true"><app-icon name="brand" /></span>
+    @if (loading()) {
+      <mat-spinner diameter="42" />
+      <h1>Verifying your email…</h1>
+      <p>Please keep this page open for a moment.</p>
+    } @else if (verified()) {
+      <span class="result-mark success" aria-hidden="true">✓</span>
+      <h1>Your masjid is ready</h1>
+      <p>Your email is verified and your administrator account has been activated.</p>
+      <button mat-flat-button color="primary" type="button" (click)="continue()">Open the dashboard</button>
+    } @else {
+      <span class="result-mark error" aria-hidden="true">!</span>
+      <h1>Verification did not complete</h1>
+      <p>{{ error() }}</p>
+      <a mat-flat-button color="primary" routerLink="/login">Return to registration</a>
+    }
+  </mat-card>
+</main>

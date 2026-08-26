@@ -40,9 +40,9 @@ public sealed class DatabaseReadiness(IDbContextFactory<AppDbContext> dbFactory)
         {
             throw;
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            return DatabaseReadinessResult.Unavailable(exception.GetBaseException().Message);
+            return DatabaseReadinessResult.Unavailable("The database readiness check failed.");
         }
     }
 }

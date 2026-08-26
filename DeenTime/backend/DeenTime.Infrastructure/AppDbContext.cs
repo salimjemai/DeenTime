@@ -22,6 +22,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<HadithRecord> HadithRecords => Set<HadithRecord>();
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
     public DbSet<ApiClientUsage> ApiClientUsage => Set<ApiClientUsage>();
+    public DbSet<PendingRegistration> PendingRegistrations => Set<PendingRegistration>();
+    public DbSet<MasjidInvitation> MasjidInvitations => Set<MasjidInvitation>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -74,8 +76,20 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             .HasIndex(x => new { x.OrganizationId, x.Issuer, x.Subject })
             .IsUnique();
 
-
+        b.Entity<AppUser>().Property(u => u.Email).HasMaxLength(320);
         b.Entity<AppUser>().HasIndex(u => u.Email).IsUnique();
+        b.Entity<Organization>().Property(o => o.Name).HasMaxLength(160);
+        b.Entity<Organization>().Property(o => o.NormalizedName).HasMaxLength(160);
+        b.Entity<Organization>().Property(o => o.NormalizedWebsiteHost).HasMaxLength(253);
+        b.Entity<Organization>().Property(o => o.AddressFingerprint).HasMaxLength(64);
+        b.Entity<Organization>().Property(o => o.MasjidIdentityKey).HasMaxLength(64);
+        b.Entity<Organization>().Property(o => o.AdminUserId).HasMaxLength(120);
+        b.Entity<Organization>().HasIndex(o => o.NormalizedWebsiteHost).IsUnique()
+            .HasFilter("\"NormalizedWebsiteHost\" IS NOT NULL");
+        b.Entity<Organization>().HasIndex(o => o.AddressFingerprint).IsUnique()
+            .HasFilter("\"AddressFingerprint\" IS NOT NULL");
+        b.Entity<Organization>().HasIndex(o => o.MasjidIdentityKey).IsUnique()
+            .HasFilter("\"MasjidIdentityKey\" IS NOT NULL");
         b.Entity<Organization>().HasIndex(o => o.Name);
         b.Entity<PrayerTimingCriteria>().HasIndex(c => new { c.OrganizationId });
         b.Entity<Organization>().HasIndex(o => o.Slug).IsUnique();
@@ -129,5 +143,48 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         b.Entity<HadithRecord>().HasIndex(h => new { h.BookSlug, h.ChapterNumber });
         b.Entity<HadithRecord>().HasIndex(h => h.Status);
         b.Entity<HadithRecord>().HasIndex(h => h.ProviderId);
+
+        b.Entity<PendingRegistration>().Property(p => p.Email).HasMaxLength(320);
+        b.Entity<PendingRegistration>().Property(p => p.NormalizedEmail).HasMaxLength(320);
+        b.Entity<PendingRegistration>().Property(p => p.OrganizationName).HasMaxLength(160);
+        b.Entity<PendingRegistration>().Property(p => p.NormalizedName).HasMaxLength(160);
+        b.Entity<PendingRegistration>().Property(p => p.WebsiteUrl).HasMaxLength(2048);
+        b.Entity<PendingRegistration>().Property(p => p.NormalizedWebsiteHost).HasMaxLength(253);
+        b.Entity<PendingRegistration>().Property(p => p.AddressLine).HasMaxLength(240);
+        b.Entity<PendingRegistration>().Property(p => p.City).HasMaxLength(120);
+        b.Entity<PendingRegistration>().Property(p => p.State).HasMaxLength(2);
+        b.Entity<PendingRegistration>().Property(p => p.ZipCode).HasMaxLength(10);
+        b.Entity<PendingRegistration>().Property(p => p.AddressFingerprint).HasMaxLength(64);
+        b.Entity<PendingRegistration>().Property(p => p.MasjidIdentityKey).HasMaxLength(64);
+        b.Entity<PendingRegistration>().Property(p => p.VerificationTokenHash).HasMaxLength(64);
+        b.Entity<PendingRegistration>().HasIndex(p => p.NormalizedEmail).IsUnique();
+        b.Entity<PendingRegistration>().HasIndex(p => p.NormalizedWebsiteHost).IsUnique();
+        b.Entity<PendingRegistration>().HasIndex(p => p.AddressFingerprint).IsUnique();
+        b.Entity<PendingRegistration>().HasIndex(p => p.MasjidIdentityKey).IsUnique();
+        b.Entity<PendingRegistration>().HasIndex(p => p.VerificationTokenHash).IsUnique();
+        b.Entity<PendingRegistration>().HasIndex(p => p.VerificationExpiresAtUtc);
+
+        b.Entity<MasjidInvitation>().Property(i => i.Email).HasMaxLength(320);
+        b.Entity<MasjidInvitation>().Property(i => i.NormalizedEmail).HasMaxLength(320);
+        b.Entity<MasjidInvitation>().Property(i => i.OrganizationName).HasMaxLength(160);
+        b.Entity<MasjidInvitation>().Property(i => i.NormalizedOrganizationName).HasMaxLength(160);
+        b.Entity<MasjidInvitation>().Property(i => i.WebsiteUrl).HasMaxLength(2048);
+        b.Entity<MasjidInvitation>().Property(i => i.AddressLine).HasMaxLength(240);
+        b.Entity<MasjidInvitation>().Property(i => i.City).HasMaxLength(120);
+        b.Entity<MasjidInvitation>().Property(i => i.State).HasMaxLength(2);
+        b.Entity<MasjidInvitation>().Property(i => i.ZipCode).HasMaxLength(10);
+        b.Entity<MasjidInvitation>().Property(i => i.InvitationTokenHash).HasMaxLength(64);
+        b.Entity<MasjidInvitation>().Property(i => i.InvitedBySubject).HasMaxLength(120);
+        b.Entity<MasjidInvitation>().HasIndex(i => i.InvitationTokenHash).IsUnique();
+        b.Entity<MasjidInvitation>().HasIndex(i => i.NormalizedEmail);
+        b.Entity<MasjidInvitation>().HasIndex(i => i.ExpiresAtUtc);
+        b.Entity<MasjidInvitation>().HasOne(i => i.Organization)
+            .WithMany()
+            .HasForeignKey(i => i.OrganizationId)
+            .OnDelete(DeleteBehavior.SetNull);
+        b.Entity<PendingRegistration>().HasOne(p => p.Invitation)
+            .WithMany()
+            .HasForeignKey(p => p.InvitationId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -19,6 +19,7 @@ appsettings.Staging.json
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # EF Core migration bundles
 efbundle

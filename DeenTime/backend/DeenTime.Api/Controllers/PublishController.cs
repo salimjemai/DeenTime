@@ -8,6 +8,7 @@ using DeenTime.Api.Requests.Publish;
 using DeenTime.Core.Services;
 using DeenTime.Api.Authorization;
 using System.Net;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DeenTime.Api.Controllers
 {
@@ -98,6 +99,8 @@ namespace DeenTime.Api.Controllers
 		}
 
 		[HttpPost("pdf/generate")]
+		[Authorize(Roles = "Admin,Editor")]
+		[EnableRateLimiting("expensive")]
 		public async Task<IActionResult> GeneratePdf([FromBody] PdfGenerateRequest req, [FromServices] IPdfGenerator pdfs, [FromServices] IStorageService storage)
 		{
 			if (!User.CanAccessOrganization(req.OrgId)) return Forbid();
@@ -116,6 +119,7 @@ namespace DeenTime.Api.Controllers
 
 		[HttpPost("pdf/ramadan")]
 		[Authorize(Roles = "Admin,Editor")]
+		[EnableRateLimiting("expensive")]
 		public async Task<IActionResult> GenerateRamadanPdf([FromBody] RamadanPdfGenerateRequest req, [FromServices] IPdfGenerator pdfs, [FromServices] IStorageService storage)
 		{
 			if (!User.CanAccessOrganization(req.OrgId)) return Forbid();

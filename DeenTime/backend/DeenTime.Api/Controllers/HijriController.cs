@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DeenTime.Core.Services;
+using DeenTime.Api.Authorization;
 
 namespace DeenTime.Api.Controllers
 {
@@ -19,8 +20,11 @@ namespace DeenTime.Api.Controllers
 		[HttpGet("{orgId:guid}")]
 		public async Task<IActionResult> Get(Guid orgId, [FromQuery] string from, [FromQuery] string to, [FromServices] IHijriService hijri)
 		{
+			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			if (!DateOnly.TryParse(from + "-01", out var fromDate) || !DateOnly.TryParse(to + "-01", out var toDate))
 				return BadRequest("Invalid YYYY-MM range");
+			if (toDate < fromDate || ((toDate.Year - fromDate.Year) * 12) + toDate.Month - fromDate.Month > 24)
+				return BadRequest("Date range must be no more than 24 months.");
 			var (fy, fm) = (fromDate.Year, fromDate.Month);
 			var (ty, tm) = (toDate.Year, toDate.Month);
 			var all = await _db.HijriMonthMaps
@@ -53,6 +57,7 @@ namespace DeenTime.Api.Controllers
 		[Authorize(Roles = "Admin,Editor")]
 		public async Task<IActionResult> Create([FromBody] HijriUpsertRequest req)
 		{
+			if (!User.CanAccessOrganization(req.OrganizationId)) return Forbid();
 			var entity = new HijriMonthMap
 			{
 				Id = Guid.NewGuid(), OrganizationId = req.OrganizationId,
@@ -72,7 +77,8 @@ namespace DeenTime.Api.Controllers
 		{
 			var existing = await _db.HijriMonthMaps.FirstOrDefaultAsync(h => h.Id == id);
 			if (existing is null) return NotFound();
-			existing.OrganizationId = req.OrganizationId;
+			if (!User.CanAccessOrganization(existing.OrganizationId)) return Forbid();
+			if (req.OrganizationId != existing.OrganizationId) return BadRequest("A Hijri record cannot be moved to another masjid.");
 			existing.Year = req.Year;
 			existing.Month = req.Month;
 			existing.HijriDayOnFirst = req.HijriDayOnFirst;
@@ -88,7 +94,10 @@ namespace DeenTime.Api.Controllers
 		[Authorize(Roles = "Admin,Editor")]
 		public async Task<IActionResult> Regenerate(Guid orgId, [FromQuery] string from, [FromQuery] string to, [FromServices] IHijriService hijri)
 		{
+			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			if (!DateOnly.TryParse(from + "-01", out var f) || !DateOnly.TryParse(to + "-01", out var t)) return BadRequest("Invalid range");
+			if (t < f || ((t.Year - f.Year) * 12) + t.Month - f.Month > 24)
+				return BadRequest("Date range must be no more than 24 months.");
 			var existing = await _db.HijriMonthMaps.Where(h => h.OrganizationId == orgId &&
 					(h.Year > f.Year || (h.Year == f.Year && h.Month >= f.Month)) &&
 					(h.Year < t.Year || (h.Year == t.Year && h.Month <= t.Month)))

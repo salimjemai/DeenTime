@@ -33,19 +33,35 @@
       </div>
 
       <nav class="nav-list" aria-label="IqamaTime sections">
-        @for (item of navItems; track item.path) {
+        @if (isSuperUser()) {
           <a
             class="nav-link"
-            [routerLink]="['/org', orgId(), item.path]"
+            routerLink="/admin"
             routerLinkActive="active-link"
             ariaCurrentWhenActive="page"
-            [attr.aria-label]="item.label"
-            [matTooltip]="navCollapsed() && !isMobileNavigation() ? item.label : ''"
+            aria-label="Masjid administration"
+            [matTooltip]="navCollapsed() && !isMobileNavigation() ? 'Masjids' : ''"
             matTooltipPosition="right"
             (click)="closeMobileNavigation()">
-            <span class="nav-icon-shell" aria-hidden="true"><app-icon [name]="item.icon" /></span>
-            <span class="nav-label">{{ item.label }}</span>
+            <span class="nav-icon-shell" aria-hidden="true"><mat-icon>admin_panel_settings</mat-icon></span>
+            <span class="nav-label">Masjids</span>
           </a>
+        }
+        @if (hasOrganizationContext()) {
+          @for (item of navItems; track item.path) {
+            <a
+              class="nav-link"
+              [routerLink]="['/org', orgId(), item.path]"
+              routerLinkActive="active-link"
+              ariaCurrentWhenActive="page"
+              [attr.aria-label]="item.label"
+              [matTooltip]="navCollapsed() && !isMobileNavigation() ? item.label : ''"
+              matTooltipPosition="right"
+              (click)="closeMobileNavigation()">
+              <span class="nav-icon-shell" aria-hidden="true"><app-icon [name]="item.icon" /></span>
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          }
         }
       </nav>
 
@@ -81,9 +97,21 @@
       <span class="mobile-brand">IqamaTime</span>
 
       <div class="header-copy">
-        <div class="content-kicker">MOSQUE OPERATIONS · {{ todayLabel }}</div>
+        <div class="content-kicker">{{ contentKicker() }}</div>
         <h1>{{ orgName() }}</h1>
-        <p>Keep your prayer schedule accurate, consistent, and ready to publish.</p>
+        <p>{{ headerDescription() }}</p>
+        @if (isSuperUser()) {
+          <label class="masjid-selector">
+            <mat-icon>mosque</mat-icon>
+            <span class="visually-hidden">Choose a masjid to manage</span>
+            <select [value]="selectedOrgId() ?? ''" (change)="selectMasjid($any($event.target).value)">
+              <option value="">Choose a masjid…</option>
+              @for (masjid of registeredMasjids(); track masjid.organizationId) {
+                <option [value]="masjid.organizationId">{{ masjid.organizationName }}</option>
+              }
+            </select>
+          </label>
+        }
       </div>
 
       <div class="header-actions">
@@ -102,18 +130,25 @@
           }
         </div>
 
-        <a mat-stroked-button class="help-shortcut" [routerLink]="['/org', orgId(), 'help']">
-          <mat-icon>tips_and_updates</mat-icon> Help
-        </a>
+        @if (hasOrganizationContext()) {
+          <a mat-stroked-button class="help-shortcut" [routerLink]="['/org', orgId(), 'help']">
+            <mat-icon>tips_and_updates</mat-icon> Help
+          </a>
 
-        <a
-          class="account-chip"
-          [routerLink]="['/org', orgId(), 'profile']"
-          aria-label="Open organization profile">
-          <span class="account-avatar"><mat-icon>person</mat-icon></span>
-          <span class="account-email">{{ email() }}</span>
-          <mat-icon class="account-arrow">chevron_right</mat-icon>
-        </a>
+          <a
+            class="account-chip"
+            [routerLink]="['/org', orgId(), 'profile']"
+            aria-label="Open organization profile">
+            <span class="account-avatar"><mat-icon>person</mat-icon></span>
+            <span class="account-email">{{ email() }}</span>
+            <mat-icon class="account-arrow">chevron_right</mat-icon>
+          </a>
+        } @else {
+          <span class="account-chip administration-account" aria-label="IqamaTime administrator account">
+            <span class="account-avatar"><mat-icon>admin_panel_settings</mat-icon></span>
+            <span class="account-email">{{ email() }}</span>
+          </span>
+        }
       </div>
     </header>
 

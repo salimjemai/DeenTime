@@ -1,1 +1,149 @@
-mat-card { max-width: 400px; }
+:host { display: block; }
+
+.admin-page {
+  display: grid;
+  gap: 24px;
+  padding: 8px clamp(22px, 3vw, 48px) 54px;
+  color: var(--app-text);
+}
+
+.page-heading,
+.section-heading,
+.masjid-identity,
+.filters,
+.row-actions { display: flex; align-items: center; }
+
+.page-heading { justify-content: space-between; gap: 22px; }
+.page-heading h2 { margin: 5px 0 5px; color: var(--app-heading); font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.04em; }
+.page-heading p,
+.section-heading p { margin: 0; color: var(--app-muted); line-height: 1.55; }
+.eyebrow { color: var(--app-primary); font-size: .68rem; font-weight: 900; letter-spacing: .16em; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.summary-grid article {
+  display: grid;
+  min-height: 100px;
+  align-content: center;
+  gap: 5px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--app-border) 65%, transparent);
+  border-radius: 18px;
+  background: var(--app-surface);
+  box-shadow: var(--app-box-ambient-shadow);
+}
+.summary-grid span { color: var(--app-muted); font-size: .75rem; font-weight: 750; }
+.summary-grid strong { color: var(--app-heading); font-size: 1.85rem; line-height: 1; }
+.summary-grid .registered strong { color: #3d9a63; }
+.summary-grid .invited strong { color: #4e83bc; }
+.summary-grid .waiting strong { color: #a87820; }
+.summary-grid .attention strong { color: #b85d4b; }
+
+.invite-card,
+.tracking-section {
+  padding: clamp(20px, 2.5vw, 30px);
+  border: 1px solid color-mix(in srgb, var(--app-border) 70%, transparent);
+  border-radius: 22px;
+  background: var(--app-surface);
+  box-shadow: var(--app-box-ambient-shadow);
+}
+
+.section-heading { gap: 13px; }
+.section-heading h3 { margin: 0 0 3px; color: var(--app-heading); font-size: 1.2rem; }
+.section-icon {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-primary) 14%, transparent);
+  color: var(--app-primary);
+}
+
+.invite-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px 13px; margin-top: 22px; }
+.invite-form mat-form-field:first-child,
+.invite-form mat-form-field:nth-child(2) { grid-column: span 2; }
+.send-button { min-height: 48px; align-self: start; border-radius: 13px; }
+.send-button mat-spinner { display: inline-block; }
+.development-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--app-primary); font-weight: 700; }
+
+.tracking-heading { align-items: flex-start; }
+.filters { gap: 10px; margin-left: auto; }
+.filters label {
+  display: flex;
+  min-width: 240px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-field);
+  color: var(--app-muted);
+}
+.filters input,
+.filters select,
+.filters label input { min-width: 0; border: 0; outline: 0; background: transparent; color: var(--app-text); font: inherit; }
+.filters label input { width: 100%; }
+.filters select { padding: 10px 12px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-field); }
+
+.masjid-list { display: grid; gap: 10px; margin-top: 22px; }
+.masjid-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) minmax(190px, 1fr) minmax(150px, .7fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 15px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--app-surface-solid) 82%, transparent);
+}
+.masjid-identity { min-width: 0; gap: 12px; }
+.masjid-avatar { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: var(--app-surface-muted); color: var(--app-primary); }
+.masjid-identity div,
+.status-column,
+.date-column { display: grid; min-width: 0; gap: 3px; }
+.masjid-identity strong { overflow: hidden; color: var(--app-heading); text-overflow: ellipsis; white-space: nowrap; }
+.masjid-identity a { overflow: hidden; color: var(--app-primary); font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+.masjid-identity small,
+.status-column small,
+.date-column span,
+.date-column small { color: var(--app-muted); font-size: .7rem; }
+.date-column strong { font-size: .83rem; }
+
+.status-badge { width: fit-content; padding: 5px 9px; border-radius: 999px; background: var(--app-surface-muted); color: var(--app-muted); font-size: .7rem; font-weight: 800; }
+.status-badge.registered { background: color-mix(in srgb, #3d9a63 16%, transparent); color: #3d9a63; }
+.status-badge.invitation-sent { background: color-mix(in srgb, #4e83bc 16%, transparent); color: #4e83bc; }
+.status-badge.awaiting-email-verification { background: color-mix(in srgb, #c6912b 17%, transparent); color: #9a6b12; }
+.status-badge.email-verification-expired,
+.status-badge.expired { background: color-mix(in srgb, #b85d4b 15%, transparent); color: #b85d4b; }
+.status-badge.revoked { opacity: .72; }
+.row-actions { justify-content: flex-end; gap: 4px; }
+.manage-button { background: var(--app-primary) !important; color: var(--app-on-primary) !important; }
+.manage-button mat-icon { width: 17px; height: 17px; font-size: 17px; }
+.revoke-button { color: #b85d4b !important; }
+
+.loading-state,
+.empty-state { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-direction: column; gap: 9px; color: var(--app-muted); }
+.empty-state mat-icon { width: 42px; height: 42px; font-size: 42px; opacity: .55; }
+.empty-state strong { color: var(--app-heading); }
+
+@media (max-width: 1200px) {
+  .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  .invite-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .invite-form mat-form-field:first-child,
+  .invite-form mat-form-field:nth-child(2) { grid-column: span 1; }
+  .masjid-row { grid-template-columns: minmax(240px, 1.5fr) minmax(180px, 1fr) auto; }
+  .date-column { display: none; }
+}
+
+@media (max-width: 800px) {
+  .admin-page { padding-inline: 14px; }
+  .page-heading { align-items: flex-start; flex-direction: column; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .invite-form { grid-template-columns: 1fr; }
+  .tracking-heading { align-items: stretch; flex-wrap: wrap; }
+  .filters { width: 100%; margin: 10px 0 0; flex-direction: column; align-items: stretch; }
+  .filters label { min-width: 0; }
+  .masjid-row { grid-template-columns: 1fr; }
+  .row-actions { justify-content: flex-start; }
+}

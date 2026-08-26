@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { catchError, shareReplay, tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LoginRequest, RegisterRequest, AuthResponse, AuthSession } from '../models';
+import { LoginRequest, RegisterRequest, AuthResponse, AuthSession, RegistrationResponse, AuthPublicConfig, MasjidInvitationPrefill, AddressSuggestion, VerifiedAddress, PostalCodeLocation } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -25,9 +25,37 @@ export class AuthService {
   }
 
   register(req: RegisterRequest) {
-    return this.http.post<AuthResponse>(`${this.base}/api/v1/auth/register`, req).pipe(
+    return this.http.post<RegistrationResponse>(`${this.base}/api/v1/auth/register`, req);
+  }
+
+  verifyEmail(token: string) {
+    return this.http.post<AuthResponse>(`${this.base}/api/v1/auth/verify-email`, { token }).pipe(
       tap(res => this.storeToken(res.token))
     );
+  }
+
+  getPublicConfig() {
+    return this.http.get<AuthPublicConfig>(`${this.base}/api/v1/auth/config`);
+  }
+
+  getInvitation(token: string) {
+    return this.http.get<MasjidInvitationPrefill>(`${this.base}/api/v1/auth/invitations/${encodeURIComponent(token)}`);
+  }
+
+  searchAddresses(input: string, sessionToken: string) {
+    return this.http.get<AddressSuggestion[]>(`${this.base}/api/v1/locations/address-suggestions`, {
+      params: { input, sessionToken }
+    });
+  }
+
+  resolveAddress(placeId: string, sessionToken: string) {
+    return this.http.get<VerifiedAddress>(`${this.base}/api/v1/locations/address-details/${encodeURIComponent(placeId)}`, {
+      params: { sessionToken }
+    });
+  }
+
+  resolveUsPostalCode(postalCode: string) {
+    return this.http.get<PostalCodeLocation>(`${this.base}/api/v1/locations/postal-code/${encodeURIComponent(postalCode)}`);
   }
 
   validateSession(force = false): Observable<AuthSession> {
@@ -88,6 +116,11 @@ export class AuthService {
   hasAdminRole(): boolean {
     return (this.session()?.roles ?? this.rolesFromPayload())
       .some(role => /admin|owner|superuser/i.test(role));
+  }
+
+  hasSuperUserRole(): boolean {
+    return (this.session()?.roles ?? this.rolesFromPayload())
+      .some(role => role.toLowerCase() === 'superuser');
   }
 
   clearSession() {
