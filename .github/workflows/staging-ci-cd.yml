@@ -114,35 +114,37 @@ jobs:
           tar -czf "deentime-web-$GITHUB_SHA.tar.gz" \
             -C DeenTime/frontend/deentime-web/dist/deentime-web/browser .
 
-      - name: Configure pinned SSH identity
+      - name: Configure password-authenticated SSH
         env:
-          STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          STAGING_SSH_PASSWORD: ${{ secrets.STAGING_SSH_PASSWORD }}
         run: |
-          if [ -z "$STAGING_SSH_PRIVATE_KEY" ]; then
-            echo 'STAGING_SSH_PRIVATE_KEY is missing.' >&2
+          if [ -z "$STAGING_SSH_PASSWORD" ]; then
+            echo 'STAGING_SSH_PASSWORD is missing.' >&2
             exit 1
+          fi
+          if ! command -v sshpass >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes sshpass
           fi
           install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$STAGING_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
-          chmod 600 "$HOME/.ssh/id_ed25519"
-          if ! ssh-keygen -y -f "$HOME/.ssh/id_ed25519" > /dev/null; then
-            echo 'STAGING_SSH_PRIVATE_KEY is not a valid private SSH key.' >&2
-            exit 1
-          fi
           printf '%s\n' '165.227.175.2 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlGFaTKNS9P8kVfTvBbvBrqDmtxNDDUQoPKGMRjA/G6' > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
       - name: Copy release to the server
+        env:
+          SSHPASS: ${{ secrets.STAGING_SSH_PASSWORD }}
         run: |
-          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p "$HOME/deentime/incoming"'
-          scp -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes DeenTime/deploy/deploy-staging.sh "$DEPLOY_USER@$DEPLOY_HOST:deentime/deploy-staging.sh"
-          scp -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes DeenTime/deploy/deentime-api.service "$DEPLOY_USER@$DEPLOY_HOST:deentime/deentime-api.service"
-          scp -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes \
+          sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p "$HOME/deentime/incoming"'
+          sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes DeenTime/deploy/deploy-staging.sh "$DEPLOY_USER@$DEPLOY_HOST:deentime/deploy-staging.sh"
+          sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes DeenTime/deploy/deentime-api.service "$DEPLOY_USER@$DEPLOY_HOST:deentime/deentime-api.service"
+          sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes \
             "deentime-api-$GITHUB_SHA.tar.gz" "deentime-web-$GITHUB_SHA.tar.gz" \
             "$DEPLOY_USER@$DEPLOY_HOST:deentime/incoming/"
 
       - name: Start release and run local health checks
-        run: ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash \"\$HOME/deentime/deploy-staging.sh\" \"$GITHUB_SHA\""
+        env:
+          SSHPASS: ${{ secrets.STAGING_SSH_PASSWORD }}
+        run: sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash \"\$HOME/deentime/deploy-staging.sh\" \"$GITHUB_SHA\""
 
       - name: Verify public HTTPS endpoints
         run: |
