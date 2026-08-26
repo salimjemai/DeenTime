@@ -1,4 +1,161 @@
-<mat-card>
-  <mat-card-header><mat-card-title>Admin Dashboard</mat-card-title></mat-card-header>
-  <mat-card-content><p>Welcome, admin.</p></mat-card-content>
-</mat-card>
+<main class="admin-page">
+  <section class="page-heading">
+    <div>
+      <span class="eyebrow">IQAMATIME ADMINISTRATION</span>
+      <h2>Masjid registrations</h2>
+      <p>Invite a masjid, follow its email verification, and see every active registration in one place.</p>
+    </div>
+    <button mat-stroked-button type="button" (click)="load()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon> Refresh
+    </button>
+  </section>
+
+  <section class="summary-grid" aria-label="Masjid registration summary">
+    <article><span>Total masjids</span><strong>{{ dashboard()?.summary?.total ?? 0 }}</strong></article>
+    <article class="registered"><span>Registered</span><strong>{{ dashboard()?.summary?.registered ?? 0 }}</strong></article>
+    <article class="invited"><span>Invited</span><strong>{{ dashboard()?.summary?.invited ?? 0 }}</strong></article>
+    <article class="waiting"><span>Awaiting verification</span><strong>{{ dashboard()?.summary?.awaitingEmailVerification ?? 0 }}</strong></article>
+    <article class="attention"><span>Expired</span><strong>{{ dashboard()?.summary?.expired ?? 0 }}</strong></article>
+  </section>
+
+  <mat-card class="invite-card">
+    <div class="section-heading">
+      <span class="section-icon"><mat-icon>mark_email_unread</mat-icon></span>
+      <div>
+        <h3>Invite a masjid</h3>
+        <p>Email and masjid name are required. Add any known details to save the administrator time.</p>
+      </div>
+    </div>
+
+    <form [formGroup]="inviteForm" (ngSubmit)="sendInvitation()" class="invite-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Masjid administrator email</mat-label>
+        <input matInput formControlName="email" type="email" autocomplete="email" />
+        @if (inviteForm.controls.email.hasError('required')) {
+          <mat-error>Email is required</mat-error>
+        } @else if (inviteForm.controls.email.hasError('email')) {
+          <mat-error>Enter a valid email</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Masjid name</mat-label>
+        <input matInput formControlName="organizationName" autocomplete="organization" />
+        @if (inviteForm.controls.organizationName.hasError('required')) {
+          <mat-error>Masjid name is required</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Website (optional)</mat-label>
+        <input matInput formControlName="websiteUrl" type="url" placeholder="https://example.org" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Street address (optional)</mat-label>
+        <input matInput formControlName="addressLine" autocomplete="street-address" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>City (optional)</mat-label>
+        <input matInput formControlName="city" autocomplete="address-level2" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>State (optional)</mat-label>
+        <input matInput formControlName="state" maxlength="2" placeholder="TX" />
+        @if (inviteForm.controls.state.hasError('pattern')) {
+          <mat-error>Use a two-letter state code</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>ZIP (optional)</mat-label>
+        <input matInput formControlName="zipCode" inputmode="numeric" />
+        @if (inviteForm.controls.zipCode.hasError('pattern')) {
+          <mat-error>Enter a valid U.S. ZIP code</mat-error>
+        }
+      </mat-form-field>
+      <button mat-flat-button type="submit" class="send-button" [disabled]="sending()">
+        @if (sending()) {
+          <mat-spinner diameter="19" />
+        } @else {
+          <ng-container><mat-icon>send</mat-icon> Send invitation</ng-container>
+        }
+      </button>
+    </form>
+
+    @if (developmentInvitationUrl()) {
+      <a class="development-link" [href]="developmentInvitationUrl()" target="_blank" rel="noopener">
+        <mat-icon>open_in_new</mat-icon> Open development invitation
+      </a>
+    }
+  </mat-card>
+
+  <section class="tracking-section">
+    <div class="section-heading tracking-heading">
+      <span class="section-icon"><mat-icon>domain</mat-icon></span>
+      <div>
+        <h3>Registration tracking</h3>
+        <p>Invitations and self-registered masjids are shown together.</p>
+      </div>
+      <div class="filters">
+        <label>
+          <mat-icon>search</mat-icon>
+          <input type="search" placeholder="Search masjids or email" (input)="search.set($any($event.target).value)" />
+        </label>
+        <select aria-label="Filter registration status" (change)="statusFilter.set($any($event.target).value)">
+          <option value="All">All statuses</option>
+          <option value="Registered">Registered</option>
+          <option value="InvitationSent">Invitation sent</option>
+          <option value="AwaitingEmailVerification">Awaiting verification</option>
+          <option value="EmailVerificationExpired">Verification expired</option>
+          <option value="Expired">Invitation expired</option>
+          <option value="Revoked">Revoked</option>
+        </select>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state"><mat-spinner diameter="34" /><span>Loading masjids…</span></div>
+    } @else if (filteredItems().length === 0) {
+      <div class="empty-state"><mat-icon>mosque</mat-icon><strong>No matching masjids</strong><span>Send an invitation or change the filters.</span></div>
+    } @else {
+      <div class="masjid-list">
+        @for (item of filteredItems(); track item.id) {
+          <article class="masjid-row">
+            <div class="masjid-identity">
+              <span class="masjid-avatar"><mat-icon>mosque</mat-icon></span>
+              <div>
+                <strong>{{ item.organizationName }}</strong>
+                <a [href]="'mailto:' + item.email">{{ item.email }}</a>
+                @if (item.city || item.state) { <small>{{ item.city }}{{ item.city && item.state ? ', ' : '' }}{{ item.state }}</small> }
+              </div>
+            </div>
+            <div class="status-column">
+              <span [class]="'status-badge ' + statusClass(item.status)">{{ statusLabel(item.status) }}</span>
+              <small>{{ item.source === 'Invitation' ? 'Invited by IqamaTime' : 'Self-registered' }}</small>
+            </div>
+            <div class="date-column">
+              @if (item.registeredAtUtc) {
+                <span>Registered</span><strong>{{ item.registeredAtUtc | date:'mediumDate' }}</strong>
+              } @else if (item.invitedAtUtc) {
+                <span>Invited</span><strong>{{ item.invitedAtUtc | date:'mediumDate' }}</strong>
+              }
+              @if (item.expiresAtUtc && item.status !== 'Registered' && item.status !== 'Revoked') {
+                <small>Expires {{ item.expiresAtUtc | date:'short' }}</small>
+              }
+            </div>
+            <div class="row-actions">
+              @if (item.status === 'Registered' && item.organizationId) {
+                <button mat-flat-button type="button" class="manage-button" (click)="manage(item)">
+                  <mat-icon>settings</mat-icon> Manage
+                </button>
+              }
+              @if (item.canResend) {
+                <button mat-stroked-button type="button" (click)="resend(item)" [disabled]="workingId() === item.id">Resend</button>
+              }
+              @if (item.canRevoke) {
+                <button mat-button type="button" class="revoke-button" (click)="revoke(item)" [disabled]="workingId() === item.id">Revoke</button>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
+</main>

@@ -2,10 +2,12 @@ using DeenTime.Core.Services;
 using DeenTime.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DeenTime.Api.Controllers
 {
 	[ApiController]
+	[EnableRateLimiting("public")]
 	[Route("api/v1/[controller]")]
 	public sealed class TimingsController : ControllerBase
 	{
@@ -30,6 +32,7 @@ namespace DeenTime.Api.Controllers
         public async Task<IActionResult> GetRange([FromQuery] string orgId, [FromQuery] DateOnly from, [FromQuery] DateOnly to)
         {
             if (to < from) return BadRequest("Invalid range");
+			if (to.DayNumber - from.DayNumber > 366) return BadRequest("Date range must be no more than 367 days.");
             var org = await FindOrganization(orgId);
             if (org?.Criteria is null) return NotFound();
             var dates = Enumerable.Range(0, (to.DayNumber - from.DayNumber) + 1).Select(offset => from.AddDays(offset));

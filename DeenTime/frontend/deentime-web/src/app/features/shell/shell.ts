@@ -12,6 +12,8 @@ import { AuthService } from '../../services/auth';
 import { OrgsService } from '../../services/orgs';
 import { HelpTipsService } from '../../services/help-tips';
 import { AppIconComponent, AppIconName } from '../../shared/app-icon';
+import { AdminMasjidsService } from '../../services/admin-masjids';
+import { MasjidAdminRow } from '../../models';
 
 type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -30,6 +32,7 @@ export class ShellComponent implements OnInit {
   private auth   = inject(AuthService);
   private router = inject(Router);
   private orgs   = inject(OrgsService);
+  private adminMasjids = inject(AdminMasjidsService);
   private destroyRef = inject(DestroyRef);
   private platformId = inject(PLATFORM_ID);
   readonly tips = inject(HelpTipsService);
@@ -37,9 +40,21 @@ export class ShellComponent implements OnInit {
   private readonly navStorageKey = 'iqamatime-navigation-collapsed';
   private systemThemeQuery?: MediaQueryList;
 
-  orgId   = computed(() => this.auth.getOrgId() ?? '');
+  selectedOrgId = signal<string | null>(this.organizationIdFromUrl(this.router.url));
+  orgId   = computed(() => this.isSuperUser()
+    ? (this.selectedOrgId() ?? '')
+    : (this.auth.getOrgId() ?? ''));
   email   = computed(() => this.auth.getEmail() ?? '');
-  orgName = signal('Your organization');
+  isSuperUser = computed(() => this.auth.hasSuperUserRole());
+  registeredMasjids = signal<MasjidAdminRow[]>([]);
+  hasOrganizationContext = computed(() => !this.isSuperUser() || !!this.selectedOrgId());
+  orgName = signal(this.auth.hasSuperUserRole() ? 'IqamaTime Administration' : 'Your organization');
+  contentKicker = computed(() => this.hasOrganizationContext()
+    ? `MOSQUE OPERATIONS · ${this.todayLabel}`
+    : `IQAMATIME ADMINISTRATION · ${this.todayLabel}`);
+  headerDescription = computed(() => this.hasOrganizationContext()
+    ? 'Keep your prayer schedule accurate, consistent, and ready to publish.'
+    : 'Choose a registered masjid to review and manage its setup.');
   isMobileNavigation = signal(false);
   sidenavOpened = signal(true);
   navCollapsed = signal(false);
@@ -50,9 +65,9 @@ export class ShellComponent implements OnInit {
     return preference === 'system' ? (this.systemPrefersDark() ? 'dark' : 'light') : preference;
   });
   activePath = signal(this.pathFromUrl(this.router.url));
-  showWelcome = computed(() => !this.tips.welcomeSeen());
+  showWelcome = computed(() => this.hasOrganizationContext() && !this.tips.welcomeSeen());
   currentTip = computed(() => {
-    if (!this.tips.tipsEnabled() || !this.tips.welcomeSeen()) return undefined;
+    if (!this.hasOrganizationContext() || !this.tips.tipsEnabled() || !this.tips.welcomeSeen()) return undefined;
     const path = this.activePath();
     if (this.tips.dismissedTips().has(path)) return undefined;
     return this.tips.tab(path);
@@ -74,18 +89,17 @@ export class ShellComponent implements OnInit {
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(event => this.activePath.set(this.pathFromUrl(event.urlAfterRedirects)));
-
-    const orgId = this.auth.getOrgId();
-    if (orgId) {
-      this.orgs.get(orgId).subscribe({
-        next: org => this.orgName.set(org.name),
-        error: () => this.orgName.set('Your organization')
+      .subscribe(event => {
+        this.activePath.set(this.pathFromUrl(event.urlAfterRedirects));
+        this.syncOrganizationContext(event.urlAfterRedirects);
       });
-    }
 
-    if (this.router.url === '/' && orgId) {
-      this.router.navigate(['/org', orgId, 'timings']);
+    this.syncOrganizationContext(this.router.url);
+    if (this.isSuperUser()) this.loadRegisteredMasjids();
+
+    if (this.router.url === '/') {
+      if (this.isSuperUser()) this.router.navigate(['/admin']);
+      else if (this.auth.getOrgId()) this.router.navigate(['/org', this.auth.getOrgId(), 'timings']);
     }
   }
 
@@ -133,6 +147,7 @@ export class ShellComponent implements OnInit {
   }
 
   openGuide() {
+    if (!this.orgId()) return;
     this.tips.markWelcomeSeen();
     this.router.navigate(['/org', this.orgId(), 'help']);
   }
@@ -146,6 +161,18 @@ export class ShellComponent implements OnInit {
   }
 
   logout() { this.auth.logout(); }
+
+  selectMasjid(organizationId: string) {
+    if (!organizationId) {
+      this.router.navigate(['/admin']);
+      return;
+    }
+
+    const operationPath = this.navItems.some(item => item.path === this.activePath())
+      ? this.activePath()
+      : 'timings';
+    this.router.navigate(['/org', organizationId, operationPath]);
+  }
 
   private initializeDisplayPreferences() {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -182,6 +209,44 @@ export class ShellComponent implements OnInit {
   private applyThemeToDocument() {
     if (!isPlatformBrowser(this.platformId)) return;
     document.documentElement.dataset['appTheme'] = this.resolvedTheme();
+  }
+
+  private syncOrganizationContext(url: string) {
+    const routeOrganizationId = this.organizationIdFromUrl(url);
+    if (this.isSuperUser()) {
+      const demoOrganizationId = this.auth.getOrgId();
+      if (!routeOrganizationId || routeOrganizationId === demoOrganizationId) {
+        this.selectedOrgId.set(null);
+        this.orgName.set('IqamaTime Administration');
+        if (routeOrganizationId === demoOrganizationId) this.router.navigate(['/admin']);
+        return;
+      }
+      if (this.selectedOrgId() !== routeOrganizationId) this.selectedOrgId.set(routeOrganizationId);
+      this.loadOrganizationName(routeOrganizationId, 'Selected masjid');
+      return;
+    }
+
+    const ownOrganizationId = this.auth.getOrgId();
+    if (ownOrganizationId) this.loadOrganizationName(ownOrganizationId, 'Your organization');
+  }
+
+  private loadRegisteredMasjids() {
+    this.adminMasjids.getDashboard().subscribe({
+      next: dashboard => this.registeredMasjids.set(dashboard.items.filter(item =>
+        item.status === 'Registered' && !!item.organizationId)),
+      error: () => this.registeredMasjids.set([])
+    });
+  }
+
+  private loadOrganizationName(organizationId: string, fallback: string) {
+    this.orgs.get(organizationId).subscribe({
+      next: org => this.orgName.set(org.name),
+      error: () => this.orgName.set(fallback)
+    });
+  }
+
+  private organizationIdFromUrl(url: string): string | null {
+    return /\/org\/([^/?#]+)/.exec(url)?.[1] ?? null;
   }
 
   private pathFromUrl(url: string): string {

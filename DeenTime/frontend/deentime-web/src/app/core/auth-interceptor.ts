@@ -9,7 +9,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authReq = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
   return next(authReq).pipe(
     catchError(error => {
-      if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403) && !req.url.includes('/auth/login') && !req.url.includes('/auth/register')) {
+      const publicAuthRequest = ['/auth/login', '/auth/register', '/auth/verify-email', '/auth/config']
+        .some(path => req.url.includes(path));
+      if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403) && !publicAuthRequest) {
         if (typeof localStorage !== 'undefined') localStorage.removeItem('token');
         router.navigate(['/login'], { queryParams: { reason: error.status === 403 ? 'organization-unavailable' : 'session-expired' } });
       }

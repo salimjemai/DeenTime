@@ -1,0 +1,31 @@
+# User-level systemd unit for the DeenTime API.
+# Install (as the deployment user):
+#   mkdir -p ~/.config/systemd/user
+#   cp deentime-api.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable deentime-api
+# One-time, as root, so the user services keep running after logout:
+#   loginctl enable-linger <deploy-user>
+
+[Unit]
+Description=DeenTime API (staging)
+After=network.target
+
+[Service]
+WorkingDirectory=%h/deentime/current/api
+ExecStart=%h/deentime/current/api/DeenTime.Api
+EnvironmentFile=%h/deentime/.env.staging
+EnvironmentFile=-%h/deentime/current/release.env
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:18080
+Environment=ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+Environment=DOTNET_NOLOGO=1
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=%h/deentime/shared/uploads
+
+[Install]
+WantedBy=default.target

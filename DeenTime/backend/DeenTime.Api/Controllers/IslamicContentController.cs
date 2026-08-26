@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DeenTime.Api.Controllers;
 
 [ApiController]
-[Authorize("Admin")]
+[Authorize("SuperUser")]
 [Route("api/v1/islamic-content")]
 public sealed class IslamicContentController(
     IDbContextFactory<AppDbContext> dbFactory,

@@ -8,7 +8,7 @@ From the repository root, run:
 ./DeenTime/scripts/start-local.sh
 ```
 
-The launcher checks the exact owners of ports 5432 and 8080, rebuilds the current API image, waits for PostgreSQL-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
+The launcher verifies native PostgreSQL on port 5432, starts the current .NET API directly on port 8080, waits for database-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
 
 Optional secrets are supplied through the environment or an untracked local `.env` file. Copy `DeenTime/.env.example` as a reference. Set `DEENTIME_HADITH_API_KEY` only in a secret store or shell environment; the upstream provider key is never sent to browsers or committed.
 
@@ -49,26 +49,27 @@ IqamaTime also adds the Quran/Hadith content library and rate-limited public JSO
 
 ---
 
-## Quick start (Docker)
+## Quick start
 
 ```bash
 cd DeenTime
-docker compose up --build
+./scripts/start-local.sh
 ```
 
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger  _(development mode only)_
 - Health: http://localhost:8080/health/live
+- Angular: http://127.0.0.1:4200
 
-The `docker-compose.yml` spins up PostgreSQL 16 and the API together. The DB schema is applied automatically on first run via EF Core migrations.
+The script expects a local PostgreSQL (`brew install postgresql@16 && brew services start postgresql@16` on macOS), creates the `deentime` database and the `postgres` role if missing, starts the API with `dotnet run`, then starts the Angular dev server. The DB schema is applied automatically on first run via EF Core migrations.
 
 ---
 
-## Local development (without Docker)
+## Local development (manual)
 
 ### Prerequisites
 - .NET 9 SDK
-- PostgreSQL 16 (or via `docker compose up db`)
+- PostgreSQL 16
 - Node.js 20.19+, 22.12+, or 24+ (Angular CLI is installed locally)
 
 ### 1 — API

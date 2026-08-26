@@ -102,7 +102,8 @@ namespace DeenTime.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Email")
-                        .HasColumnType("text");
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -128,10 +129,12 @@ namespace DeenTime.Infrastructure.Migrations
 
                     b.Property<string>("CompactFontFamily")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("system");
 
                     b.Property<int>("CompactFontScale")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(100);
 
@@ -154,10 +157,12 @@ namespace DeenTime.Infrastructure.Migrations
 
                     b.Property<string>("TvFontFamily")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("system");
 
                     b.Property<int>("TvFontScale")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(100);
 
@@ -166,10 +171,12 @@ namespace DeenTime.Infrastructure.Migrations
 
                     b.Property<string>("WidgetFontFamily")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("system");
 
                     b.Property<int>("WidgetFontScale")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(100);
 
@@ -492,6 +499,100 @@ namespace DeenTime.Infrastructure.Migrations
                     b.ToTable("IslamicContentSyncStates");
                 });
 
+            modelBuilder.Entity("DeenTime.Core.Entities.MasjidInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AddressLine")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvitationTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("InvitedBySubject")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("NormalizedOrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTime?>("RegistrationStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SendCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("State")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("ZipCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("InvitationTokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedEmail");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("MasjidInvitations");
+                });
+
             modelBuilder.Entity("DeenTime.Core.Entities.OrgUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -536,8 +637,16 @@ namespace DeenTime.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AddressFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("AddressLine")
                         .HasColumnType("text");
+
+                    b.Property<string>("AdminUserId")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.Property<string>("City")
                         .HasColumnType("text");
@@ -545,9 +654,23 @@ namespace DeenTime.Infrastructure.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
+                    b.Property<string>("MasjidIdentityKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("NormalizedWebsiteHost")
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)");
 
                     b.Property<string>("Phone")
                         .HasColumnType("text");
@@ -573,12 +696,146 @@ namespace DeenTime.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AddressFingerprint")
+                        .IsUnique()
+                        .HasFilter("\"AddressFingerprint\" IS NOT NULL");
+
+                    b.HasIndex("MasjidIdentityKey")
+                        .IsUnique()
+                        .HasFilter("\"MasjidIdentityKey\" IS NOT NULL");
+
                     b.HasIndex("Name");
+
+                    b.HasIndex("NormalizedWebsiteHost")
+                        .IsUnique()
+                        .HasFilter("\"NormalizedWebsiteHost\" IS NOT NULL");
 
                     b.HasIndex("Slug")
                         .IsUnique();
 
                     b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.PendingRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddressFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("AddressLine")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<Guid?>("InvitationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Longitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("MasjidIdentityKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("NormalizedWebsiteHost")
+                        .IsRequired()
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)");
+
+                    b.Property<string>("OrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("TimezoneId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("VerificationExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerificationTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("WebsiteUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddressFingerprint")
+                        .IsUnique();
+
+                    b.HasIndex("InvitationId");
+
+                    b.HasIndex("MasjidIdentityKey")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedWebsiteHost")
+                        .IsUnique();
+
+                    b.HasIndex("VerificationExpiresAtUtc");
+
+                    b.HasIndex("VerificationTokenHash")
+                        .IsUnique();
+
+                    b.ToTable("PendingRegistrations");
                 });
 
             modelBuilder.Entity("DeenTime.Core.Entities.PrayerTimingCriteria", b =>
@@ -733,6 +990,7 @@ namespace DeenTime.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("ClockFontScale")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(160);
 
@@ -797,6 +1055,16 @@ namespace DeenTime.Infrastructure.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("DeenTime.Core.Entities.MasjidInvitation", b =>
+                {
+                    b.HasOne("DeenTime.Core.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("DeenTime.Core.Entities.OrgUser", b =>
                 {
                     b.HasOne("DeenTime.Core.Entities.Organization", "Organization")
@@ -806,6 +1074,16 @@ namespace DeenTime.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("DeenTime.Core.Entities.PendingRegistration", b =>
+                {
+                    b.HasOne("DeenTime.Core.Entities.MasjidInvitation", "Invitation")
+                        .WithMany()
+                        .HasForeignKey("InvitationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Invitation");
                 });
 
             modelBuilder.Entity("DeenTime.Core.Entities.PrayerTimingCriteria", b =>

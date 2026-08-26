@@ -13,6 +13,11 @@ public sealed class Organization
     public Guid Id { get; set; }
     public string Slug { get; set; } = "";  // unique
     public string Name { get; set; } = "";
+    public string NormalizedName { get; set; } = "";
+    public string? NormalizedWebsiteHost { get; set; }
+    public string? AddressFingerprint { get; set; }
+    public string? MasjidIdentityKey { get; set; }
+    public string? AdminUserId { get; set; }
     public string? AddressLine { get; set; }
     public string? City { get; set; }
     public string? State { get; set; }
@@ -25,4 +30,3 @@ public sealed class Organization
     public DesignSettings? Design { get; set; }
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }
-

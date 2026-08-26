@@ -77,16 +77,15 @@ namespace DeenTime.Api.Controllers
 		{
 			if (!User.CanAccessOrganization(orgId)) return Forbid();
 			if (file is null || file.Length == 0) return BadRequest("Choose an image first.");
-			if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-				return BadRequest("Header image must be an image file.");
-
-			var extension = Path.GetExtension(file.FileName);
-			if (string.IsNullOrWhiteSpace(extension) || extension.Length > 6) extension = ".jpg";
-			var key = $"orgs/{orgId}/header-{Guid.NewGuid()}{extension.ToLowerInvariant()}";
 			await using var stream = file.OpenReadStream();
 			using var memory = new MemoryStream();
 			await stream.CopyToAsync(memory);
-			var publicUrl = await storage.UploadAsync(key, file.ContentType, memory.ToArray());
+			var bytes = memory.ToArray();
+			if (!TryIdentifySafeImage(bytes, out var extension, out var contentType))
+				return BadRequest("Header image must be a valid PNG, JPEG, or WebP file.");
+
+			var key = $"orgs/{orgId}/header-{Guid.NewGuid()}{extension}";
+			var publicUrl = await storage.UploadAsync(key, contentType, bytes);
 
 			var design = await _db.DesignSettings.FirstOrDefaultAsync(d => d.OrganizationId == orgId);
 			if (design is null)
@@ -118,5 +117,32 @@ namespace DeenTime.Api.Controllers
 			string.Equals(theme, "light", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(theme)
 				? "default"
 				: theme!.ToLowerInvariant();
+
+		private static bool TryIdentifySafeImage(byte[] bytes, out string extension, out string contentType)
+		{
+			extension = string.Empty;
+			contentType = string.Empty;
+			if (bytes.Length >= 8 && bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
+			{
+				extension = ".png";
+				contentType = "image/png";
+				return true;
+			}
+			if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+			{
+				extension = ".jpg";
+				contentType = "image/jpeg";
+				return true;
+			}
+			if (bytes.Length >= 12 &&
+				bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
+				bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8))
+			{
+				extension = ".webp";
+				contentType = "image/webp";
+				return true;
+			}
+			return false;
+		}
 	}
 }

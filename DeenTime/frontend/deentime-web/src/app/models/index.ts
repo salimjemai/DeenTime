@@ -1,7 +1,55 @@
 // ── Auth ─────────────────────────────────────────────────────────────────────
-export interface LoginRequest  { email: string; password: string; }
-export interface RegisterRequest { email: string; password: string; organizationName?: string; }
+export interface LoginRequest  { email: string; password: string; captchaToken?: string; }
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  organizationName: string;
+  websiteUrl: string;
+  addressLine: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  addressPlaceId?: string;
+  captchaToken?: string;
+  invitationToken?: string;
+}
 export interface AuthResponse  { token: string; }
+export interface RegistrationResponse {
+  message: string;
+  verificationRequired: boolean;
+  developmentVerificationUrl?: string;
+}
+export interface AuthPublicConfig {
+  captchaEnabled: boolean;
+  captchaSiteKey?: string;
+  addressAutocompleteEnabled: boolean;
+}
+export interface AddressSuggestion {
+  placeId: string;
+  description: string;
+}
+export interface VerifiedAddress {
+  placeId: string;
+  formattedAddress: string;
+  addressLine: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+}
+export interface MasjidInvitationPrefill {
+  email: string;
+  organizationName: string;
+  websiteUrl?: string;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  expiresAtUtc: string;
+}
 export interface AuthSession {
   userId: string;
   email?: string;
@@ -10,6 +58,64 @@ export interface AuthSession {
   organizationSlug: string;
   organizationName: string;
   roles: string[];
+}
+
+export type MasjidAdminStatus =
+  | 'Registered'
+  | 'InvitationSent'
+  | 'AwaitingEmailVerification'
+  | 'EmailVerificationExpired'
+  | 'Expired'
+  | 'Revoked';
+
+export interface CreateMasjidInvitationRequest {
+  email: string;
+  organizationName: string;
+  websiteUrl?: string;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+export interface MasjidAdminRow {
+  id: string;
+  organizationId?: string;
+  organizationName: string;
+  email: string;
+  websiteUrl?: string;
+  city?: string;
+  state?: string;
+  status: MasjidAdminStatus;
+  source: 'Invitation' | 'SelfRegistration';
+  invitedAtUtc?: string;
+  expiresAtUtc?: string;
+  registrationStartedAtUtc?: string;
+  registeredAtUtc?: string;
+  sendCount: number;
+  canResend: boolean;
+  canRevoke: boolean;
+}
+
+export interface MasjidAdminDashboard {
+  summary: {
+    total: number;
+    registered: number;
+    invited: number;
+    awaitingEmailVerification: number;
+    expired: number;
+    revoked: number;
+  };
+  items: MasjidAdminRow[];
+}
+
+export interface MasjidInvitationResponse {
+  id: string;
+  email: string;
+  organizationName: string;
+  status: MasjidAdminStatus;
+  expiresAtUtc: string;
+  developmentInvitationUrl?: string;
 }
 
 export interface ApiVersion {

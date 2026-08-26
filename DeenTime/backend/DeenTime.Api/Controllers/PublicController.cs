@@ -7,10 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DeenTime.Api.Controllers;
 
 [ApiController]
+[EnableRateLimiting("public")]
 [Route("public")]
 public sealed class PublicController : ControllerBase
 {
@@ -56,11 +58,10 @@ public sealed class PublicController : ControllerBase
         var iqamaHistory = await _db.IqamaEntries
             .AsNoTracking()
             .Where(i => i.OrganizationId == org.Id && i.Date <= date)
-            .OrderBy(i => i.Date)
+            .GroupBy(i => i.Salah)
+            .Select(group => group.OrderByDescending(i => i.Date).ThenByDescending(i => i.UpdatedAtUtc).First())
             .ToListAsync();
         var iqama = iqamaHistory
-            .GroupBy(i => i.Salah)
-            .Select(group => group.Last())
             .OrderBy(i => i.Time)
             .ThenBy(i => i.Salah)
             .Select(i =>
