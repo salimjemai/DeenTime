@@ -54,11 +54,12 @@ there. The server needs **no Docker and no .NET runtime**:
    (see below). OpenLiteSpeed keeps terminating the existing Let's Encrypt
    certificate.
 
-6. Add the public half of a dedicated deployment key to
-   `~/.ssh/authorized_keys` for `iqama6368`. Add only its private half to the
-   GitHub repository secret named `STAGING_SSH_PRIVATE_KEY`. Do not put the
-   server password, database password, SMTP password, or signing key in the
-   workflow file.
+6. Store the restricted deployment account's SSH password in the GitHub
+   `staging` environment secret named `STAGING_SSH_PASSWORD`. The workflow
+   passes it to `sshpass` through the process environment and never places the
+   password on the command line or in the repository. Rotate this password if
+   workflow access changes. Do not put the server password, database password,
+   SMTP password, or signing key in the workflow file.
 
 7. Push to `main` (or run the workflow manually). GitHub Actions performs the
    build, tests, transfer, service restart, rollback-on-failure, and public
