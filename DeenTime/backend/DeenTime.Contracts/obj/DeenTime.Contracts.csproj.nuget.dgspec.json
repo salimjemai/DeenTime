@@ -61,7 +61,15 @@
               "version": "[9.0.15, 9.0.15]"
             },
             {
+              "name": "Microsoft.AspNetCore.App.Runtime.linux-x64",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
               "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.linux-x64",
               "version": "[9.0.15, 9.0.15]"
             }
           ],
@@ -71,6 +79,11 @@
             }
           },
           "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/10.0.107/libexec/sdk/10.0.107/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-x64": {
+          "#import": []
         }
       }
     }

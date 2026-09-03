@@ -113,21 +113,25 @@
               "target": "Package",
               "version": "[8.14.0, )"
             },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.3, )"
+            },
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
               "version": "[9.0.4, )"
             },
             "OpenTelemetry.Exporter.Console": {
               "target": "Package",
-              "version": "[1.12.0, )"
+              "version": "[1.16.0, )"
             },
             "OpenTelemetry.Extensions.Hosting": {
               "target": "Package",
-              "version": "[1.12.0, )"
+              "version": "[1.16.0, )"
             },
             "OpenTelemetry.Instrumentation.AspNetCore": {
               "target": "Package",
-              "version": "[1.12.0, )"
+              "version": "[1.16.0, )"
             },
             "QuestPDF": {
               "target": "Package",
@@ -183,11 +187,19 @@
               "version": "[9.0.15, 9.0.15]"
             },
             {
-              "name": "Microsoft.NETCore.App.Host.osx-arm64",
+              "name": "Microsoft.AspNetCore.App.Runtime.linux-x64",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.linux-x64",
               "version": "[9.0.15, 9.0.15]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.linux-x64",
               "version": "[9.0.15, 9.0.15]"
             }
           ],
@@ -200,6 +212,11 @@
             }
           },
           "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/10.0.107/libexec/sdk/10.0.107/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-x64": {
+          "#import": []
         }
       }
     },
@@ -260,7 +277,15 @@
               "version": "[9.0.15, 9.0.15]"
             },
             {
+              "name": "Microsoft.AspNetCore.App.Runtime.linux-x64",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
               "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.linux-x64",
               "version": "[9.0.15, 9.0.15]"
             }
           ],
@@ -270,6 +295,11 @@
             }
           },
           "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/10.0.107/libexec/sdk/10.0.107/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-x64": {
+          "#import": []
         }
       }
     },
@@ -334,7 +364,15 @@
               "version": "[9.0.15, 9.0.15]"
             },
             {
+              "name": "Microsoft.AspNetCore.App.Runtime.linux-x64",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
               "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.linux-x64",
               "version": "[9.0.15, 9.0.15]"
             }
           ],
@@ -344,6 +382,11 @@
             }
           },
           "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/10.0.107/libexec/sdk/10.0.107/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-x64": {
+          "#import": []
         }
       }
     },
@@ -424,7 +467,15 @@
               "version": "[9.0.15, 9.0.15]"
             },
             {
+              "name": "Microsoft.AspNetCore.App.Runtime.linux-x64",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
               "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.15, 9.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.linux-x64",
               "version": "[9.0.15, 9.0.15]"
             }
           ],
@@ -434,6 +485,11 @@
             }
           },
           "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/10.0.107/libexec/sdk/10.0.107/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-x64": {
+          "#import": []
         }
       }
     }

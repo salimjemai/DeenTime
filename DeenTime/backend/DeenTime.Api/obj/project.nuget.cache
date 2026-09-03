@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "tm/0n7al7Yw=",
+  "dgSpecHash": "DzZtynIZN74=",
   "success": true,
   "projectFilePath": "/Users/salim/Desktop/GitHub/DeenTime/DeenTime/backend/DeenTime.Api/DeenTime.Api.csproj",
   "expectedPackageFiles": [
@@ -70,15 +70,15 @@
     "/Users/salim/.nuget/packages/microsoft.identitymodel.tokens/8.14.0/microsoft.identitymodel.tokens.8.14.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/microsoft.openapi/1.6.17/microsoft.openapi.1.6.17.nupkg.sha512",
     "/Users/salim/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/newtonsoft.json/11.0.1/newtonsoft.json.11.0.1.nupkg.sha512",
+    "/Users/salim/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
     "/Users/salim/.nuget/packages/npgsql/9.0.3/npgsql.9.0.3.nupkg.sha512",
     "/Users/salim/.nuget/packages/npgsql.entityframeworkcore.postgresql/9.0.4/npgsql.entityframeworkcore.postgresql.9.0.4.nupkg.sha512",
-    "/Users/salim/.nuget/packages/opentelemetry/1.12.0/opentelemetry.1.12.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/opentelemetry.api/1.12.0/opentelemetry.api.1.12.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/opentelemetry.api.providerbuilderextensions/1.12.0/opentelemetry.api.providerbuilderextensions.1.12.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/opentelemetry.exporter.console/1.12.0/opentelemetry.exporter.console.1.12.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/opentelemetry.extensions.hosting/1.12.0/opentelemetry.extensions.hosting.1.12.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/opentelemetry.instrumentation.aspnetcore/1.12.0/opentelemetry.instrumentation.aspnetcore.1.12.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/opentelemetry/1.16.0/opentelemetry.1.16.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/opentelemetry.api/1.16.0/opentelemetry.api.1.16.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/opentelemetry.api.providerbuilderextensions/1.16.0/opentelemetry.api.providerbuilderextensions.1.16.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/opentelemetry.exporter.console/1.16.0/opentelemetry.exporter.console.1.16.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/opentelemetry.extensions.hosting/1.16.0/opentelemetry.extensions.hosting.1.16.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/opentelemetry.instrumentation.aspnetcore/1.16.0/opentelemetry.instrumentation.aspnetcore.1.16.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/questpdf/2024.6.0/questpdf.2024.6.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/serilog/4.2.0/serilog.4.2.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/serilog.aspnetcore/9.0.0/serilog.aspnetcore.9.0.0.nupkg.sha512",
@@ -106,7 +106,7 @@
     "/Users/salim/.nuget/packages/system.composition.hosting/7.0.0/system.composition.hosting.7.0.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/system.composition.runtime/7.0.0/system.composition.runtime.7.0.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/system.composition.typedparts/7.0.0/system.composition.typedparts.7.0.0.nupkg.sha512",
-    "/Users/salim/.nuget/packages/system.diagnostics.diagnosticsource/9.0.0/system.diagnostics.diagnosticsource.9.0.0.nupkg.sha512",
+    "/Users/salim/.nuget/packages/system.diagnostics.diagnosticsource/10.0.0/system.diagnostics.diagnosticsource.10.0.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/system.identitymodel.tokens.jwt/8.14.0/system.identitymodel.tokens.jwt.8.14.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/system.io.hashing/6.0.0/system.io.hashing.6.0.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/system.io.pipelines/7.0.0/system.io.pipelines.7.0.0.nupkg.sha512",
@@ -119,8 +119,10 @@
     "/Users/salim/.nuget/packages/system.threading.channels/7.0.0/system.threading.channels.7.0.0.nupkg.sha512",
     "/Users/salim/.nuget/packages/system.threading.tasks.extensions/4.5.4/system.threading.tasks.extensions.4.5.4.nupkg.sha512",
     "/Users/salim/.nuget/packages/microsoft.netcore.app.ref/9.0.15/microsoft.netcore.app.ref.9.0.15.nupkg.sha512",
+    "/Users/salim/.nuget/packages/microsoft.netcore.app.runtime.linux-x64/9.0.15/microsoft.netcore.app.runtime.linux-x64.9.0.15.nupkg.sha512",
     "/Users/salim/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.15/microsoft.aspnetcore.app.ref.9.0.15.nupkg.sha512",
-    "/Users/salim/.nuget/packages/microsoft.netcore.app.host.osx-arm64/9.0.15/microsoft.netcore.app.host.osx-arm64.9.0.15.nupkg.sha512"
+    "/Users/salim/.nuget/packages/microsoft.aspnetcore.app.runtime.linux-x64/9.0.15/microsoft.aspnetcore.app.runtime.linux-x64.9.0.15.nupkg.sha512",
+    "/Users/salim/.nuget/packages/microsoft.netcore.app.host.linux-x64/9.0.15/microsoft.netcore.app.host.linux-x64.9.0.15.nupkg.sha512"
   ],
   "logs": []
 }
