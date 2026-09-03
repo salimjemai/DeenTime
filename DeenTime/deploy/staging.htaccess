@@ -1,0 +1,20 @@
+# DeenTime staging — OpenLiteSpeed .htaccess for the iqama.momyum.com doc root.
+#
+# SCOPE: SPA fallback ONLY. The API reverse proxy is NOT here on purpose:
+# OpenLiteSpeed's rewrite [P] flag cannot proxy to a bare 127.0.0.1:18080
+# address (it returns a LiteSpeed 500). The proxy must be a named External App
+# defined in the vhost config — see deploy/staging-vhost.conf.
+#
+# Also note OpenLiteSpeed ignores .htaccess unless the vhost enables Rewrite +
+# "Auto Load from .htaccess". If it's off, put the rewrite below in the vhost
+# config instead. The deploy script excludes .htaccess from `rsync --delete`,
+# so a hand-placed file here survives releases.
+
+RewriteEngine On
+
+# SPA fallback: anything that is not a real file or directory is index.html.
+# The proxied prefixes are excluded so API calls are never rewritten away.
+RewriteCond %{REQUEST_URI} !^/(api|health|public|uploads)(/|$)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]

@@ -16,3 +16,15 @@
 # Local tooling and operating-system files
 .DS_Store
 .pnpm-store/
+DeenTime/backend/DeenTime.Api/obj/DeenTime.Api.csproj.nuget.dgspec.json
+DeenTime/backend/DeenTime.Api/obj/project.assets.json
+DeenTime/backend/DeenTime.Api/obj/project.nuget.cache
+DeenTime/backend/DeenTime.Contracts/obj/DeenTime.Contracts.csproj.nuget.dgspec.json
+DeenTime/backend/DeenTime.Contracts/obj/project.assets.json
+DeenTime/backend/DeenTime.Contracts/obj/project.nuget.cache
+DeenTime/backend/DeenTime.Core/obj/DeenTime.Core.csproj.nuget.dgspec.json
+DeenTime/backend/DeenTime.Core/obj/project.assets.json
+DeenTime/backend/DeenTime.Core/obj/project.nuget.cache
+DeenTime/backend/DeenTime.Infrastructure/obj/DeenTime.Infrastructure.csproj.nuget.dgspec.json
+DeenTime/backend/DeenTime.Infrastructure/obj/project.assets.json
+DeenTime/backend/DeenTime.Infrastructure/obj/project.nuget.cache
