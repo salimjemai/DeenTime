@@ -1,31 +1,27 @@
-# User-level systemd unit for the DeenTime API.
-# Install (as the deployment user):
-#   mkdir -p ~/.config/systemd/user
-#   cp deentime-api.service ~/.config/systemd/user/
-#   systemctl --user daemon-reload
-#   systemctl --user enable deentime-api
-# One-time, as root, so the user services keep running after logout:
-#   loginctl enable-linger <deploy-user>
+# System-level systemd unit for the DeenTime API on the plain-Ubuntu staging box.
+# Installed to /etc/systemd/system/deentime-api.service by deploy-staging.sh on
+# every release. Secrets live in /etc/deentime/deentime.env (chmod 600, root).
 
 [Unit]
-Description=DeenTime API (staging)
-After=network.target
+Description=DeenTime API
+After=network.target postgresql.service
+Wants=postgresql.service
 
 [Service]
-WorkingDirectory=%h/deentime/current/api
-ExecStart=%h/deentime/current/api/DeenTime.Api
-EnvironmentFile=%h/deentime/.env.staging
-EnvironmentFile=-%h/deentime/current/release.env
+User=deentime
+Group=deentime
+WorkingDirectory=/opt/deentime/current/api
+ExecStart=/opt/deentime/current/api/DeenTime.Api
+EnvironmentFile=/etc/deentime/deentime.env
+EnvironmentFile=-/opt/deentime/current/release.env
 Environment=ASPNETCORE_ENVIRONMENT=Production
-Environment=ASPNETCORE_URLS=http://127.0.0.1:18080
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5080
 Environment=ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 Environment=DOTNET_NOLOGO=1
 Restart=always
 RestartSec=5
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=%h/deentime/shared/uploads
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

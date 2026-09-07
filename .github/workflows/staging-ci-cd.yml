@@ -15,8 +15,13 @@ permissions:
   contents: read
 
 env:
-  DEPLOY_HOST: 165.227.175.2
-  DEPLOY_USER: iqama6368
+  # Self-hosted staging box (srv1, plain Ubuntu + nginx + systemd).
+  DEPLOY_HOST: 70.36.101.120
+  DEPLOY_USER: root
+  DEPLOY_HOST_KEY: 70.36.101.120 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICOaeiHdbbHIbQTVREHS6Lw76srcYiSbmHHmk5coo2rw
+  # Public base URL used for post-deploy verification. Switch to https://<domain>
+  # once a hostname points at the server and certbot has issued a certificate.
+  STAGING_URL: http://70.36.101.120
 
 jobs:
   test:
@@ -71,13 +76,13 @@ jobs:
           fi
 
   deploy:
-    name: Deploy iqama.momyum.com
+    name: Deploy staging (srv1)
     if: github.event_name != 'pull_request'
     needs: test
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://iqama.momyum.com
+      url: ${{ env.STAGING_URL }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -114,40 +119,40 @@ jobs:
           tar -czf "deentime-web-$GITHUB_SHA.tar.gz" \
             -C DeenTime/frontend/deentime-web/dist/deentime-web/browser .
 
-      - name: Configure password-authenticated SSH
+      - name: Configure key-authenticated SSH
         env:
-          STAGING_SSH_PASSWORD: ${{ secrets.STAGING_SSH_PASSWORD }}
+          STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
         run: |
-          if [ -z "$STAGING_SSH_PASSWORD" ]; then
-            echo 'STAGING_SSH_PASSWORD is missing.' >&2
+          if [ -z "$STAGING_SSH_PRIVATE_KEY" ]; then
+            echo 'STAGING_SSH_PRIVATE_KEY is missing.' >&2
             exit 1
           fi
-          if ! command -v sshpass >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install --yes sshpass
-          fi
           install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' '165.227.175.2 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlGFaTKNS9P8kVfTvBbvBrqDmtxNDDUQoPKGMRjA/G6' > "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$STAGING_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$DEPLOY_HOST_KEY" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
+          cat > "$HOME/.ssh/config" <<EOF
+          Host staging
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile ~/.ssh/id_ed25519
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+          chmod 600 "$HOME/.ssh/config"
 
       - name: Copy release to the server
-        env:
-          SSHPASS: ${{ secrets.STAGING_SSH_PASSWORD }}
         run: |
-          sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p "$HOME/deentime/incoming"'
-          sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes DeenTime/deploy/deploy-staging.sh "$DEPLOY_USER@$DEPLOY_HOST:deentime/deploy-staging.sh"
-          sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes DeenTime/deploy/deentime-api.service "$DEPLOY_USER@$DEPLOY_HOST:deentime/deentime-api.service"
-          sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes \
-            "deentime-api-$GITHUB_SHA.tar.gz" "deentime-web-$GITHUB_SHA.tar.gz" \
-            "$DEPLOY_USER@$DEPLOY_HOST:deentime/incoming/"
+          ssh staging 'mkdir -p /opt/deentime/incoming'
+          scp DeenTime/deploy/deploy-staging.sh DeenTime/deploy/deentime-api.service staging:/opt/deentime/
+          scp "deentime-api-$GITHUB_SHA.tar.gz" "deentime-web-$GITHUB_SHA.tar.gz" staging:/opt/deentime/incoming/
 
       - name: Start release and run local health checks
-        env:
-          SSHPASS: ${{ secrets.STAGING_SSH_PASSWORD }}
-        run: sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash \"\$HOME/deentime/deploy-staging.sh\" \"$GITHUB_SHA\""
+        run: ssh staging "bash /opt/deentime/deploy-staging.sh $GITHUB_SHA"
 
-      - name: Verify public HTTPS endpoints
+      - name: Verify public endpoints
         run: |
-          curl --fail --show-error --silent --retry 12 --retry-delay 5 --retry-all-errors https://iqama.momyum.com/health/ready
-          curl --fail --show-error --silent --retry 12 --retry-delay 5 --retry-all-errors https://iqama.momyum.com/api/version
-          curl --fail --show-error --silent --retry 12 --retry-delay 5 --retry-all-errors https://iqama.momyum.com/ > /dev/null
+          curl --fail --show-error --silent --retry 12 --retry-delay 5 --retry-all-errors "$STAGING_URL/health/ready"
+          curl --fail --show-error --silent --retry 12 --retry-delay 5 --retry-all-errors "$STAGING_URL/api/version"
+          curl --fail --show-error --silent --retry 12 --retry-delay 5 --retry-all-errors "$STAGING_URL/" > /dev/null
