@@ -109,6 +109,21 @@ bare IP through certbot. To enable HTTPS:
    `systemctl restart deentime-api`.
 4. Change `STAGING_URL` in the workflow to `https://<domain>`.
 
+## Registering masjids on staging
+
+Registration creates the account only after the verification link is opened.
+The server has no mail server, so `EmailDelivery__Enabled=false` and
+`EmailDelivery__LogLinksWhenDisabled=true` make the API write the link to the
+journal instead of failing. After someone registers, fetch it with:
+
+```bash
+journalctl -u deentime-api --no-pager | grep "URL for" | tail -1
+```
+
+and open it in a browser. Invitation links are logged the same way. The seeded
+super user (`SuperUser__Email` / `SuperUser__Password` in `deentime.env`) can
+sign in without this step.
+
 ## Rollback by hand
 
 ```bash

@@ -10,6 +10,12 @@ public sealed class EmailDeliveryOptions
 {
     public const string SectionName = "EmailDelivery";
     public bool Enabled { get; set; }
+    /// <summary>
+    /// When delivery is disabled, log verification and invitation links instead of
+    /// failing. Development does this automatically; set this for a staging server
+    /// that has no mail server so accounts can be activated from the API log.
+    /// </summary>
+    public bool LogLinksWhenDisabled { get; set; }
     public string Host { get; set; } = "";
     public int Port { get; set; } = 587;
     public bool UseSsl { get; set; } = true;
@@ -33,13 +39,15 @@ public sealed class CyberPanelEmailSender(
 {
     private readonly EmailDeliveryOptions settings = options.Value;
 
+    private bool LinksCanBeLogged => environment.IsDevelopment() || settings.LogLinksWhenDisabled;
+
     public async Task SendVerificationAsync(string email, string organizationName, string verificationUrl, CancellationToken cancellationToken)
     {
         if (!settings.Enabled)
         {
-            if (environment.IsDevelopment())
+            if (LinksCanBeLogged)
             {
-                logger.LogInformation("Development email verification URL: {VerificationUrl}", verificationUrl);
+                logger.LogInformation("Email delivery disabled; verification URL for {Email}: {VerificationUrl}", email, verificationUrl);
                 return;
             }
             throw new InvalidOperationException("Email delivery is not configured.");
@@ -56,9 +64,9 @@ public sealed class CyberPanelEmailSender(
     {
         if (!settings.Enabled)
         {
-            if (environment.IsDevelopment())
+            if (LinksCanBeLogged)
             {
-                logger.LogInformation("Development masjid invitation URL: {InvitationUrl}", invitationUrl);
+                logger.LogInformation("Email delivery disabled; invitation URL for {Email}: {InvitationUrl}", email, invitationUrl);
                 return;
             }
             throw new InvalidOperationException("Email delivery is not configured.");
