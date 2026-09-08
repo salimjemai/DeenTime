@@ -127,6 +127,20 @@ You get real HTTPS, no interstitial, no bandwidth cap, and your home IP stays
 hidden. Update the public URL in `appsettings.Production.json` and restart the
 app pool.
 
+## What runs where
+
+| Piece | On the PC | Notes |
+|-------|-----------|-------|
+| Database | PostgreSQL 16 Windows service (`postgresql-x64-16`), `127.0.0.1:5432`, database `deentime`, role `deentime` | Created by the installer. Schema migrations run automatically when the app starts. |
+| API + site | IIS website **DeenTime**, app pool **DeenTime**, in-process (`DeenTime.Api.exe` inside `w3wp.exe`) | Serves `/api/*`, `/health/*`, `/public/*`, `/uploads/*` and the Angular files from `C:\DeenTime\app\wwwroot`. |
+| Background worker | Same IIS process — the Islamic-content sync worker is a hosted service inside the API | No separate service to install. The app pool is *Always Running* with no idle timeout and the site is *preloaded*, so the worker runs continuously, including after a reboot. |
+| Job dashboard | `/jobs` (Hangfire), only if `Hangfire:ConnectionString` is set in settings | Optional; nothing schedules jobs through it today, so leave it unset. |
+
+Startup order after a reboot: PostgreSQL service → IIS (World Wide Web
+Publishing Service) → the DeenTime app pool preloads → migrations → worker.
+If the app ever starts before PostgreSQL is ready it retries the readiness
+check; `Restart-WebAppPool DeenTime` forces a fresh start.
+
 ## Registering masjids
 
 Email delivery is off by default (`EmailDelivery.Enabled=false`), so

@@ -52,7 +52,7 @@ if (-not (Test-Path (Join-Path $src 'DeenTime.Api.exe'))) {
 Write-Host "Checking IIS features..." -ForegroundColor Cyan
 $features = 'IIS-WebServerRole','IIS-WebServer','IIS-CommonHttpFeatures','IIS-StaticContent',
             'IIS-DefaultDocument','IIS-HttpErrors','IIS-HttpLogging','IIS-RequestFiltering',
-            'IIS-HttpCompressionStatic','IIS-ManagementConsole'
+            'IIS-HttpCompressionStatic','IIS-ManagementConsole','IIS-ApplicationInit'
 foreach ($f in $features) {
   $state = (Get-WindowsOptionalFeature -Online -FeatureName $f -ErrorAction SilentlyContinue).State
   if ($state -ne 'Enabled') { Enable-WindowsOptionalFeature -Online -FeatureName $f -All -NoRestart | Out-Null }
@@ -165,6 +165,9 @@ if (-not (Test-Path "IIS:\Sites\$siteName")) {
   Set-ItemProperty "IIS:\Sites\$siteName" -Name physicalPath -Value $appDir
   Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $poolName
 }
+# Preload: start the app at boot / after recycles without waiting for a request,
+# so the in-process background worker (content sync) runs continuously.
+Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled -Value $true
 
 # ── Permissions for the app pool identity ────────────────────────────────────
 $identity = "IIS AppPool\$poolName"
