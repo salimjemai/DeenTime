@@ -4,6 +4,15 @@ set -euo pipefail
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_dir"
 
+# Load the untracked local .env (see .env.example) so the JWT signing key and
+# super-user password stay stable between runs instead of being regenerated.
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 api_port="${DEENTIME_API_PORT:-8080}"
 db_port="${DEENTIME_DB_PORT:-5432}"
 web_port="${DEENTIME_WEB_PORT:-4200}"
