@@ -24,8 +24,8 @@ mkdir -p "$out/app/wwwroot"
 cp -R "$root/frontend/deentime-web/dist/deentime-web/browser/." "$out/app/wwwroot/"
 
 echo "==> Adding install files"
-cp "$root/deploy/windows/install-deentime.ps1" "$root/deploy/windows/appsettings.Production.template.json" \
-   "$root/deploy/windows/README.md" "$out/"
+cp "$root/deploy/windows/install-deentime-iis.ps1" "$root/deploy/windows/install-deentime.ps1" \
+   "$root/deploy/windows/appsettings.Production.template.json" "$root/deploy/windows/README.md" "$out/"
 
 mkdir -p "$root/dist"
 zip_path="$root/dist/deentime-windows-$sha.zip"

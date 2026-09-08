@@ -1,14 +1,18 @@
-# Self-hosting IqamaTime on a Windows PC
+# Self-hosting IqamaTime on a Windows PC (IIS)
 
-One Windows service runs both the API and the Angular site on
-`http://localhost:8080`. PostgreSQL runs alongside it. A tunnel (ngrok now,
-Cloudflare Tunnel once you own a domain) publishes it to the internet without
-opening router ports or exposing your home IP.
+IIS hosts the whole app: the ASP.NET Core API and the Angular site come from
+one IIS website ("DeenTime") on port 80, managed in IIS Manager. PostgreSQL
+runs alongside it. A tunnel (ngrok now, Cloudflare Tunnel once you own a
+domain) publishes it to the internet without opening router ports or exposing
+your home IP.
 
 ```
-Internet ──HTTPS──> tunnel provider ──> ngrok/cloudflared on the PC ──> http://localhost:8080 (DeenTime service)
+Internet ──HTTPS──> tunnel provider ──> ngrok/cloudflared on the PC ──> http://localhost:80 (IIS site "DeenTime")
                                                                                 └── PostgreSQL 127.0.0.1:5432
 ```
+
+(An alternative installer, `install-deentime.ps1`, runs the same build as a
+plain Windows service on port 8080 without IIS. Use one or the other.)
 
 ## 1. Build the release (on the Mac)
 
@@ -26,32 +30,40 @@ install script and settings template. Copy the zip to the PC.
 In an elevated PowerShell:
 
 ```powershell
-winget install PostgreSQL.PostgreSQL.16     # note the "postgres" password you choose
-winget install ngrok.ngrok                   # or: winget install Cloudflare.cloudflared
+winget install PostgreSQL.PostgreSQL.16      # note the "postgres" password you choose
+winget install Microsoft.DotNet.HostingBundle.9   # ASP.NET Core Module for IIS
+winget install ngrok.ngrok                    # or: winget install Cloudflare.cloudflared
 ```
+
+The installer script turns on the IIS features itself. If IIS was already
+installed before the Hosting Bundle, run `iisreset` once afterwards.
 
 Power settings: **Settings → System → Power** → set *Sleep* to **Never** on
 plugged-in power, so the service stays reachable.
 
-## 3. Install / update the service
+## 3. Install / update the IIS site
 
 Unzip the release, open an elevated PowerShell in the unzipped folder:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
-.\install-deentime.ps1 -PublicUrl https://YOUR-TUNNEL-HOSTNAME
+.\install-deentime-iis.ps1 -PublicUrl https://YOUR-TUNNEL-HOSTNAME
 ```
 
 On the first run it asks for the PostgreSQL `postgres` password, the site
 admin (super user) email and password, and writes
 `C:\DeenTime\app\appsettings.Production.json` — the only file holding secrets.
-It creates the `deentime` role and database, installs the **DeenTime** Windows
-service (starts automatically, restarts on failure, depends on PostgreSQL),
-and health-checks it. Re-run the same command with a new zip to update; the
+It creates the `deentime` role and database, creates the **DeenTime** app pool
+(No Managed Code, Always Running) and the **DeenTime** website on port 80
+pointing at `C:\DeenTime\app`, stops the IIS "Default Web Site" so it cannot
+shadow ours, grants the app pool identity access to uploads and logs, and
+health-checks it. Re-run the same command with a new zip to update; the
 settings file and uploads are preserved.
 
-Verify: http://localhost:8080 shows the site, http://localhost:8080/api/version
-shows the build.
+Verify: http://localhost shows the site, http://localhost/api/version shows
+the build. In IIS Manager (`inetmgr`) you will see the site and app pool.
+
+Pass `-HttpPort 8080` if something else already owns port 80 on the PC.
 
 ## 4. Publish to the internet
 
@@ -75,15 +87,15 @@ agent:
 tunnels:
   deentime:
     proto: http
-    addr: 8080
+    addr: 80
     domain: something.ngrok-free.app
 ```
 
-then `ngrok service start`. Re-run `install-deentime.ps1 -PublicUrl
+then `ngrok service start`. Re-run `install-deentime-iis.ps1 -PublicUrl
 https://something.ngrok-free.app` if you did not pass the URL the first time
 (it only updates the settings when the file does not exist — otherwise edit
 `Frontend.PublicBaseUrl`, `Cors.AllowedOrigins` and `SuperUser.WebsiteUrl` in
-`appsettings.Production.json` and `Restart-Service DeenTime`).
+`appsettings.Production.json` and `Restart-WebAppPool DeenTime`).
 
 Limits of the free ngrok tier: an interstitial "you are about to visit" page
 on first visit for browsers, and bandwidth caps. Fine for testing and for the
@@ -107,13 +119,13 @@ tunnel: deentime
 credentials-file: C:\Users\YOU\.cloudflared\<tunnel-id>.json
 ingress:
   - hostname: iqama.YOURDOMAIN.com
-    service: http://localhost:8080
+    service: http://localhost:80
   - service: http_status:404
 ```
 
 You get real HTTPS, no interstitial, no bandwidth cap, and your home IP stays
 hidden. Update the public URL in `appsettings.Production.json` and restart the
-service.
+app pool.
 
 ## Registering masjids
 
@@ -127,9 +139,9 @@ true.
 ## Operations
 
 ```powershell
-Get-Service DeenTime                # status
-Restart-Service DeenTime
-Get-Content C:\DeenTime\logs\api-*.log -Tail 50
+Get-Website DeenTime; Get-WebAppPoolState DeenTime     # status
+Restart-WebAppPool DeenTime                              # restart the app
+Get-Content C:\DeenTime\logs\api-*.log -Tail 50          # app log (stdout*.log = IIS module log)
 & "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" -U deentime -h 127.0.0.1 deentime > backup.sql   # backup
 ```
 
