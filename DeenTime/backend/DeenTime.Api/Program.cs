@@ -24,6 +24,10 @@ using DeenTime.Api.Authorization;
 
 var b = WebApplication.CreateBuilder(args);
 
+// Run as a Windows service when installed with sc.exe / install-deentime.ps1
+// (no-op on Linux/macOS and when started from a console).
+b.Host.UseWindowsService(options => options.ServiceName = "DeenTime");
+
 // QuestPDF community license
 QuestPDF.Settings.License = LicenseType.Community;
 
@@ -338,7 +342,17 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.UseOutputCache();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+  OnPrepareResponse = context =>
+  {
+    // App shell and service-worker manifest must never be cached so PWA
+    // updates roll out promptly (mirrors the nginx config on staging).
+    var name = context.File.Name;
+    if (name is "index.html" or "ngsw.json")
+      context.Context.Response.Headers.CacheControl = "no-store";
+  }
+});
 
 if (!string.IsNullOrWhiteSpace(hfConn))
 {
@@ -360,6 +374,31 @@ app.MapGet("/health/ready", async (DatabaseReadiness readiness, CancellationToke
         : Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable);
 });
 app.MapGet("/api/version", (IConfiguration configuration) => Results.Ok(BuildInfoProvider.Create(configuration)));
+
+// SPA fallback: when the Angular production build is placed in wwwroot (the
+// self-hosted / Windows package does this), unknown non-API routes return
+// index.html so deep links work. API-style prefixes still 404.
+app.MapFallback(async context =>
+{
+  var path = context.Request.Path;
+  if (path.StartsWithSegments("/api") || path.StartsWithSegments("/health") ||
+      path.StartsWithSegments("/public") || path.StartsWithSegments("/uploads") ||
+      path.StartsWithSegments("/jobs") || path.StartsWithSegments("/swagger"))
+  {
+    context.Response.StatusCode = StatusCodes.Status404NotFound;
+    return;
+  }
+  var index = context.RequestServices.GetRequiredService<IWebHostEnvironment>()
+    .WebRootFileProvider.GetFileInfo("index.html");
+  if (!index.Exists || index.PhysicalPath is null)
+  {
+    context.Response.StatusCode = StatusCodes.Status404NotFound;
+    return;
+  }
+  context.Response.ContentType = "text/html; charset=utf-8";
+  context.Response.Headers.CacheControl = "no-store";
+  await context.Response.SendFileAsync(index.PhysicalPath);
+});
 
 app.Run();
 
