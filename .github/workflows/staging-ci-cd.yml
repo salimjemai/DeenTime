@@ -77,7 +77,9 @@ jobs:
 
   deploy:
     name: Deploy staging (srv1)
-    if: github.event_name != 'pull_request'
+    # Deploys are manual only: Actions -> "Build and deploy staging" -> Run workflow.
+    # Pushes and pull requests run the tests but never touch the server.
+    if: github.event_name == 'workflow_dispatch'
     needs: test
     runs-on: ubuntu-latest
     environment:
