@@ -14,16 +14,22 @@ Internet ──HTTPS──> tunnel provider ──> ngrok/cloudflared on the PC 
 (An alternative installer, `install-deentime.ps1`, runs the same build as a
 plain Windows service on port 8080 without IIS. Use one or the other.)
 
-## 1. Build the release (on the Mac)
+## 1. Build the release
 
-```bash
-cd DeenTime
-./deploy/windows/build-windows-release.sh
+**On the Windows PC itself** (needs the .NET SDK and Node.js:
+`winget install Microsoft.DotNet.SDK.9` and `winget install OpenJS.NodeJS.LTS`):
+
+```powershell
+cd D:\Git\DeenTime\DeenTime
+.\deploy\windows\build-windows-release.ps1
 ```
 
-Produces `dist/deentime-windows-<sha>.zip` containing the self-contained
-win-x64 API with the production Angular bundle in `app\wwwroot`, plus the
-install script and settings template. Copy the zip to the PC.
+Produces `dist\deentime-windows\` with the self-contained win-x64 API, the
+production Angular bundle in `app\wwwroot`, the installers and the settings
+template. Nothing to copy; install straight from that folder.
+
+**Or on a Mac/Linux machine:** `./deploy/windows/build-windows-release.sh`
+produces `dist/deentime-windows-<sha>.zip`; copy and unzip it on the PC.
 
 ## 2. Prepare the PC (once)
 
