@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace DeenTime.Api.Controllers;
 
@@ -113,6 +114,7 @@ public sealed class AdminMasjidsController : ControllerBase
         [FromServices] IConfiguration configuration,
         [FromServices] IRegistrationEmailSender emailSender,
         [FromServices] IWebHostEnvironment environment,
+        [FromServices] IOptions<EmailDeliveryOptions> emailDelivery,
         CancellationToken cancellationToken)
     {
         var email = request.Email.Trim().ToLowerInvariant();
@@ -179,7 +181,8 @@ public sealed class AdminMasjidsController : ControllerBase
             invitation.OrganizationName,
             status = "InvitationSent",
             invitation.ExpiresAtUtc,
-            developmentInvitationUrl = environment.IsDevelopment() ? invitationUrl : null
+            emailDelivered = emailDelivery.Value.Enabled,
+            invitationUrl = ShareableInvitationUrl(environment, emailDelivery.Value, invitationUrl)
         });
     }
 
@@ -191,6 +194,7 @@ public sealed class AdminMasjidsController : ControllerBase
         [FromServices] IConfiguration configuration,
         [FromServices] IRegistrationEmailSender emailSender,
         [FromServices] IWebHostEnvironment environment,
+        [FromServices] IOptions<EmailDeliveryOptions> emailDelivery,
         CancellationToken cancellationToken)
     {
         var invitation = await db.MasjidInvitations.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
@@ -225,7 +229,8 @@ public sealed class AdminMasjidsController : ControllerBase
         {
             message = "Invitation resent.",
             invitation.ExpiresAtUtc,
-            developmentInvitationUrl = environment.IsDevelopment() ? invitationUrl : null
+            emailDelivered = emailDelivery.Value.Enabled,
+            invitationUrl = ShareableInvitationUrl(environment, emailDelivery.Value, invitationUrl)
         });
     }
 
@@ -256,6 +261,13 @@ public sealed class AdminMasjidsController : ControllerBase
 
     private static string InvitationUrl(IConfiguration configuration, string rawToken) =>
         $"{(configuration["Frontend:PublicBaseUrl"] ?? "http://127.0.0.1:4200").TrimEnd('/')}/login?invite={Uri.EscapeDataString(rawToken)}";
+
+    /// <summary>
+    /// The raw invitation link is handed back to the super user only when it was not
+    /// emailed (no mail server configured) so it can be passed on by hand, or in Development.
+    /// </summary>
+    private static string? ShareableInvitationUrl(IWebHostEnvironment environment, EmailDeliveryOptions emailDelivery, string invitationUrl) =>
+        environment.IsDevelopment() || !emailDelivery.Enabled ? invitationUrl : null;
 
     private static string? NormalizeOptionalWebsite(string? value)
     {

@@ -7,24 +7,33 @@
       <p>Please keep this page open for a moment.</p>
     } @else if (verified()) {
       <span class="result-mark success" aria-hidden="true">✓</span>
-      <h1>Your masjid is ready</h1>
-      <p>Your email is verified and your administrator account has been activated.</p>
-      <button mat-flat-button color="primary" type="button" (click)="continue()">Open the dashboard</button>
+      <h1>Email verified</h1>
+      <p>
+        @if (organizationName()) {
+          The administrator account for <strong>{{ organizationName() }}</strong> is active.
+        } @else {
+          Your administrator account is active.
+        }
+        Sign in with the password you chose to open your masjid dashboard. Prayer-time settings and the display design are already set up from your registration.
+      </p>
+      <button mat-flat-button color="primary" type="button" (click)="signIn()">Sign in</button>
     } @else {
       <span class="result-mark error" aria-hidden="true">!</span>
       <h1>Verification did not complete</h1>
       <p>{{ error() }}</p>
       <p class="hint">
         Each verification link works once. If you already opened it, your account is ready:
-        sign in with your email and password. Otherwise register again to receive a new link.
+        sign in with your email and password. Otherwise ask the IqamaTime administrator to resend your invitation.
       </p>
       <div class="actions">
         @if (hasSession()) {
           <button mat-flat-button color="primary" type="button" (click)="continue()">Open the dashboard</button>
         } @else {
-          <a mat-flat-button color="primary" routerLink="/login">Sign in</a>
+          <a mat-flat-button color="primary" routerLink="/login">Go to sign in</a>
         }
-        <a mat-button routerLink="/login">Register again</a>
+        @if (supportEmail()) {
+          <a mat-stroked-button [href]="'mailto:' + supportEmail()">Contact {{ supportEmail() }}</a>
+        }
       </div>
     }
   </mat-card>

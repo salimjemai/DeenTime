@@ -38,6 +38,17 @@ export interface AuthPublicConfig {
   captchaEnabled: boolean;
   captchaSiteKey?: string;
   addressAutocompleteEnabled: boolean;
+  /** Masjids join only through an invitation sent by the IqamaTime administrator. */
+  registrationByInvitationOnly?: boolean;
+  supportEmail?: string | null;
+  supportPhone?: string | null;
+  supportUrl?: string | null;
+}
+export interface EmailVerificationResponse {
+  verified: boolean;
+  email?: string;
+  organizationName?: string;
+  message?: string;
 }
 export interface AddressSuggestion {
   placeId: string;
@@ -129,7 +140,16 @@ export interface MasjidInvitationResponse {
   organizationName: string;
   status: MasjidAdminStatus;
   expiresAtUtc: string;
-  developmentInvitationUrl?: string;
+  /** False when no mail server is configured; the link must then be shared by hand. */
+  emailDelivered: boolean;
+  /** Present when the invitation was not emailed (or in development) so it can be shared. */
+  invitationUrl?: string | null;
+}
+export interface MasjidInvitationResendResponse {
+  message: string;
+  expiresAtUtc: string;
+  emailDelivered: boolean;
+  invitationUrl?: string | null;
 }
 
 export interface ApiVersion {

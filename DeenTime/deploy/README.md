@@ -109,20 +109,36 @@ bare IP through certbot. To enable HTTPS:
    `systemctl restart deentime-api`.
 4. Change `STAGING_URL` in the workflow to `https://<domain>`.
 
+## The administrator account
+
+`SuperUser__Email` / `SuperUser__Password` in `deentime.env` define the
+IqamaTime administrator (super user). They are authoritative: on every start
+the API creates the account if it is missing, renames the seeded account when
+the email changes, grants the SuperUser role if the email belongs to an existing
+user, and replaces the stored password hash when the password changes. To
+rotate the password, edit `deentime.env` and `systemctl restart deentime-api`.
+
+`Support__Email` (and optionally `Support__Phone` / `Support__Url`) is shown on
+the sign-in page so a masjid without an invitation knows whom to contact.
+
 ## Registering masjids on staging
 
-Registration creates the account only after the verification link is opened.
+Masjids are registered by invitation only. The administrator signs in, opens
+**Masjids** (`/admin`), and sends an invitation with the masjid administrator's
+email and the masjid name. The invited email opens the link, chooses a
+password, completes the masjid details, verifies the email address, and then
+signs in; the prayer-time criteria and display design are created at
+verification, so the masjid is ready to use on first sign-in.
+
 The server has no mail server, so `EmailDelivery__Enabled=false` and
-`EmailDelivery__LogLinksWhenDisabled=true` make the API write the link to the
-journal instead of failing. After someone registers, fetch it with:
+`EmailDelivery__LogLinksWhenDisabled=true` make the API write the links to the
+journal instead of failing. Invitation links are also returned to the
+administrator in the Masjids page ("Send this link to …") so they can be passed
+on by hand. Verification links can be fetched with:
 
 ```bash
 journalctl -u deentime-api --no-pager | grep "URL for" | tail -1
 ```
-
-and open it in a browser. Invitation links are logged the same way. The seeded
-super user (`SuperUser__Email` / `SuperUser__Password` in `deentime.env`) can
-sign in without this step.
 
 ## Rollback by hand
 

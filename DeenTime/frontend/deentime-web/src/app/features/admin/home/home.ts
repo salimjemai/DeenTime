@@ -35,7 +35,8 @@ export class HomeComponent {
   readonly workingId = signal<string | null>(null);
   readonly search = signal('');
   readonly statusFilter = signal('All');
-  readonly developmentInvitationUrl = signal<string | null>(null);
+  /** Invitation link returned when it could not be emailed, so the administrator can pass it on. */
+  readonly shareableInvitation = signal<{ email: string; url: string; emailDelivered: boolean } | null>(null);
 
   readonly inviteForm = this.fb.group({
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
@@ -70,7 +71,7 @@ export class HomeComponent {
     if (this.inviteForm.invalid) return;
     const value = this.inviteForm.getRawValue();
     this.sending.set(true);
-    this.developmentInvitationUrl.set(null);
+    this.shareableInvitation.set(null);
     this.service.invite({
       email: value.email!.trim(),
       organizationName: value.organizationName!.trim(),
@@ -81,9 +82,11 @@ export class HomeComponent {
       zipCode: this.optional(value.zipCode)
     }).pipe(finalize(() => this.sending.set(false))).subscribe({
       next: response => {
-        this.developmentInvitationUrl.set(response.developmentInvitationUrl ?? null);
+        this.rememberShareableInvitation(response.email, response.invitationUrl, response.emailDelivered);
         this.inviteForm.reset();
-        this.snack.open(`Invitation sent to ${response.email}.`, 'Dismiss', { duration: 4000 });
+        this.snack.open(response.emailDelivered
+          ? `Invitation emailed to ${response.email}.`
+          : `Invitation created for ${response.email}. Share the link below.`, 'Dismiss', { duration: 5000 });
         this.load();
       },
       error: error => this.showError(error, 'The invitation could not be sent.')
@@ -94,8 +97,10 @@ export class HomeComponent {
     this.workingId.set(item.id);
     this.service.resend(item.id).pipe(finalize(() => this.workingId.set(null))).subscribe({
       next: response => {
-        this.developmentInvitationUrl.set(response.developmentInvitationUrl ?? null);
-        this.snack.open(`Invitation resent to ${item.email}.`, 'Dismiss', { duration: 4000 });
+        this.rememberShareableInvitation(item.email, response.invitationUrl, response.emailDelivered);
+        this.snack.open(response.emailDelivered
+          ? `Invitation re-emailed to ${item.email}.`
+          : `New invitation link created for ${item.email}. Share the link below.`, 'Dismiss', { duration: 5000 });
         this.load();
       },
       error: error => this.showError(error, 'The invitation could not be resent.')
@@ -131,6 +136,23 @@ export class HomeComponent {
 
   statusClass(status: MasjidAdminStatus): string {
     return status.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  }
+
+  copyInvitationLink(): void {
+    const invitation = this.shareableInvitation();
+    if (!invitation) return;
+    const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    if (!clipboard) {
+      this.snack.open('Copying is not available here. Select the link and copy it manually.', 'Dismiss', { duration: 4000 });
+      return;
+    }
+    clipboard.writeText(invitation.url)
+      .then(() => this.snack.open('Invitation link copied.', 'Dismiss', { duration: 3000 }))
+      .catch(() => this.snack.open('The link could not be copied. Select it and copy manually.', 'Dismiss', { duration: 4000 }));
+  }
+
+  private rememberShareableInvitation(email: string, url: string | null | undefined, emailDelivered: boolean): void {
+    this.shareableInvitation.set(url ? { email, url, emailDelivered } : null);
   }
 
   private optional(value: string | null | undefined): string | undefined {

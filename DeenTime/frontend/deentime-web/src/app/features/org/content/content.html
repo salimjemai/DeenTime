@@ -205,7 +205,13 @@
     @if (hadithLoading()) {
       <div class="hadith-loading"><mat-progress-bar mode="indeterminate" /></div>
     } @else if (hadiths().length === 0) {
-      <div class="empty-state"><span><mat-icon>auto_stories</mat-icon></span><h4>The collection is waiting to be imported.</h4><p>Use “Import every book” above, then search all available Arabic, English, and Urdu records locally.</p></div>
+      <div class="empty-state"><span><mat-icon>auto_stories</mat-icon></span><h4>The collection is waiting to be imported.</h4>
+        @if (isSuperUser) {
+          <p>Use “Import every book” above, then search all available Arabic, English, and Urdu records locally.</p>
+        } @else {
+          <p>The IqamaTime administrator imports the Hadith collection once for every masjid. Until then, search and flash cards stay empty.</p>
+        }
+      </div>
     } @else {
       <div class="hadith-results">
         @for (hadith of hadiths(); track hadith.id) {

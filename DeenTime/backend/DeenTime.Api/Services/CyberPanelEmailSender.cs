@@ -35,12 +35,24 @@ public interface IRegistrationEmailSender
 
 public sealed class CyberPanelEmailSender(
     IOptions<EmailDeliveryOptions> options,
+    IOptions<SupportOptions> support,
     IWebHostEnvironment environment,
     ILogger<CyberPanelEmailSender> logger) : IRegistrationEmailSender
 {
     private readonly EmailDeliveryOptions settings = options.Value;
 
     private bool LinksCanBeLogged => environment.IsDevelopment() || settings.LogLinksWhenDisabled;
+
+    private string SupportLine
+    {
+        get
+        {
+            var email = support.Value.Email?.Trim();
+            if (string.IsNullOrWhiteSpace(email)) return "";
+            var encoded = HtmlEncoder.Default.Encode(email);
+            return $"<p>Questions? Contact the IqamaTime administrator at <a href=\"mailto:{encoded}\">{encoded}</a>.</p>";
+        }
+    }
 
     public async Task SendVerificationAsync(string email, string organizationName, string verificationUrl, CancellationToken cancellationToken)
     {
@@ -57,7 +69,7 @@ public sealed class CyberPanelEmailSender(
         await SendAsync(
             email,
             "Verify your IqamaTime administrator account",
-            $"<p>Assalamu alaikum,</p><p>Confirm your administrator account for <strong>{HtmlEncoder.Default.Encode(organizationName)}</strong>.</p><p><a href=\"{HtmlEncoder.Default.Encode(verificationUrl)}\">Verify email and activate the masjid</a></p><p>This link expires in 30 minutes.</p>",
+            $"<p>Assalamu alaikum,</p><p>Confirm your administrator account for <strong>{HtmlEncoder.Default.Encode(organizationName)}</strong>.</p><p><a href=\"{HtmlEncoder.Default.Encode(verificationUrl)}\">Verify email and activate the masjid</a></p><p>This link expires in 30 minutes. After verifying, sign in with the password you chose to open your masjid dashboard.</p>{SupportLine}",
             cancellationToken);
     }
 
@@ -76,7 +88,7 @@ public sealed class CyberPanelEmailSender(
         await SendAsync(
             email,
             "You are invited to register your masjid with IqamaTime",
-            $"<p>Assalamu alaikum,</p><p>IqamaTime has invited you to register <strong>{HtmlEncoder.Default.Encode(organizationName)}</strong>.</p><p><a href=\"{HtmlEncoder.Default.Encode(invitationUrl)}\">Start secure masjid registration</a></p><p>You will still create a password, complete the security check, and verify this email address. This invitation expires in 7 days.</p>",
+            $"<p>Assalamu alaikum,</p><p>IqamaTime has invited you to register <strong>{HtmlEncoder.Default.Encode(organizationName)}</strong>.</p><p><a href=\"{HtmlEncoder.Default.Encode(invitationUrl)}\">Start secure masjid registration</a></p><p>You will create a password, complete the masjid details, and verify this email address; then sign in to open your masjid dashboard. This invitation expires in 7 days.</p>{SupportLine}",
             cancellationToken);
     }
 
