@@ -24,7 +24,12 @@ function hashSecret(value: string): string {
 
 /** 32 random bytes as unpadded base64url (Base64Url helper). */
 function newSecret(): string {
-  return randomBytes(32).toString('base64url');
+  // A secret starting with "_" would be stripped by the Split('_', 3, RemoveEmptyEntries)
+  // parsing on both APIs and could never validate, so such secrets are never issued.
+  for (;;) {
+    const secret = randomBytes(32).toString('base64url');
+    if (!secret.startsWith('_')) return secret;
+  }
 }
 
 function buildKey(clientId: string, secret: string): string {

@@ -87,7 +87,8 @@ function applyRules(rules: StringRule[], value: string | null, context: RuleCont
 /** A non-nullable `string` record parameter: implicitly [Required], then the FluentValidation chain. */
 export function requiredString(propertyName: string, ...rules: StringRule[]) {
   const context: RuleContext = { propertyName, displayName: displayName(propertyName) };
-  return z.unknown().transform((input, ctx): string => {
+  // `.optional()` lets a missing key reach the transform instead of zod's own "nonoptional" error.
+  return z.unknown().optional().transform((input, ctx): string => {
     const value = readString(input, ctx);
     if (value === undefined) return z.NEVER;
     const messages = value === null ? [`The ${propertyName} field is required.`] : [];
@@ -101,7 +102,8 @@ export function requiredString(propertyName: string, ...rules: StringRule[]) {
 /** A `string?` record parameter: null when missing, otherwise the FluentValidation chain. */
 export function optionalString(propertyName: string, ...rules: StringRule[]) {
   const context: RuleContext = { propertyName, displayName: displayName(propertyName) };
-  return z.unknown().transform((input, ctx): string | null => {
+  // `.optional()` lets a missing key reach the transform instead of zod's own "nonoptional" error.
+  return z.unknown().optional().transform((input, ctx): string | null => {
     const value = readString(input, ctx);
     if (value === undefined) return z.NEVER;
     const messages = applyRules(rules, value, context);

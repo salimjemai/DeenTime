@@ -16,6 +16,11 @@ import { IntegrationsModule } from './integrations/integrations.module.js';
 import { IslamicContentModule } from './modules/islamic-content/islamic-content.module.js';
 import { ApiClientsModule } from './modules/api-clients/api-clients.module.js';
 import { PublicContentModule } from './modules/public-content/public-content.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
+import { AdminMasjidsModule } from './modules/admin-masjids/admin-masjids.module.js';
+import { LocationsModule } from './modules/locations/locations.module.js';
+import { PublishModule } from './modules/publish/publish.module.js';
+import { PublicModule } from './modules/public/public.module.js';
 import { StartupService } from './startup/startup.service.js';
 
 @Module({})
@@ -48,6 +53,11 @@ export class AppModule {
         IslamicContentModule,
         ApiClientsModule,
         PublicContentModule,
+        AuthModule,
+        AdminMasjidsModule,
+        LocationsModule,
+        PublishModule,
+        PublicModule,
       ],
       providers: [
         StartupService,

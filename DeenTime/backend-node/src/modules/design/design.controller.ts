@@ -87,6 +87,7 @@ export class DesignController {
   }
 
   @Post('files/header-image')
+  @HttpCode(200)
   @AuthorizeRoles('Admin', 'Editor')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
   async uploadHeaderImage(

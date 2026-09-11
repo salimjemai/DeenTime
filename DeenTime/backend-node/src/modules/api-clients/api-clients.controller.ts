@@ -67,6 +67,7 @@ export class ApiClientsController {
   }
 
   @Post()
+  @HttpCode(200)
   async create(
     @Param('organizationId') organizationIdParam: string,
     @Body(validated(createSchema)) body: z.infer<typeof createSchema>,
@@ -82,6 +83,7 @@ export class ApiClientsController {
   }
 
   @Post(':clientId/rotate')
+  @HttpCode(200)
   async rotate(@Param('organizationId') organizationIdParam: string, @Param('clientId') clientIdParam: string, @CurrentUser() user: SessionUser | null) {
     const organizationId = requireGuid(organizationIdParam);
     const clientId = requireGuid(clientIdParam);

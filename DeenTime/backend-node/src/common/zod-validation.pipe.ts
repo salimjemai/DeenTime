@@ -1,6 +1,6 @@
 import { Injectable, type PipeTransform } from '@nestjs/common';
 import type { ZodType } from 'zod';
-import { validationProblem } from './errors.js';
+import { modelValidationProblem } from './errors.js';
 
 /**
  * Validates a request body with a zod schema and reports failures as ASP.NET
@@ -18,7 +18,7 @@ export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
       const key = modelStateKey(issue.path);
       (errors[key] ??= []).push(issue.message);
     }
-    throw validationProblem(errors);
+    throw modelValidationProblem(errors);
   }
 }
 

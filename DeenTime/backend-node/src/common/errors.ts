@@ -50,10 +50,19 @@ export function problem(status: number, title?: string, detail?: string): Proble
   });
 }
 
-/** ControllerBase.ValidationProblem(ModelState) → 400 ValidationProblemDetails. */
+/** ControllerBase.ValidationProblem(ModelState) → 400 ValidationProblemDetails (with type + traceId). */
 export function validationProblem(errors: Record<string, string[]>): ProblemDetailsException {
   return new ProblemDetailsException({
     type: STATUS_TYPES[400],
+    title: 'One or more validation errors occurred.',
+    status: 400,
+    errors,
+  });
+}
+
+/** Automatic model validation (InvalidModelStateResponseFactory): title, status and errors only. */
+export function modelValidationProblem(errors: Record<string, string[]>): ProblemDetailsException {
+  return new ProblemDetailsException({
     title: 'One or more validation errors occurred.',
     status: 400,
     errors,
@@ -71,16 +80,19 @@ export function badRequest(body: unknown): JsonResponseException {
   return new JsonResponseException(HttpStatus.BAD_REQUEST, body);
 }
 
-export function unauthorized(body?: unknown): JsonResponseException {
-  return new JsonResponseException(HttpStatus.UNAUTHORIZED, body ?? '');
+/** Unauthorized() without a body is mapped by [ApiController] to a 401 ProblemDetails. */
+export function unauthorized(body?: unknown): HttpException {
+  return body === undefined ? problem(401) : new JsonResponseException(HttpStatus.UNAUTHORIZED, body);
 }
 
-export function forbidden(): ProblemDetailsException {
-  return problem(403);
+/** Forbid() and failed [Authorize] policies: 403 with an empty body (JWT bearer handler). */
+export function forbidden(): JsonResponseException {
+  return new JsonResponseException(HttpStatus.FORBIDDEN, '');
 }
 
-export function notFound(body?: unknown): JsonResponseException {
-  return new JsonResponseException(HttpStatus.NOT_FOUND, body ?? '');
+/** NotFound() without a body is mapped by [ApiController] to a 404 ProblemDetails. */
+export function notFound(body?: unknown): HttpException {
+  return body === undefined ? problem(404) : new JsonResponseException(HttpStatus.NOT_FOUND, body);
 }
 
 export function conflict(body: unknown): JsonResponseException {

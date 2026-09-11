@@ -1,11 +1,17 @@
 import { ArgumentsHost, Catch, type ExceptionFilter, HttpException, Logger, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { JsonResponseException, ProblemDetailsException } from './errors.js';
 
 /** Paths that never fall back to the SPA (Program.cs MapFallback). */
 export const API_PREFIXES = ['/api', '/health', '/public', '/uploads', '/jobs', '/swagger'];
+
+function traceIdFor(correlationId: string | undefined): string {
+  const trace = (correlationId ?? '').replace(/[^0-9a-f]/gi, '').toLowerCase().padEnd(32, '0').slice(0, 32);
+  return `00-${trace}-${randomBytes(8).toString('hex')}-01`;
+}
 
 export function isApiPath(path: string): boolean {
   return API_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
@@ -31,7 +37,11 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const request = http.getRequest<Request & { correlationId?: string; id?: string }>();
 
     if (exception instanceof ProblemDetailsException) {
-      response.status(exception.problem.status).type('application/problem+json').send(JSON.stringify(exception.problem));
+      // ProblemDetailsFactory adds a W3C traceId to Problem()/ValidationProblem() bodies.
+      const body = exception.problem.type && !('traceId' in exception.problem)
+        ? { ...exception.problem, traceId: traceIdFor(request.correlationId ?? request.id) }
+        : exception.problem;
+      response.status(exception.problem.status).type('application/problem+json').send(JSON.stringify(body));
       return;
     }
     if (exception instanceof JsonResponseException) {
