@@ -20,10 +20,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const connection = config.get('ConnectionStrings:Default');
     if (!connection) throw new Error('ConnectionStrings:Default must be configured before the API can start.');
     const settings = parsePostgresConnectionString(connection);
+    // Prisma exchanges timestamptz values as naive UTC strings, so the session time
+    // zone must be UTC or every stored instant drifts by the server's local offset.
+    const session = { options: '-c TimeZone=UTC' };
     const pool = new pg.Pool(
       settings.connectionString
-        ? { connectionString: settings.connectionString }
-        : { host: settings.host, port: settings.port, database: settings.database, user: settings.user, password: settings.password, ssl: settings.ssl },
+        ? { connectionString: settings.connectionString, ...session }
+        : { host: settings.host, port: settings.port, database: settings.database, user: settings.user, password: settings.password, ssl: settings.ssl, ...session },
     );
     super({ adapter: new PrismaPg(pool) });
     this.pool = pool;

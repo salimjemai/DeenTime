@@ -49,6 +49,16 @@ describe('API integration', () => {
     await app.close();
   });
 
+  it('writes timestamps as true UTC instants regardless of the database session time zone', async () => {
+    const before = Date.now();
+    const maps = await app.http().get(`/api/v1/hijri/${app.organizationId}?from=2030-01&to=2030-01`).set(superUser());
+    expect(maps.status).toBe(200);
+    const written = Date.parse(maps.body[0].updatedAtUtc);
+    expect(Math.abs(written - before)).toBeLessThan(60_000);
+    const raw = await app.app.get(PrismaService).pool.query<{ utc: string }>(`SELECT to_char("UpdatedAtUtc" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') AS utc FROM "HijriMonthMaps" WHERE "Id" = $1`, [maps.body[0].id]);
+    expect(Date.parse(`${raw.rows[0].utc}Z`)).toBe(Math.floor(written / 1000) * 1000);
+  });
+
   it('readiness and version report the current stack', async () => {
     const readiness = await app.http().get('/health/ready');
     expect(readiness.status).toBe(200);
