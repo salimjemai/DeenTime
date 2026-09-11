@@ -1,4 +1,6 @@
 #Requires -RunAsAdministrator
+# NOTE: this installer hosts the retired .NET build (app\DeenTime.Api.exe) in IIS.
+# The current Node.js release is installed with install-deentime.ps1 (NSSM service).
 <#
 .SYNOPSIS
   Install or update IqamaTime (DeenTime) under IIS on this Windows PC.

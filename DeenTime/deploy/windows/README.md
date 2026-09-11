@@ -1,32 +1,32 @@
-# Self-hosting IqamaTime on a Windows PC (IIS)
+# Self-hosting IqamaTime on a Windows PC
 
-IIS hosts the whole app: the ASP.NET Core API and the Angular site come from
-one IIS website ("DeenTime") on port 80, managed in IIS Manager. PostgreSQL
-runs alongside it. A tunnel (ngrok now, Cloudflare Tunnel once you own a
-domain) publishes it to the internet without opening router ports or exposing
-your home IP.
+One Windows service ("DeenTime", hosted by NSSM) runs the Node.js API, which
+also serves the Angular site, on port 8080. PostgreSQL runs alongside it. A
+tunnel (ngrok now, Cloudflare Tunnel once you own a domain) publishes it to the
+internet without opening router ports or exposing your home IP.
 
 ```
-Internet ──HTTPS──> tunnel provider ──> ngrok/cloudflared on the PC ──> http://localhost:80 (IIS site "DeenTime")
+Internet ──HTTPS──> tunnel provider ──> ngrok/cloudflared on the PC ──> http://localhost:8080 (service "DeenTime": node.exe)
                                                                                 └── PostgreSQL 127.0.0.1:5432
 ```
 
-(An alternative installer, `install-deentime.ps1`, runs the same build as a
-plain Windows service on port 8080 without IIS. Use one or the other.)
+(`install-deentime-iis.ps1` is the installer for the retired .NET build and
+needs `app\DeenTime.Api.exe`; it does not apply to the Node.js release.)
 
 ## 1. Build the release
 
-**On the Windows PC itself** (needs the .NET SDK and Node.js:
-`winget install Microsoft.DotNet.SDK.9` and `winget install OpenJS.NodeJS.LTS`):
+**On the Windows PC itself** (needs Node.js 22 LTS:
+`winget install OpenJS.NodeJS.LTS`):
 
 ```powershell
 cd D:\Git\DeenTime\DeenTime
 .\deploy\windows\build-windows-release.ps1
 ```
 
-Produces `dist\deentime-windows\` with the self-contained win-x64 API, the
-production Angular bundle in `app\wwwroot`, the installers and the settings
-template. Nothing to copy; install straight from that folder.
+Produces `dist\deentime-windows\` with the built API (`app\dist`, production
+`app\node_modules`, `app\prisma`), the production Angular bundle in
+`app\wwwroot`, the installers and the settings template. Nothing to copy;
+install straight from that folder.
 
 **Or on a Mac/Linux machine:** `./deploy/windows/build-windows-release.sh`
 produces `dist/deentime-windows-<sha>.zip`; copy and unzip it on the PC.
@@ -37,39 +37,37 @@ In an elevated PowerShell:
 
 ```powershell
 winget install PostgreSQL.PostgreSQL.16      # note the "postgres" password you choose
-winget install Microsoft.DotNet.HostingBundle.9   # ASP.NET Core Module for IIS
+winget install OpenJS.NodeJS.LTS             # Node.js runtime for the API
+winget install NSSM.NSSM                     # runs node.exe as a Windows service
 winget install ngrok.ngrok                    # or: winget install Cloudflare.cloudflared
 ```
 
-The installer script turns on the IIS features itself. If IIS was already
-installed before the Hosting Bundle, run `iisreset` once afterwards.
+Open a new PowerShell afterwards so `node` and `nssm` are on PATH.
 
 Power settings: **Settings → System → Power** → set *Sleep* to **Never** on
 plugged-in power, so the service stays reachable.
 
-## 3. Install / update the IIS site
+## 3. Install / update the service
 
 Unzip the release, open an elevated PowerShell in the unzipped folder:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
-.\install-deentime-iis.ps1 -PublicUrl https://YOUR-TUNNEL-HOSTNAME
+.\install-deentime.ps1 -PublicUrl https://YOUR-TUNNEL-HOSTNAME
 ```
 
 On the first run it asks for the PostgreSQL `postgres` password, the site
 admin (super user) email and password, and writes
 `C:\DeenTime\app\appsettings.Production.json` — the only file holding secrets.
-It creates the `deentime` role and database, creates the **DeenTime** app pool
-(No Managed Code, Always Running) and the **DeenTime** website on port 80
-pointing at `C:\DeenTime\app`, stops the IIS "Default Web Site" so it cannot
-shadow ours, grants the app pool identity access to uploads and logs, and
-health-checks it. Re-run the same command with a new zip to update; the
-settings file and uploads are preserved.
+It creates the `deentime` role and database, copies the build to
+`C:\DeenTime\app`, registers the **DeenTime** Windows service (NSSM running
+`node.exe dist\main.js`, automatic start, restarts on failure, depends on
+PostgreSQL, logs in `C:\DeenTime\logs\deentime-api.log`) and health-checks it.
+Re-run the same command with a new zip to update; the settings file and
+uploads are preserved.
 
-Verify: http://localhost shows the site, http://localhost/api/version shows
-the build. In IIS Manager (`inetmgr`) you will see the site and app pool.
-
-Pass `-HttpPort 8080` if something else already owns port 80 on the PC.
+Verify: http://localhost:8080 shows the site, http://localhost:8080/api/version
+shows the build. `nssm status DeenTime` reports the service state.
 
 ## 4. Publish to the internet
 
@@ -138,14 +136,14 @@ app pool.
 | Piece | On the PC | Notes |
 |-------|-----------|-------|
 | Database | PostgreSQL 16 Windows service (`postgresql-x64-16`), `127.0.0.1:5432`, database `deentime`, role `deentime` | Created by the installer. Schema migrations run automatically when the app starts. |
-| API + site | IIS website **DeenTime**, app pool **DeenTime**, in-process (`DeenTime.Api.exe` inside `w3wp.exe`) | Serves `/api/*`, `/health/*`, `/public/*`, `/uploads/*` and the Angular files from `C:\DeenTime\app\wwwroot`. |
-| Background worker | Same IIS process — the Islamic-content sync worker is a hosted service inside the API | No separate service to install. The app pool is *Always Running* with no idle timeout and the site is *preloaded*, so the worker runs continuously, including after a reboot. |
-| Job dashboard | `/jobs` (Hangfire), only if `Hangfire:ConnectionString` is set in settings | Optional; nothing schedules jobs through it today, so leave it unset. |
+| API + site | Windows service **DeenTime** (NSSM → `node.exe C:\DeenTime\app\dist\main.js`) on `127.0.0.1:8080` | Serves `/api/*`, `/health/*`, `/public/*`, `/uploads/*` and the Angular files from `C:\DeenTime\app\wwwroot`. |
+| Background worker | Same process — the Islamic-content sync worker runs inside the API | No separate service to install; it runs whenever the service runs, including after a reboot. |
+| Job status | `/jobs` (super user only) lists queued syncs and their state | Replaces the former Hangfire dashboard. |
 
-Startup order after a reboot: PostgreSQL service → IIS (World Wide Web
-Publishing Service) → the DeenTime app pool preloads → migrations → worker.
-If the app ever starts before PostgreSQL is ready it retries the readiness
-check; `Restart-WebAppPool DeenTime` forces a fresh start.
+Startup order after a reboot: PostgreSQL service → DeenTime service →
+migrations → worker. If the app starts before PostgreSQL is ready it exits and
+NSSM restarts it after 5 seconds; `Restart-Service DeenTime` forces a fresh
+start.
 
 ## The administrator account
 
@@ -181,7 +179,7 @@ account) and set `Enabled` to true.
 ```powershell
 Get-Website DeenTime; Get-WebAppPoolState DeenTime     # status
 Restart-WebAppPool DeenTime                              # restart the app
-Get-Content C:\DeenTime\logs\api-*.log -Tail 50          # app log (stdout*.log = IIS module log)
+Get-Content C:\DeenTime\logs\deentime-api.log -Tail 50   # API log (stdout/stderr captured by NSSM)
 & "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" -U deentime -h 127.0.0.1 deentime > backup.sql   # backup
 ```
 
