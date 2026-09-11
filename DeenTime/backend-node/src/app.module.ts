@@ -13,6 +13,9 @@ import { TimingsModule } from './modules/timings/timings.module.js';
 import { HijriModule } from './modules/hijri/hijri.module.js';
 import { DesignModule } from './modules/design/design.module.js';
 import { IntegrationsModule } from './integrations/integrations.module.js';
+import { IslamicContentModule } from './modules/islamic-content/islamic-content.module.js';
+import { ApiClientsModule } from './modules/api-clients/api-clients.module.js';
+import { PublicContentModule } from './modules/public-content/public-content.module.js';
 import { StartupService } from './startup/startup.service.js';
 
 @Module({})
@@ -42,6 +45,9 @@ export class AppModule {
         TimingsModule,
         HijriModule,
         DesignModule,
+        IslamicContentModule,
+        ApiClientsModule,
+        PublicContentModule,
       ],
       providers: [
         StartupService,

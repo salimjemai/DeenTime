@@ -207,10 +207,6 @@ function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
 
-function discardBody(response: Response): void {
-  void response.body?.cancel().catch(() => undefined);
-}
-
 /**
  * Typed client for https://api.alquran.cloud/v1/ (3 minute timeout, UA DeenTime/1.0)
  * with the database-backed payload cache from QuranProviderClient.cs.

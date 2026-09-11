@@ -50,12 +50,13 @@ function diff(a, b, path = '') {
 }
 
 async function call(base, method, path, { token, body, headers = {} } = {}) {
-  const response = await fetch(`${base}${path}`, {
+  const init = {
     method,
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
-    body: body ? JSON.stringify(body) : undefined,
     redirect: 'manual',
-  });
+  };
+  if (body) init.body = JSON.stringify(body);
+  const response = await fetch(`${base}${path}`, init);
   const text = await response.text();
   let json = null;
   try {
