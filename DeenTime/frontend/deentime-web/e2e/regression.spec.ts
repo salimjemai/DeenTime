@@ -36,9 +36,10 @@ test.describe('IqamaTime browser regression matrix', () => {
     expect((await font.body()).byteLength).toBeGreaterThan(300_000);
 
     for (const label of ['Prayer Times', 'Iqama', 'Design', 'Hijri', 'Publish', 'Content', 'Profile', 'Help & Tips']) {
-      await page.locator('mat-nav-list').getByRole('link', { name: label, exact: true }).click();
-      const icon = page.locator('mat-nav-list mat-icon').first();
-      await expect(icon).toHaveCSS('font-family', /IqamaTime Material Symbols/);
+      await page.locator('nav.nav-list').getByRole('link', { name: label, exact: true }).click();
+      // The shell renders its own SVG icons; any Material icon on the page must use the bundled font.
+      const icons = page.locator('mat-icon');
+      if (await icons.count()) await expect(icons.first()).toHaveCSS('font-family', /IqamaTime Material Symbols/);
       const dimensions = await page.evaluate(() => ({
         clientWidth: document.documentElement.clientWidth,
         scrollWidth: document.documentElement.scrollWidth
@@ -52,7 +53,7 @@ test.describe('IqamaTime browser regression matrix', () => {
   test('Hadith cards flip and Qur’an reciters can be previewed', async ({ page }) => {
     await useApi(page);
     await signIn(page);
-    await page.locator('mat-nav-list').getByRole('link', { name: 'Content', exact: true }).click();
+    await page.locator('nav.nav-list').getByRole('link', { name: 'Content', exact: true }).click();
 
     await expect(page.getByRole('link', { name: 'Open Qibla metadata' })).toBeVisible();
     await expect(page.locator('.qibla-live-card')).toBeVisible();
@@ -177,7 +178,7 @@ test.describe('IqamaTime browser regression matrix', () => {
       { path: 'design', heading: 'Design your schedule', content: '.preview-shell' },
       { path: 'hijri', heading: 'Hijri Calendar', content: 'table' },
       { path: 'publish', heading: 'Publish your schedule', content: 'iframe' },
-      { path: 'content', heading: 'A living library for every masjid surface.', content: '.metric-card' }
+      { path: 'content', heading: 'A living library for every masjid surface.', content: '.studio-card' }
     ];
 
     for (const tab of tabs) {
@@ -242,7 +243,7 @@ test.describe('IqamaTime browser regression matrix', () => {
     test.setTimeout(90_000);
     await useApi(page);
     await signIn(page);
-    await page.locator('mat-nav-list').getByRole('link', { name: 'Publish', exact: true }).click();
+    await page.locator('nav.nav-list').getByRole('link', { name: 'Publish', exact: true }).click();
 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await expect(page.getByLabel('Local time font size')).toBeVisible();
@@ -309,7 +310,14 @@ test.describe('IqamaTime browser regression matrix', () => {
         });
       }
     });
-    await page.locator('mat-nav-list a[href$="/content"]').click();
+    // Simulated sensor readings need no permission prompt: drop the iOS/Chromium
+    // requestPermission hook before the Content page loads so the compass listens directly.
+    await page.addInitScript(() => {
+      const orientation = (globalThis as { DeviceOrientationEvent?: { requestPermission?: unknown } }).DeviceOrientationEvent;
+      if (orientation && 'requestPermission' in orientation) delete orientation.requestPermission;
+    });
+    // The shell collapses its navigation on mobile, so open the Content tab by URL.
+    await page.goto(page.url().replace(/\/publish(?:[?#].*)?$/, '/content'));
     await expect(page.locator('.qibla-live-card')).toBeVisible();
     await expect(page.locator('.qibla-live-card .bearing-value')).toContainText(/°/);
     await expect(page.locator('.qibla-live-card')).toContainText('PNG ready');
