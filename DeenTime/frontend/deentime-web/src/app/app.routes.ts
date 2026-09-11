@@ -6,6 +6,8 @@ import { superUserGuard } from './core/super-user.guard';
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./features/login/login').then(m => m.LoginComponent) },
   { path: 'verify-email', loadComponent: () => import('./features/verify-email/verify-email').then(m => m.VerifyEmailComponent) },
+  { path: 'forgot-password', loadComponent: () => import('./features/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) },
+  { path: 'reset-password', loadComponent: () => import('./features/reset-password/reset-password').then(m => m.ResetPasswordComponent) },
   { path: 'tv/:slug',  loadComponent: () => import('./features/tv/tv').then(m => m.TvComponent) },
   { path: 'w/:slug/daily', data: { content: 'daily' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },
   { path: 'w/:slug/jumuah', data: { content: 'jumuah' }, loadComponent: () => import('./features/widget/widget').then(m => m.WidgetComponent) },

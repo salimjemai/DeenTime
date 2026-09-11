@@ -115,6 +115,9 @@ export class ContentComponent implements OnInit {
   private orgs = inject(OrgsService);
   private snack = inject(MatSnackBar);
   private destroyRef = inject(DestroyRef);
+
+  /** The content library (sync controls, totals) is managed by the IqamaTime super user only. */
+  readonly isSuperUser = this.auth.hasSuperUserRole();
   private completionMarkers = new Map<string, string>();
   private reciterRequest = 0;
 
@@ -205,8 +208,13 @@ export class ContentComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.loadSummary();
-    this.loadEditions();
+    if (this.isSuperUser) {
+      this.loadSummary();
+      this.loadEditions();
+    } else {
+      this.loadingSummary.set(false);
+      this.loadPublicEditions();
+    }
     this.loadBooks();
     this.loadRandomAyah();
     this.searchHadith();
@@ -215,11 +223,13 @@ export class ContentComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => this.releaseQiblaImage());
 
-    interval(5000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (this.syncing() || this.quranState()?.status === 'running' || this.hadithState()?.status === 'running') {
-        this.loadSummary();
-      }
-    });
+    if (this.isSuperUser) {
+      interval(5000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+        if (this.syncing() || this.quranState()?.status === 'running' || this.hadithState()?.status === 'running') {
+          this.loadSummary();
+        }
+      });
+    }
   }
 
   loadSummary() {
@@ -241,15 +251,25 @@ export class ContentComponent implements OnInit {
 
   loadEditions() {
     this.content.quranEditions().subscribe({
-      next: response => {
-        this.editions.set(response.data);
-        const available = this.reciters();
-        if (available.length && !available.some(reciter => reciter.identifier === this.selectedReciter)) {
-          this.selectedReciter = available[0].identifier;
-        }
-      },
+      next: response => this.applyEditions(response.data),
       error: () => this.editions.set([])
     });
+  }
+
+  /** Masjid admins read the reciter catalogue through the public proxy instead of the super-user library API. */
+  loadPublicEditions() {
+    this.content.publicQuranEditions('audio').subscribe({
+      next: editions => this.applyEditions(editions),
+      error: () => this.editions.set([])
+    });
+  }
+
+  private applyEditions(editions: QuranEdition[]) {
+    this.editions.set(editions);
+    const available = this.reciters();
+    if (available.length && !available.some(reciter => reciter.identifier === this.selectedReciter)) {
+      this.selectedReciter = available[0].identifier;
+    }
   }
 
   loadBooks() {

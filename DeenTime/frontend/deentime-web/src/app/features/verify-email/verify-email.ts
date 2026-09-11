@@ -22,6 +22,8 @@ export class VerifyEmailComponent implements OnInit {
   readonly verified = signal(false);
   readonly organizationName = signal('');
   readonly error = signal('');
+  /** A session already exists (for example the link was reloaded after it succeeded). */
+  readonly hasSession = signal(false);
   readonly supportEmail = signal('');
 
   ngOnInit(): void {
@@ -49,6 +51,9 @@ export class VerifyEmailComponent implements OnInit {
       },
       error: response => {
         this.loading.set(false);
+        // A verification link is single-use, so a reload or a second click lands here
+        // even though the account was created. Keep the sign-in path visible.
+        this.hasSession.set(this.auth.hasValidToken());
         this.error.set(response.error?.message ?? 'This verification link is invalid or has expired. Ask the IqamaTime administrator to resend your invitation.');
       }
     });
@@ -56,5 +61,10 @@ export class VerifyEmailComponent implements OnInit {
 
   signIn(): void {
     this.router.navigate(['/login'], { queryParams: { reason: 'verified' } });
+  }
+
+  /** The link was already used and this browser still holds a valid session. */
+  continue(): void {
+    this.router.navigate(['/org', this.auth.getOrgId(), 'timings']);
   }
 }

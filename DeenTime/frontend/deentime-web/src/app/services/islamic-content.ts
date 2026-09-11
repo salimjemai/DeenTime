@@ -1,3 +1,4 @@
+import { map } from 'rxjs/operators';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -35,6 +36,13 @@ export class IslamicContentService {
     });
     return this.http.get<{ data: QuranEdition[]; total: number }>(
       `${this.base}/api/v1/islamic-content/quran/editions`, { params });
+  }
+
+  /** Edition catalogue through the public proxy, for masjid admins who are not super users. */
+  publicQuranEditions(format: 'audio' | 'text') {
+    return this.http.get<QuranApiResponse<Omit<QuranEdition, 'syncedAtUtc'>[]>>(
+      `${this.base}/public/content/quran/edition/format/${format}`
+    ).pipe(map(response => (response.data ?? []).map(edition => ({ ...edition, syncedAtUtc: '' }))));
   }
 
   syncQuran(scope: 'catalog' | 'text' | 'all') {

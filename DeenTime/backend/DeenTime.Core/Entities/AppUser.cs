@@ -7,4 +7,6 @@ public sealed class AppUser
     public string? Email { get; set; }
     public string PasswordHash { get; set; } = ""; // PBKDF2 hash
     public string PasswordSalt { get; set; } = ""; // base64
+    public string? PasswordResetTokenHash { get; set; } // SHA-256 hex of the emailed reset token
+    public DateTime? PasswordResetExpiresAtUtc { get; set; }
 }

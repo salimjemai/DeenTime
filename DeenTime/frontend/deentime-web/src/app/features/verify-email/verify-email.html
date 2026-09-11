@@ -1,5 +1,5 @@
-<main class="verify-page">
-  <mat-card class="verify-card">
+<main class="auth-page">
+  <mat-card class="auth-card">
     <span class="brand-mark" aria-hidden="true"><app-icon name="brand" /></span>
     @if (loading()) {
       <mat-spinner diameter="42" />
@@ -21,8 +21,16 @@
       <span class="result-mark error" aria-hidden="true">!</span>
       <h1>Verification did not complete</h1>
       <p>{{ error() }}</p>
-      <div class="result-actions">
-        <a mat-flat-button color="primary" routerLink="/login">Go to sign in</a>
+      <p class="hint">
+        Each verification link works once. If you already opened it, your account is ready:
+        sign in with your email and password. Otherwise ask the IqamaTime administrator to resend your invitation.
+      </p>
+      <div class="actions">
+        @if (hasSession()) {
+          <button mat-flat-button color="primary" type="button" (click)="continue()">Open the dashboard</button>
+        } @else {
+          <a mat-flat-button color="primary" routerLink="/login">Go to sign in</a>
+        }
         @if (supportEmail()) {
           <a mat-stroked-button [href]="'mailto:' + supportEmail()">Contact {{ supportEmail() }}</a>
         }

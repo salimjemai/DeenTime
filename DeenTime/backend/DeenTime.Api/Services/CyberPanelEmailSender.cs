@@ -30,6 +30,7 @@ public interface IRegistrationEmailSender
 {
     Task SendVerificationAsync(string email, string organizationName, string verificationUrl, CancellationToken cancellationToken);
     Task SendInvitationAsync(string email, string organizationName, string invitationUrl, CancellationToken cancellationToken);
+    Task SendPasswordResetAsync(string email, string resetUrl, CancellationToken cancellationToken);
 }
 
 public sealed class CyberPanelEmailSender(
@@ -88,6 +89,25 @@ public sealed class CyberPanelEmailSender(
             email,
             "You are invited to register your masjid with IqamaTime",
             $"<p>Assalamu alaikum,</p><p>IqamaTime has invited you to register <strong>{HtmlEncoder.Default.Encode(organizationName)}</strong>.</p><p><a href=\"{HtmlEncoder.Default.Encode(invitationUrl)}\">Start secure masjid registration</a></p><p>You will create a password, complete the masjid details, and verify this email address; then sign in to open your masjid dashboard. This invitation expires in 7 days.</p>{SupportLine}",
+            cancellationToken);
+    }
+
+    public async Task SendPasswordResetAsync(string email, string resetUrl, CancellationToken cancellationToken)
+    {
+        if (!settings.Enabled)
+        {
+            if (LinksCanBeLogged)
+            {
+                logger.LogInformation("Email delivery disabled; password reset URL for {Email}: {ResetUrl}", email, resetUrl);
+                return;
+            }
+            throw new InvalidOperationException("Email delivery is not configured.");
+        }
+
+        await SendAsync(
+            email,
+            "Reset your IqamaTime password",
+            $"<p>Assalamu alaikum,</p><p>A password reset was requested for your IqamaTime administrator account.</p><p><a href=\"{HtmlEncoder.Default.Encode(resetUrl)}\">Choose a new password</a></p><p>This link expires in 30 minutes. If you did not request it, you can ignore this email; your password will not change.</p>",
             cancellationToken);
     }
 

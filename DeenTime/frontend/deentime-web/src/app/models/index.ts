@@ -20,6 +20,20 @@ export interface RegistrationResponse {
   verificationRequired: boolean;
   developmentVerificationUrl?: string;
 }
+export interface PasswordResetRequestResponse {
+  message: string;
+  developmentResetUrl?: string;
+}
+export interface DevTestMasjid {
+  email: string;
+  password: string;
+  organizationName: string;
+  websiteUrl: string;
+  addressLine: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
 export interface AuthPublicConfig {
   captchaEnabled: boolean;
   captchaSiteKey?: string;

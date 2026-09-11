@@ -436,16 +436,81 @@ namespace DeenTime.Api.Controllers
 
 		[HttpPost("forgot")]
 		[EnableRateLimiting("auth-register")]
-		public IActionResult Forgot([FromBody] ForgotRequest req)
+		public async Task<IActionResult> Forgot(
+			[FromBody] ForgotRequest req,
+			[FromServices] AppDbContext db,
+			[FromServices] IConfiguration cfg,
+			[FromServices] IRegistrationEmailSender emailSender,
+			[FromServices] IWebHostEnvironment environment,
+			CancellationToken cancellationToken)
 		{
-			return Ok();
+			// The response is the same whether or not the email has an account, so the
+			// endpoint cannot be used to discover registered administrators.
+			var email = req.Email.Trim().ToLowerInvariant();
+			var user = await db.AppUsers.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+			string? developmentResetUrl = null;
+			if (user is not null)
+			{
+				var rawToken = Base64Url(RandomNumberGenerator.GetBytes(32));
+				user.PasswordResetTokenHash = HashToken(rawToken);
+				user.PasswordResetExpiresAtUtc = DateTime.UtcNow.AddMinutes(30);
+				await db.SaveChangesAsync(cancellationToken);
+
+				var publicBaseUrl = (cfg["Frontend:PublicBaseUrl"] ?? "http://127.0.0.1:4200").TrimEnd('/');
+				var resetUrl = $"{publicBaseUrl}/reset-password?token={Uri.EscapeDataString(rawToken)}";
+				try
+				{
+					await emailSender.SendPasswordResetAsync(user.Email!, resetUrl, cancellationToken);
+				}
+				catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException)
+				{
+					user.PasswordResetTokenHash = null;
+					user.PasswordResetExpiresAtUtc = null;
+					await db.SaveChangesAsync(cancellationToken);
+					return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Password reset email could not be sent.");
+				}
+				if (environment.IsDevelopment()) developmentResetUrl = resetUrl;
+			}
+
+			return Accepted(new
+			{
+				message = "If that email belongs to an administrator account, a password reset link is on its way.",
+				developmentResetUrl
+			});
 		}
 
 		[HttpPost("reset")]
-		[EnableRateLimiting("auth-register")]
-		public IActionResult Reset([FromBody] ResetRequest req)
+		[EnableRateLimiting("auth-verify")]
+		public async Task<IActionResult> Reset(
+			[FromBody] ResetRequest req,
+			[FromServices] AppDbContext db,
+			[FromServices] IPasswordHasher hasher,
+			[FromServices] LoginAttemptThrottle throttle,
+			CancellationToken cancellationToken)
 		{
-			return Ok();
+			if (string.IsNullOrWhiteSpace(req.Token) || req.Token.Length > 512)
+				return BadRequest(new { code = "reset_invalid", message = "The password reset link is invalid or has expired. Request a new one." });
+
+			var tokenHash = HashToken(req.Token);
+			var user = await db.AppUsers.FirstOrDefaultAsync(u => u.PasswordResetTokenHash == tokenHash, cancellationToken);
+			if (user is null || user.PasswordResetExpiresAtUtc is null || user.PasswordResetExpiresAtUtc <= DateTime.UtcNow)
+			{
+				if (user is not null)
+				{
+					user.PasswordResetTokenHash = null;
+					user.PasswordResetExpiresAtUtc = null;
+					await db.SaveChangesAsync(cancellationToken);
+				}
+				return BadRequest(new { code = "reset_invalid", message = "The password reset link is invalid or has expired. Request a new one." });
+			}
+
+			(user.PasswordHash, user.PasswordSalt) = hasher.HashPassword(req.NewPassword);
+			user.PasswordResetTokenHash = null;
+			user.PasswordResetExpiresAtUtc = null;
+			await db.SaveChangesAsync(cancellationToken);
+			if (!string.IsNullOrWhiteSpace(user.Email)) throttle.Reset(user.Email.Trim().ToLowerInvariant());
+
+			return Ok(new { message = "Your password has been updated. Sign in with your new password." });
 		}
 
 		private static string IssueJwt(IConfiguration cfg, AppUser user, Guid orgId, string[] roles)
