@@ -8,7 +8,7 @@ From the repository root, run:
 ./DeenTime/scripts/start-local.sh
 ```
 
-The launcher verifies native PostgreSQL on port 5432, starts the current .NET API directly on port 8080, waits for database-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
+The launcher verifies native PostgreSQL on port 5432, builds and starts the Node.js API (`DeenTime/backend-node`) on port 8080, waits for database-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. `DEENTIME_API_RUNTIME=dotnet ./DeenTime/scripts/start-local.sh` starts the original ASP.NET Core API instead (kept for parity checks). It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
 
 Optional secrets are supplied through the environment or an untracked local `.env` file. Copy `DeenTime/.env.example` as a reference. Set `DEENTIME_HADITH_API_KEY` only in a secret store or shell environment; the upstream provider key is never sent to browsers or committed.
 
@@ -19,7 +19,7 @@ Runtime checks:
 - API build/schema metadata: `http://127.0.0.1:8080/api/version`
 - Angular: `http://127.0.0.1:4200`
 
-A .NET 9 + Angular 20 platform for mosque organizations to compute daily prayer times, manage iqama schedules, maintain Hijri month maps, design publishable PDFs, and serve public TV/widget views.
+A Node.js (NestJS + Prisma) + Angular 20 platform for mosque organizations to compute daily prayer times, manage iqama schedules, maintain Hijri month maps, design publishable PDFs, and serve public TV/widget views.
 
 ## Legacy IqamaTime migration coverage
 
@@ -41,11 +41,12 @@ IqamaTime also adds the Quran/Hadith content library and rate-limited public JSO
 
 | Path | Description |
 |------|-------------|
-| `backend/DeenTime.Api` | ASP.NET Core 9 Web API |
-| `backend/DeenTime.Core` | Domain entities and services (ISNA calculator, Hijri service) |
-| `backend/DeenTime.Infrastructure` | EF Core DbContext (PostgreSQL via Npgsql) |
-| `backend/DeenTime.Contracts` | Shared DTOs |
-| `frontend/deentime-web` | Angular 20 PWA (SSR enabled) |
+| `backend-node` | **The API**: NestJS 12 + Prisma 7 on PostgreSQL (see `backend-node/README.md`) |
+| `frontend/deentime-web` | Angular 20 PWA |
+| `backend/DeenTime.Api` | Original ASP.NET Core 9 Web API — reference implementation kept for parity checks until retired |
+| `backend/DeenTime.Core` | Original domain entities and services (ISNA calculator, Hijri service) |
+| `backend/DeenTime.Infrastructure` | Original EF Core DbContext and migrations (the schema the Node API inherits) |
+| `backend/DeenTime.Contracts` | Original shared DTOs |
 
 ---
 
@@ -57,38 +58,34 @@ cd DeenTime
 ```
 
 - API: http://localhost:8080
-- Swagger: http://localhost:8080/swagger  _(development mode only)_
 - Health: http://localhost:8080/health/live
 - Angular: http://127.0.0.1:4200
 
-The script expects a local PostgreSQL (`brew install postgresql@16 && brew services start postgresql@16` on macOS), creates the `deentime` database and the `postgres` role if missing, starts the API with `dotnet run`, then starts the Angular dev server. The DB schema is applied automatically on first run via EF Core migrations.
+The script expects a local PostgreSQL (`brew install postgresql@16 && brew services start postgresql@16` on macOS), creates the `deentime` database and the `postgres` role if missing, builds and starts the Node.js API, then starts the Angular dev server. The DB schema is applied automatically at API startup (SQL migrations under `backend-node/prisma/migrations`; a database created by the original EF Core migrations is adopted as is).
 
 ---
 
 ## Local development (manual)
 
 ### Prerequisites
-- .NET 9 SDK
 - PostgreSQL 16
-- Node.js 20.19+, 22.12+, or 24+ (Angular CLI is installed locally)
+- Node.js 22.12+ (or 24+)
+- .NET 9 SDK only if you want to run the original API for comparison
 
 ### 1 — API
 
 ```bash
-cd DeenTime
-
-# Apply migrations (needs a running Postgres)
-dotnet ef database update \
-  --project backend/DeenTime.Infrastructure \
-  --startup-project backend/DeenTime.Api
-
-# Run
-dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj
+cd DeenTime/backend-node
+npm ci
+npm run build
+ConnectionStrings__Default="Host=localhost;Port=5432;Database=deentime;Username=postgres;Password=postgres" \
+Auth__SigningKey="a-local-signing-key-of-at-least-32-characters" \
+ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:8080 \
+node dist/main.js
 ```
 
-Swagger UI: http://localhost:5000/swagger
-
-The `appsettings.Development.json` includes a pre-set signing key and local DB connection string so the API works out of the box against a default Postgres install.
+Migrations run at startup. `appsettings.Development.json` carries the local DB
+connection string and defaults; secrets come from environment variables.
 
 ### 2 — Angular frontend
 
@@ -108,14 +105,14 @@ All secrets are injected via environment variables (12-factor). Key settings:
 |-----|-------------|
 | `ConnectionStrings__Default` | PostgreSQL connection string |
 | `Auth__SigningKey` | HMAC-SHA256 signing key (≥ 32 chars). Set for local-JWT mode. |
-| `Auth__Authority` | OIDC authority URL. Set to use an external IDP instead of local JWT. |
+| `Auth__Authority` | OIDC authority URL (original .NET API only; the Node.js API requires `Auth__SigningKey`). |
 | `Auth__Issuer` | JWT issuer claim |
 | `Auth__Audience` | JWT audience claim |
 | `Storage__ConnectionString` | Azure Blob Storage connection string. Omit to use local filesystem. |
 | `Storage__Container` | Blob container name (default: `deentime`) |
 | `Storage__CdnBase` | Optional CDN base URL for blob public URLs |
 | `Cors__AllowedOrigins__0` | Allowed CORS origin(s) |
-| `Hangfire__ConnectionString` | PostgreSQL connection string for Hangfire. Omit to disable. |
+| `Hangfire__ConnectionString` | Original .NET API only; the Node.js API runs its sync worker in-process and reports it at `/jobs`. |
 
 For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStrings__Default` via secrets manager / environment — never commit these.
 
@@ -237,8 +234,8 @@ Times are returned in the organization's configured IANA timezone.
 - [ ] Set `Storage__ConnectionString` to Azure Blob Storage (omit to fall back to local disk — not suitable for multi-instance)
 - [ ] Set `Cors__AllowedOrigins__0` to your production frontend domain
 - [ ] Set `EmailDelivery__*` so verification, invitation and password-reset emails are delivered
-- [ ] Run `dotnet ef database update` on deploy (or use migration bundles)
-- [ ] Secure `/jobs` (Hangfire dashboard) behind authentication or remove in non-background deployments
+- [ ] Let the API apply migrations at startup (it exits non-zero if they fail) and check `/health/ready`
+- [ ] `/jobs` is a super-user-only JSON status endpoint in the Node.js API (no Hangfire dashboard)
 
 ---
 
