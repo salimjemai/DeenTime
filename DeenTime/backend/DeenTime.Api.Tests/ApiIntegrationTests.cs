@@ -148,7 +148,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal("ready", readinessBody.RootElement.GetProperty("status").GetString());
 
         var version = await client.GetFromJsonAsync<JsonElement>("/api/version");
-        Assert.Equal("20260823092555_AddMasjidInvitations", version.GetProperty("schemaVersion").GetString());
+        Assert.Equal(BuildInfoProvider.CurrentSchemaVersion, version.GetProperty("schemaVersion").GetString());
         Assert.False(string.IsNullOrWhiteSpace(version.GetProperty("apiVersion").GetString()));
     }
 
@@ -633,10 +633,44 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task Password_reset_link_updates_the_password_once()
+    {
+        using var anonymous = factory!.CreateClient();
+        registrationEmailSender.LastPasswordResetUrl = null;
+
+        var unknown = await anonymous.PostAsJsonAsync("/api/v1/auth/forgot", new { email = "nobody@masjid.test" });
+        Assert.Equal(HttpStatusCode.Accepted, unknown.StatusCode);
+        Assert.Null(registrationEmailSender.LastPasswordResetUrl);
+
+        var forgot = await anonymous.PostAsJsonAsync("/api/v1/auth/forgot", new { email = "Admin@DeenTime.test" });
+        Assert.Equal(HttpStatusCode.Accepted, forgot.StatusCode);
+        Assert.NotNull(registrationEmailSender.LastPasswordResetUrl);
+        var resetUri = new Uri(registrationEmailSender.LastPasswordResetUrl!);
+        Assert.Equal("https://public.deentime.test/reset-password", resetUri.GetLeftPart(UriPartial.Path));
+        var token = Uri.UnescapeDataString(resetUri.Query["?token=".Length..]);
+
+        var weak = await anonymous.PostAsJsonAsync("/api/v1/auth/reset", new { token, newPassword = "short" });
+        Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
+
+        const string newPassword = "Another-strong-password-5678";
+        var reset = await anonymous.PostAsJsonAsync("/api/v1/auth/reset", new { token, newPassword });
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+
+        var reused = await anonymous.PostAsJsonAsync("/api/v1/auth/reset", new { token, newPassword = "Yet-another-password-9012" });
+        Assert.Equal(HttpStatusCode.BadRequest, reused.StatusCode);
+
+        var oldLogin = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "admin@deentime.test", password = Password });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldLogin.StatusCode);
+        var newLogin = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "admin@deentime.test", password = newPassword });
+        Assert.Equal(HttpStatusCode.OK, newLogin.StatusCode);
+    }
+
     private sealed class CapturingRegistrationEmailSender : IRegistrationEmailSender
     {
         public string? LastVerificationUrl { get; private set; }
         public string? LastInvitationUrl { get; private set; }
+        public string? LastPasswordResetUrl { get; set; }
 
         public Task SendVerificationAsync(string email, string organizationName, string verificationUrl, CancellationToken cancellationToken)
         {
@@ -647,6 +681,12 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         public Task SendInvitationAsync(string email, string organizationName, string invitationUrl, CancellationToken cancellationToken)
         {
             LastInvitationUrl = invitationUrl;
+            return Task.CompletedTask;
+        }
+
+        public Task SendPasswordResetAsync(string email, string resetUrl, CancellationToken cancellationToken)
+        {
+            LastPasswordResetUrl = resetUrl;
             return Task.CompletedTask;
         }
     }

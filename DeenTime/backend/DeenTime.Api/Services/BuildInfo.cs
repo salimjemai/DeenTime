@@ -10,7 +10,7 @@ public sealed record BuildInfo(
 
 public static class BuildInfoProvider
 {
-    public const string CurrentSchemaVersion = "20260823092555_AddMasjidInvitations";
+    public const string CurrentSchemaVersion = "20260911012917_AddPasswordReset";
 
     public static BuildInfo Create(IConfiguration configuration)
     {

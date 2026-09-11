@@ -82,6 +82,10 @@ if [[ -z "${DEENTIME_SUPERUSER_PASSWORD:-}" ]]; then
 fi
 
 # ── API ──────────────────────────────────────────────────────────────────────
+# Compile first so the readiness timer below measures startup, not the build.
+echo "Building the API..."
+dotnet build backend/DeenTime.Api/DeenTime.Api.csproj --nologo -v quiet
+
 api_pid=""
 cleanup() {
   if [[ -n "$api_pid" ]] && kill -0 "$api_pid" 2>/dev/null; then
@@ -97,11 +101,11 @@ Auth__SigningKey="$DEENTIME_AUTH_SIGNING_KEY" \
 SuperUser__Password="$DEENTIME_SUPERUSER_PASSWORD" \
 IslamicContent__HadithApiKey="${DEENTIME_HADITH_API_KEY:-}" \
 Frontend__PublicBaseUrl="$DEENTIME_PUBLIC_BASE_URL" \
-dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj &
+dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj --no-build --no-launch-profile &
 api_pid=$!
 
 ready="false"
-for _ in $(seq 1 90); do
+for _ in $(seq 1 120); do
   if ! kill -0 "$api_pid" 2>/dev/null; then
     echo "The API process exited before becoming ready." >&2
     exit 1
@@ -113,7 +117,7 @@ for _ in $(seq 1 90); do
   sleep 1
 done
 if [[ "$ready" != "true" ]]; then
-  echo "The API did not become ready within 90 seconds." >&2
+  echo "The API did not become ready within 120 seconds." >&2
   exit 1
 fi
 

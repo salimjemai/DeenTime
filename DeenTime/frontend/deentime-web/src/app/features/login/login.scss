@@ -284,6 +284,16 @@ app-turnstile { margin: 4px 0 10px; }
   a { margin-bottom: 8px; }
 }
 
+.forgot-link {
+  justify-self: end;
+  margin: -6px 0 12px;
+  color: #286f48;
+  font-size: .92rem;
+  font-weight: 600;
+  text-decoration: none;
+  &:hover, &:focus-visible { text-decoration: underline; }
+}
+
 .login-notice {
   margin: 0 0 19px;
   padding: 12px 14px;

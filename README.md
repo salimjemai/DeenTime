@@ -128,8 +128,8 @@ For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStr
 |--------|------|-------|
 | POST | `/api/v1/auth/register` | Creates user + org, returns JWT |
 | POST | `/api/v1/auth/login` | Returns JWT |
-| POST | `/api/v1/auth/forgot` | Stub — implement email delivery |
-| POST | `/api/v1/auth/reset` | Stub — implement token validation |
+| POST | `/api/v1/auth/forgot` | Emails a single-use reset link (30 min); same 202 whether or not the email exists |
+| POST | `/api/v1/auth/reset` | Validates the link token and sets the new password |
 
 ### Organizations
 | Method | Path |
@@ -236,7 +236,7 @@ Times are returned in the organization's configured IANA timezone.
 - [ ] Set `ConnectionStrings__Default` to your production PostgreSQL URL
 - [ ] Set `Storage__ConnectionString` to Azure Blob Storage (omit to fall back to local disk — not suitable for multi-instance)
 - [ ] Set `Cors__AllowedOrigins__0` to your production frontend domain
-- [ ] Implement email delivery in `AuthController.Forgot` / `Reset`
+- [ ] Set `EmailDelivery__*` so verification, invitation and password-reset emails are delivered
 - [ ] Run `dotnet ef database update` on deploy (or use migration bundles)
 - [ ] Secure `/jobs` (Hangfire dashboard) behind authentication or remove in non-background deployments
 

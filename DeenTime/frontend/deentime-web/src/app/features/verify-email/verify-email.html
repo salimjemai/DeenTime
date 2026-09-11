@@ -1,5 +1,5 @@
-<main class="verify-page">
-  <mat-card class="verify-card">
+<main class="auth-page">
+  <mat-card class="auth-card">
     <span class="brand-mark" aria-hidden="true"><app-icon name="brand" /></span>
     @if (loading()) {
       <mat-spinner diameter="42" />
@@ -14,7 +14,18 @@
       <span class="result-mark error" aria-hidden="true">!</span>
       <h1>Verification did not complete</h1>
       <p>{{ error() }}</p>
-      <a mat-flat-button color="primary" routerLink="/login">Return to registration</a>
+      <p class="hint">
+        Each verification link works once. If you already opened it, your account is ready:
+        sign in with your email and password. Otherwise register again to receive a new link.
+      </p>
+      <div class="actions">
+        @if (hasSession()) {
+          <button mat-flat-button color="primary" type="button" (click)="continue()">Open the dashboard</button>
+        } @else {
+          <a mat-flat-button color="primary" routerLink="/login">Sign in</a>
+        }
+        <a mat-button routerLink="/login">Register again</a>
+      </div>
     }
   </mat-card>
 </main>

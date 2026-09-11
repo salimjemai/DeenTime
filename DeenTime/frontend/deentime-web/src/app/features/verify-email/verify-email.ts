@@ -21,12 +21,14 @@ export class VerifyEmailComponent implements OnInit {
   readonly loading = signal(true);
   readonly verified = signal(false);
   readonly error = signal('');
+  /** A session already exists (for example the link was reloaded after it succeeded). */
+  readonly hasSession = signal(false);
 
   ngOnInit(): void {
     const token = this.route.snapshot.queryParamMap.get('token');
     if (!token) {
       this.loading.set(false);
-      this.error.set('This verification link is incomplete. Please register again.');
+      this.error.set('This verification link is incomplete.');
       return;
     }
 
@@ -37,7 +39,10 @@ export class VerifyEmailComponent implements OnInit {
       },
       error: response => {
         this.loading.set(false);
-        this.error.set(response.error?.message ?? 'This verification link is invalid or has expired. Please register again.');
+        // A verification link is single-use, so a reload or a second click lands here
+        // even though the account was created. Keep the sign-in path visible.
+        this.hasSession.set(this.auth.hasValidToken());
+        this.error.set(response.error?.message ?? 'This verification link is invalid or has expired.');
       }
     });
   }

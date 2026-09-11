@@ -51,6 +51,8 @@
               <p class="login-notice">This area requires an administrator account.</p>
             } @else if (reason === 'super-user-required') {
               <p class="login-notice">The masjid administration dashboard is available only to IqamaTime administrators.</p>
+            } @else if (reason === 'password-reset') {
+              <p class="login-notice">Your password has been updated. Sign in with your new password.</p>
             }
 
             @if (invitation()) {
@@ -92,6 +94,9 @@
                     <mat-error>Password does not meet every strength requirement</mat-error>
                   }
                 </mat-form-field>
+                @if (!isRegister()) {
+                  <a class="forgot-link span-all" routerLink="/forgot-password">Forgot your password?</a>
+                }
 
                 @if (isRegister()) {
                   <mat-form-field appearance="outline" class="full-width">
@@ -194,11 +199,17 @@
         }
       </mat-card>
 
-      @if (devSuperUser && !isRegister()) {
+      @if ((devSuperUser || devTestMasjid) && !isRegister()) {
         <div class="dev-banner">
           <span>DEV</span>
-          <button mat-flat-button (click)="quickLogin()" [disabled]="loading()">Quick Login (Super User)</button>
-          <code>{{ devSuperUser.email }}</code>
+          @if (devSuperUser) {
+            <button mat-flat-button type="button" (click)="quickLogin()" [disabled]="loading()">Quick Login (Super User)</button>
+            <code>{{ devSuperUser.email }}</code>
+          }
+          @if (devTestMasjid) {
+            <button mat-flat-button type="button" (click)="quickMasjidLogin()" [disabled]="loading()">Quick Login (Test Masjid)</button>
+            <code>{{ devTestMasjid.email }}</code>
+          }
         </div>
       }
     </div>

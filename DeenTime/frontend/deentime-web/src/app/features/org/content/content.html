@@ -16,6 +16,7 @@
     </div>
   </section>
 
+  @if (isSuperUser) {
   <section class="metric-grid" aria-label="Content library totals">
     <article class="metric-card">
       <span class="metric-icon gold"><mat-icon>menu_book</mat-icon></span>
@@ -112,6 +113,7 @@
       </div>
     </article>
   </section>
+  }
 
   <section class="studio-grid">
     <article class="studio-card verse-studio">

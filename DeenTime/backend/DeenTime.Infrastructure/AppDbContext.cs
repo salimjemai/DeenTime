@@ -78,6 +78,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
         b.Entity<AppUser>().Property(u => u.Email).HasMaxLength(320);
         b.Entity<AppUser>().HasIndex(u => u.Email).IsUnique();
+        b.Entity<AppUser>().Property(u => u.PasswordResetTokenHash).HasMaxLength(64);
+        b.Entity<AppUser>().HasIndex(u => u.PasswordResetTokenHash).IsUnique()
+            .HasFilter("\"PasswordResetTokenHash\" IS NOT NULL");
         b.Entity<Organization>().Property(o => o.Name).HasMaxLength(160);
         b.Entity<Organization>().Property(o => o.NormalizedName).HasMaxLength(160);
         b.Entity<Organization>().Property(o => o.NormalizedWebsiteHost).HasMaxLength(253);

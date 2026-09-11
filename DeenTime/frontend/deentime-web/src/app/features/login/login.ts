@@ -1,7 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Component, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -23,7 +23,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   selector: 'app-login',
   standalone: true,
   imports: [
-    ReactiveFormsModule,
+    ReactiveFormsModule, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule,
     AppIconComponent, TurnstileComponent
@@ -62,6 +62,7 @@ export class LoginComponent implements OnInit {
   readonly zipLookupMessage = signal('');
   readonly passwordValue = signal('');
   readonly devSuperUser = environment.devSuperUser;
+  readonly devTestMasjid = environment.devTestMasjid;
   readonly reason = this.route.snapshot.queryParamMap.get('reason');
   private readonly invitationToken = this.route.snapshot.queryParamMap.get('invite');
 
@@ -99,6 +100,40 @@ export class LoginComponent implements OnInit {
     if (!this.devSuperUser) return;
     this.form.patchValue({ email: this.devSuperUser.email, password: this.devSuperUser.password });
     this.submit();
+  }
+
+  /**
+   * Development helper: signs in as the local test masjid administrator. On a fresh
+   * database the account does not exist yet, so it is registered and verified through
+   * the API's development verification link before signing in.
+   */
+  quickMasjidLogin(): void {
+    const masjid = this.devTestMasjid;
+    if (!masjid || this.loading()) return;
+    this.loading.set(true);
+    const openDashboard = () => this.router.navigate(['/org', this.auth.getOrgId(), 'timings']);
+    this.auth.login({ email: masjid.email, password: masjid.password }).subscribe({
+      next: openDashboard,
+      error: error => {
+        if (error.status !== 401) return this.handleError(error);
+        this.auth.register({ ...masjid, confirmPassword: masjid.password }).subscribe({
+          next: response => {
+            const token = response.developmentVerificationUrl
+              ? new URL(response.developmentVerificationUrl).searchParams.get('token')
+              : null;
+            if (!token) {
+              this.loading.set(false);
+              this.snack.open('The API is not running in Development mode, so the test masjid cannot be verified automatically.', 'Dismiss', { duration: 6000 });
+              return;
+            }
+            this.auth.verifyEmail(token).subscribe({ next: openDashboard, error: verifyError => this.handleError(verifyError) });
+          },
+          error: registerError => this.handleError(registerError.status === 409
+            ? { status: 409, error: { message: 'The test masjid exists but its password differs from environment.ts. Reset it or delete the account.' } }
+            : registerError)
+        });
+      }
+    });
   }
 
   toggle(): void {
