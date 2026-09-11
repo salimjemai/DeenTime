@@ -338,13 +338,18 @@ export class IslamicContentSyncService {
   }
 
   private async fetchRequiredQuran(path: string, signal?: AbortSignal): Promise<QuranProviderPayload> {
-    let response: QuranProviderPayload | null = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      response = await this.quranClient.get(path, undefined, true, signal);
+    // .NET retried three times with 350 ms × attempt. The Node fetch is quicker and the
+    // catalogue sync runs four downloads in parallel, which trips AlQuran Cloud's rate
+    // limit (HTTP 429) more easily, so 429s get a longer back-off and two extra attempts.
+    let lastStatus = 0;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await this.quranClient.get(path, undefined, true, signal);
       if (response.statusCode >= 200 && response.statusCode < 300) return response;
-      if (attempt < 3) await delay(350 * attempt, signal);
+      lastStatus = response.statusCode;
+      if (lastStatus !== 429 && attempt >= 3) break;
+      if (attempt < 5) await delay(lastStatus === 429 ? 2_000 * attempt : 350 * attempt, signal);
     }
-    throw new IslamicContentProviderError(`The Qur'an provider could not supply the documented endpoint '/${path}' (HTTP ${response?.statusCode}).`);
+    throw new IslamicContentProviderError(`The Qur'an provider could not supply the documented endpoint '/${path}' (HTTP ${lastStatus}).`);
   }
 
   /** Upserts the provider's IslamicContentSyncState row (key = lower-cased provider). */
