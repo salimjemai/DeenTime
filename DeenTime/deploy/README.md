@@ -1,14 +1,16 @@
 # Staging deployment (self-hosted srv1)
 
 Staging runs on our own plain **Ubuntu 24.04** VPS (`srv1`, **70.36.101.120**)
-with **nginx + systemd + PostgreSQL**. No CyberPanel, no OpenLiteSpeed, no
-Docker, and no .NET runtime on the server (the API is published
-self-contained).
+with **nginx + systemd + PostgreSQL + Node.js 22**. No CyberPanel, no
+OpenLiteSpeed and no Docker. The API is the Node.js implementation in
+`backend-node` (the original .NET API in `backend` is kept for parity checks
+only and is not deployed).
 
 GitHub Actions (`.github/workflows/staging-ci-cd.yml`) tests the Angular and
-.NET applications, publishes a self-contained linux-x64 build of the API and a
-static Angular bundle, copies both tarballs to the server over key-authenticated
-SSH, and runs `deploy-staging.sh` there.
+Node.js applications, packages the built API (`dist/`, production
+`node_modules/`, `prisma/`, `appsettings.json`) and a static Angular bundle,
+copies both tarballs to the server over key-authenticated SSH, and runs
+`deploy-staging.sh` there.
 
 ## Server layout
 
@@ -39,7 +41,10 @@ Already done on srv1; listed here so the box can be rebuilt.
 
 ```bash
 apt-get update
-apt-get install -y nginx postgresql rsync curl libfontconfig1 fonts-liberation fonts-dejavu-core certbot python3-certbot-nginx
+apt-get install -y nginx postgresql rsync curl certbot python3-certbot-nginx
+# Node.js 22 LTS (NodeSource) for the API
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
 useradd --system --home /opt/deentime --shell /usr/sbin/nologin deentime
 mkdir -p /opt/deentime/incoming /opt/deentime/shared/uploads /var/www/deentime /etc/deentime
 chown -R deentime:deentime /opt/deentime/shared

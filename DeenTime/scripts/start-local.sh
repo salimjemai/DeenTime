@@ -18,8 +18,21 @@ db_port="${DEENTIME_DB_PORT:-5432}"
 web_port="${DEENTIME_WEB_PORT:-4200}"
 export DEENTIME_PUBLIC_BASE_URL="${DEENTIME_PUBLIC_BASE_URL:-http://127.0.0.1:${web_port}}"
 
-if ! command -v dotnet >/dev/null 2>&1; then
-  echo "The .NET 9 SDK is required (https://dotnet.microsoft.com/download)." >&2
+# DEENTIME_API_RUNTIME selects the API implementation: "node" (default, backend-node)
+# or "dotnet" (the original ASP.NET Core API kept for parity checks).
+api_runtime="${DEENTIME_API_RUNTIME:-node}"
+if [[ "$api_runtime" == "dotnet" ]]; then
+  if ! command -v dotnet >/dev/null 2>&1; then
+    echo "The .NET 9 SDK is required (https://dotnet.microsoft.com/download)." >&2
+    exit 1
+  fi
+elif [[ "$api_runtime" == "node" ]]; then
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "Node.js 22+ and npm are required (https://nodejs.org)." >&2
+    exit 1
+  fi
+else
+  echo "DEENTIME_API_RUNTIME must be 'node' or 'dotnet' (got '$api_runtime')." >&2
   exit 1
 fi
 if ! command -v psql >/dev/null 2>&1 && command -v brew >/dev/null 2>&1; then
@@ -85,8 +98,17 @@ fi
 
 # ── API ──────────────────────────────────────────────────────────────────────
 # Compile first so the readiness timer below measures startup, not the build.
-echo "Building the API..."
-dotnet build backend/DeenTime.Api/DeenTime.Api.csproj --nologo -v quiet
+if [[ "$api_runtime" == "dotnet" ]]; then
+  echo "Building the .NET API..."
+  dotnet build backend/DeenTime.Api/DeenTime.Api.csproj --nologo -v quiet
+else
+  echo "Building the Node.js API..."
+  if [[ ! -d backend-node/node_modules ]]; then
+    npm --prefix backend-node ci --no-audit --no-fund
+  fi
+  npm --prefix backend-node run -s prisma:generate
+  npm --prefix backend-node run -s build
+fi
 
 api_pid=""
 cleanup() {
@@ -105,7 +127,7 @@ SuperUser__Password="$DEENTIME_SUPERUSER_PASSWORD" \
 Support__Email="$DEENTIME_SUPPORT_EMAIL" \
 IslamicContent__HadithApiKey="${DEENTIME_HADITH_API_KEY:-}" \
 Frontend__PublicBaseUrl="$DEENTIME_PUBLIC_BASE_URL" \
-dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj --no-build --no-launch-profile &
+bash -c 'if [[ "$0" == "dotnet" ]]; then exec dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj --no-build --no-launch-profile; else exec node backend-node/dist/main.js; fi' "$api_runtime" &
 api_pid=$!
 
 ready="false"

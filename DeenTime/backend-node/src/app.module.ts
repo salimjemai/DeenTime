@@ -7,6 +7,12 @@ import { RateLimitGuard } from './common/rate-limit.js';
 import { CoreModule } from './core.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { IqamaModule } from './modules/iqama/iqama.module.js';
+import { OrganizationsModule } from './modules/organizations/organizations.module.js';
+import { TimingsModule } from './modules/timings/timings.module.js';
+import { HijriModule } from './modules/hijri/hijri.module.js';
+import { DesignModule } from './modules/design/design.module.js';
+import { IntegrationsModule } from './integrations/integrations.module.js';
 import { StartupService } from './startup/startup.service.js';
 
 @Module({})
@@ -29,7 +35,13 @@ export class AppModule {
         }),
         CoreModule.forRoot(config),
         PrismaModule,
+        IntegrationsModule,
         HealthModule,
+        IqamaModule,
+        OrganizationsModule,
+        TimingsModule,
+        HijriModule,
+        DesignModule,
       ],
       providers: [
         StartupService,

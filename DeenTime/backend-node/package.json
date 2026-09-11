@@ -1,25 +1,27 @@
 {
-  "name": "backend-node",
-  "version": "0.0.1",
-  "description": "",
+  "name": "iqamatime-api",
+  "version": "1.0.0",
+  "description": "IqamaTime API (Node.js port of DeenTime.Api)",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "deploy": "nest deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/main.js",
     "lint": "oxlint src/ test/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "prisma:generate": "prisma generate",
+    "prebuild": "prisma generate",
+    "parity": "node test/parity/compare.mjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.33.0",
@@ -67,5 +69,8 @@
     "typescript": "^6.0.2",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }

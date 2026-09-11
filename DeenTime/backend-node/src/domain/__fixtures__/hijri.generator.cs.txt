@@ -1,0 +1,303 @@
+// Fixture generator for backend-node/src/domain/hijri-calendar.spec.ts and hijri.spec.ts.
+//
+// Runs System.Globalization.HijriCalendar (default HijriAdjustment = 0, the value the API
+// gets on Linux/macOS) plus verbatim replicas of HijriService.Generate,
+// QuestPdfGenerator.GetHijriDate and PublicController.BuildHijriDate and writes the results
+// as JSON (System.Text.Json, camelCase) so the TypeScript port can be asserted value for value.
+//
+// Build/run (plain console project outside the repo, no package references):
+//   dotnet new console -o hijrigen && cp hijri.generator.cs.txt hijrigen/Program.cs
+//   cd hijrigen && DOTNET_ROLL_FORWARD=Major dotnet run -- ../hijri.json
+
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+// Fixture generator for backend-node/src/domain/__fixtures__/hijri.json.
+// Everything below is computed with System.Globalization.HijriCalendar (HijriAdjustment = 0)
+// and verbatim replicas of HijriService.Generate, QuestPdfGenerator.GetHijriDate and
+// PublicController.BuildHijriDate.
+
+var cal = new HijriCalendar();
+var output = args.Length > 0 ? args[0] : "hijri.json";
+
+static string Iso(DateTime dt) => $"{dt.Year:D4}-{dt.Month:D2}-{dt.Day:D2}";
+static string Ymd(DateTime dt) => $"{dt.Year}-{dt.Month}-{dt.Day}";
+string Hijri(DateTime dt) => $"{cal.GetYear(dt)}-{cal.GetMonth(dt)}-{cal.GetDayOfMonth(dt)}";
+
+// (a) GetYear/GetMonth/GetDayOfMonth for every day 2019-12-01 .. 2036-12-31.
+var monthStarts = new Dictionary<string, string>();
+var days2025To2027 = new Dictionary<string, string>();
+var perYearLines = new SortedDictionary<int, StringBuilder>();
+var perYearCount = new SortedDictionary<int, int>();
+var total = 0;
+for (var dt = new DateTime(2019, 12, 1); dt <= new DateTime(2036, 12, 31); dt = dt.AddDays(1))
+{
+    var h = Hijri(dt);
+    total++;
+    if (dt.Day == 1) monthStarts[Iso(dt)] = h;
+    if (dt.Year is >= 2025 and <= 2027) days2025To2027[Iso(dt)] = h;
+    if (!perYearLines.TryGetValue(dt.Year, out var sb))
+    {
+        sb = new StringBuilder();
+        perYearLines[dt.Year] = sb;
+        perYearCount[dt.Year] = 0;
+    }
+    if (sb.Length > 0) sb.Append('\n');
+    sb.Append(Iso(dt)).Append('=').Append(h);
+    perYearCount[dt.Year]++;
+}
+var yearDigests = new Dictionary<string, object>();
+foreach (var (year, sb) in perYearLines)
+{
+    yearDigests[year.ToString(CultureInfo.InvariantCulture)] = new
+    {
+        days = perYearCount[year],
+        sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()))).ToLowerInvariant()
+    };
+}
+
+// (b) ToDateTime(y, m, 1) and (c) days per month for Hijri years 1440..1460.
+var toGregorian = new Dictionary<string, string>();
+var daysInMonth = new Dictionary<string, int[]>();
+var leapYears = new Dictionary<string, bool>();
+for (var y = 1440; y <= 1460; y++)
+{
+    daysInMonth[y.ToString(CultureInfo.InvariantCulture)] = Enumerable.Range(1, 12).Select(m => cal.GetDaysInMonth(y, m)).ToArray();
+    leapYears[y.ToString(CultureInfo.InvariantCulture)] = cal.IsLeapYear(y);
+    for (var m = 1; m <= 12; m++)
+        toGregorian[$"{y}-{m}"] = Iso(cal.ToDateTime(y, m, 1, 0, 0, 0, 0));
+}
+
+// Edge cases of ToDateTime / GetDatePart range checking.
+var toDateTimeEdgeCases = new List<object>();
+foreach (var (y, m, d) in new[]
+{
+    (1, 1, 1), (1, 1, 30), (2, 1, 1), (9666, 4, 3), (9666, 4, 4), (9666, 5, 1), (9667, 1, 1), (0, 1, 1), (-5, 1, 1),
+    (1447, 0, 1), (1447, 13, 1), (1447, 1, 0), (1447, 1, 31), (1447, 2, 30), (1447, 12, 30), (1448, 12, 30), (1448, 12, 29),
+    (1447, 9, -1), (1447, 9, 30), (1447, 9, 31), (1447, 10, 29), (1447, 10, 30)
+})
+{
+    string? result = null;
+    string? error = null;
+    try
+    {
+        result = Ymd(cal.ToDateTime(y, m, d, 0, 0, 0, 0));
+    }
+    catch (Exception ex)
+    {
+        error = ex.GetType().Name;
+    }
+    toDateTimeEdgeCases.Add(new { year = y, month = m, day = d, result, error });
+}
+
+var fromGregorianEdgeCases = new List<object>();
+foreach (var (gy, gm, gd) in new[] { (622, 7, 18), (622, 7, 17), (622, 7, 19), (623, 7, 6), (623, 7, 7), (9999, 12, 31), (1, 1, 1), (2000, 1, 1) })
+{
+    string? result = null;
+    string? error = null;
+    try
+    {
+        result = Hijri(new DateTime(gy, gm, gd));
+    }
+    catch (Exception ex)
+    {
+        error = ex.GetType().Name;
+    }
+    fromGregorianEdgeCases.Add(new { date = $"{gy}-{gm}-{gd}", result, error });
+}
+
+// (d) HijriService.Generate replica for 2026-01 .. 2026-12.
+List<Anchor> Generate(DateOnly from, DateOnly to)
+{
+    var months = new List<Anchor>();
+    var cursor = new DateOnly(from.Year, from.Month, 1);
+    var end = new DateOnly(to.Year, to.Month, 1);
+    while (cursor <= end)
+    {
+        var gregorianFirst = cursor.ToDateTime(TimeOnly.MinValue);
+        months.Add(new Anchor(cursor.Year, cursor.Month, cal.GetDayOfMonth(gregorianFirst), cal.GetMonth(gregorianFirst), cal.GetYear(gregorianFirst)));
+        cursor = cursor.AddMonths(1);
+    }
+    return months;
+}
+
+// QuestPdfGenerator.GetHijriDate replica.
+(int Day, int Month, int Year) GetHijriDate(DateOnly date, IReadOnlyDictionary<(int Year, int Month), Anchor> maps)
+{
+    DateTime current;
+    if (maps.TryGetValue((date.Year, date.Month), out var map) && map.HijriMonthOnFirst > 0 && map.HijriYearOnFirst > 1)
+    {
+        var first = cal.ToDateTime(map.HijriYearOnFirst, map.HijriMonthOnFirst, map.HijriDayOnFirst, 0, 0, 0, 0);
+        current = first.AddDays(date.Day - 1);
+    }
+    else
+    {
+        current = date.ToDateTime(TimeOnly.MinValue);
+    }
+    return (cal.GetDayOfMonth(current), cal.GetMonth(current), cal.GetYear(current));
+}
+
+// PublicController.BuildHijriDate replica.
+object? BuildHijriDate(Anchor? map, DateOnly gregorianDate)
+{
+    string[] monthNames =
+    [
+        "Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Thani",
+        "Jumada al-Awwal", "Jumada al-Thani", "Rajab", "Sha'ban",
+        "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
+    ];
+    try
+    {
+        var hijriBase = map is not null && map.HijriMonthOnFirst > 0 && map.HijriYearOnFirst > 1
+            ? cal.ToDateTime(map.HijriYearOnFirst, map.HijriMonthOnFirst, map.HijriDayOnFirst, 0, 0, 0, 0)
+            : new DateTime(gregorianDate.Year, gregorianDate.Month, 1);
+        var current = hijriBase.AddDays(gregorianDate.Day - 1);
+        var day = cal.GetDayOfMonth(current);
+        var month = cal.GetMonth(current);
+        var year = cal.GetYear(current);
+        var monthName = monthNames[month - 1];
+        return new { day, month, year, monthName, formatted = $"{monthName} {day}, {year}" };
+    }
+    catch (ArgumentOutOfRangeException)
+    {
+        return null;
+    }
+}
+
+var generated2026 = Generate(new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
+var generated2026Maps = generated2026.ToDictionary(a => (a.Year, a.Month));
+var empty = new Dictionary<(int Year, int Month), Anchor>();
+
+// "Shifted" anchors: the Gregorian 1st is declared one Hijri day later than the tabular value
+// (moon sighted a day early). Every anchor is a real Hijri date, so ToDateTime never throws.
+var shifted2026 = new List<Anchor>();
+for (var m = 1; m <= 12; m++)
+{
+    var next = new DateTime(2026, m, 2);
+    shifted2026.Add(new Anchor(2026, m, cal.GetDayOfMonth(next), cal.GetMonth(next), cal.GetYear(next)));
+}
+var shifted2026Maps = shifted2026.ToDictionary(a => (a.Year, a.Month));
+
+IEnumerable<DateOnly> DaysOf(int year) =>
+    Enumerable.Range(1, DateTime.IsLeapYear(year) ? 366 : 365).Select(day => new DateOnly(year, 1, 1).AddDays(day - 1));
+
+string[] Ramadan(int year, IReadOnlyDictionary<(int Year, int Month), Anchor> maps) =>
+    DaysOf(year).Where(date => GetHijriDate(date, maps).Month == 9).Select(d => Iso(d.ToDateTime(TimeOnly.MinValue))).ToArray();
+
+var ramadan2026 = Ramadan(2026, empty);
+var ramadan2026Generated = Ramadan(2026, generated2026Maps);
+var ramadan2026Shifted = Ramadan(2026, shifted2026Maps);
+var ramadan2027 = Ramadan(2027, empty);
+var ramadan2030 = Ramadan(2030, empty);
+
+var resolvedShifted2026 = new Dictionary<string, string>();
+foreach (var date in DaysOf(2026))
+{
+    var r = GetHijriDate(date, shifted2026Maps);
+    resolvedShifted2026[Iso(date.ToDateTime(TimeOnly.MinValue))] = $"{r.Year}-{r.Month}-{r.Day}";
+}
+
+static string RamadanHijriYearTitle(int hijriYear, int year) => $"Ramadan {hijriYear} / {year}";
+
+// (g) BuildHijriDate / GetHijriDate samples with valid, ignored and invalid anchors.
+var displaySamples = new List<object>();
+void Sample(string name, Anchor? anchor, int gy, int gm, int gd)
+{
+    var date = new DateOnly(gy, gm, gd);
+    var display = BuildHijriDate(anchor, date);
+    object? resolved;
+    string? resolveError = null;
+    try
+    {
+        var maps = anchor is null ? empty : new Dictionary<(int Year, int Month), Anchor> { [(anchor.Year, anchor.Month)] = anchor };
+        var r = GetHijriDate(date, maps);
+        resolved = new { day = r.Day, month = r.Month, year = r.Year };
+    }
+    catch (Exception ex)
+    {
+        resolved = null;
+        resolveError = ex.GetType().Name;
+    }
+    displaySamples.Add(new { name, date = Iso(date.ToDateTime(TimeOnly.MinValue)), anchor, display, resolved, resolveError });
+}
+
+Sample("no anchor, 2026-02-18", null, 2026, 2, 18);
+Sample("no anchor, 2026-03-19", null, 2026, 3, 19);
+Sample("no anchor, 2026-09-10", null, 2026, 9, 10);
+Sample("no anchor, 2026-12-31", null, 2026, 12, 31);
+Sample("no anchor, 2025-01-01", null, 2025, 1, 1);
+Sample("no anchor, 2024-02-29", null, 2024, 2, 29);
+Sample("generated anchor, 2026-09-10", generated2026Maps[(2026, 9)], 2026, 9, 10);
+Sample("shifted anchor, 2026-03-19", shifted2026Maps[(2026, 3)], 2026, 3, 19);
+Sample("shifted anchor, 2026-02-18", shifted2026Maps[(2026, 2)], 2026, 2, 18);
+Sample("shifted anchor, 2026-02-28", shifted2026Maps[(2026, 2)], 2026, 2, 28);
+Sample("anchor for another month (still applied), 2026-09-10", generated2026Maps[(2026, 1)], 2026, 9, 10);
+Sample("ignored anchor: month 0", new Anchor(2026, 9, 1, 0, 1448), 2026, 9, 10);
+Sample("ignored anchor: month -3", new Anchor(2026, 9, 1, -3, 1448), 2026, 9, 10);
+Sample("ignored anchor: year 1", new Anchor(2026, 9, 1, 1, 1), 2026, 9, 10);
+Sample("ignored anchor: year 0", new Anchor(2026, 9, 1, 1, 0), 2026, 9, 10);
+Sample("ignored anchor: year 1 with bad day", new Anchor(2026, 9, 99, 13, 1), 2026, 9, 10);
+Sample("invalid anchor: day 31", new Anchor(2026, 9, 31, 3, 1448), 2026, 9, 10);
+Sample("invalid anchor: day 0", new Anchor(2026, 9, 0, 3, 1448), 2026, 9, 10);
+Sample("invalid anchor: day -1", new Anchor(2026, 9, -1, 9, 1447), 2026, 9, 10);
+Sample("invalid anchor: month 13", new Anchor(2026, 9, 1, 13, 1448), 2026, 9, 10);
+Sample("invalid anchor: year 9667", new Anchor(2026, 9, 1, 1, 9667), 2026, 9, 10);
+Sample("invalid anchor: Safar 30", new Anchor(2026, 9, 30, 2, 1448), 2026, 9, 10);
+Sample("invalid anchor: Dhu al-Hijjah 30 of common year 1448", new Anchor(2026, 9, 30, 12, 1448), 2026, 9, 10);
+Sample("valid anchor: Dhu al-Hijjah 30 of leap year 1447", new Anchor(2026, 9, 30, 12, 1447), 2026, 9, 10);
+Sample("invalid anchor: 9666-4-5 (past DateTime.MaxValue)", new Anchor(2026, 9, 5, 4, 9666), 2026, 9, 10);
+Sample("invalid anchor: 9666-4-3 then AddDays overflows", new Anchor(2026, 9, 3, 4, 9666), 2026, 9, 10);
+Sample("valid anchor: 9666-4-3 on the 1st", new Anchor(2026, 9, 3, 4, 9666), 2026, 9, 1);
+Sample("invalid anchor: 9666-5-1", new Anchor(2026, 9, 1, 5, 9666), 2026, 9, 1);
+Sample("valid anchor: 2-1-1", new Anchor(2026, 9, 1, 1, 2), 2026, 9, 10);
+Sample("valid anchor: 1440-9-1 (far from the Gregorian month)", new Anchor(2026, 9, 1, 9, 1440), 2026, 9, 10);
+
+var fixture = new
+{
+    generatedBy = "hijrigen (System.Globalization.HijriCalendar)",
+    runtime = Environment.Version.ToString(),
+    hijriAdjustment = cal.HijriAdjustment,
+    minSupportedDate = Ymd(cal.MinSupportedDateTime),
+    maxSupportedDate = Ymd(cal.MaxSupportedDateTime),
+    monthNames = new[]
+    {
+        "Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Thani",
+        "Jumada al-Awwal", "Jumada al-Thani", "Rajab", "Sha'ban",
+        "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
+    },
+    gregorianToHijri = new
+    {
+        rangeStart = "2019-12-01",
+        rangeEnd = "2036-12-31",
+        totalDays = total,
+        digestLineFormat = "YYYY-MM-DD=y-m-d joined by \\n, one digest per Gregorian year (sha256 hex of UTF-8)",
+        yearDigests,
+        monthStarts,
+        days = days2025To2027
+    },
+    hijriToGregorian = new { yearStart = 1440, yearEnd = 1460, firstOfMonth = toGregorian },
+    daysInMonth,
+    leapYears,
+    toDateTimeEdgeCases,
+    fromGregorianEdgeCases,
+    monthMaps2026 = generated2026,
+    shiftedAnchors2026 = shifted2026,
+    resolvedShifted2026,
+    ramadan = new
+    {
+        y2026 = new { dates = ramadan2026, hijriYear = GetHijriDate(DateOnly.Parse(ramadan2026[0]), empty).Year, title = RamadanHijriYearTitle(GetHijriDate(DateOnly.Parse(ramadan2026[0]), empty).Year, 2026) },
+        y2026Generated = ramadan2026Generated,
+        y2026Shifted = ramadan2026Shifted,
+        y2027 = ramadan2027,
+        y2030 = ramadan2030
+    },
+    displaySamples
+};
+
+var options = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+File.WriteAllText(output, JsonSerializer.Serialize(fixture, options) + "\n");
+Console.WriteLine($"wrote {output}: {total} days, {monthStarts.Count} month starts, {days2025To2027.Count} explicit days, {toGregorian.Count} ToDateTime entries, adjustment={cal.HijriAdjustment}");
+
+sealed record Anchor(int Year, int Month, int HijriDayOnFirst, int HijriMonthOnFirst, int HijriYearOnFirst);
