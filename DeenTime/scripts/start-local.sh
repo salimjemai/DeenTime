@@ -76,9 +76,11 @@ if [[ -z "${DEENTIME_AUTH_SIGNING_KEY:-}" ]]; then
   DEENTIME_AUTH_SIGNING_KEY="$(openssl rand -hex 32)"
   echo "Generated an ephemeral local JWT signing key for this shell." >&2
 fi
+DEENTIME_SUPERUSER_EMAIL="${DEENTIME_SUPERUSER_EMAIL:-salim_jemai@yahoo.com}"
+DEENTIME_SUPPORT_EMAIL="${DEENTIME_SUPPORT_EMAIL:-$DEENTIME_SUPERUSER_EMAIL}"
 if [[ -z "${DEENTIME_SUPERUSER_PASSWORD:-}" ]]; then
   DEENTIME_SUPERUSER_PASSWORD="LocalOnly-$(openssl rand -hex 8)"
-  echo "Generated local super-user credentials: admin@deentime.dev / $DEENTIME_SUPERUSER_PASSWORD" >&2
+  echo "Generated local super-user credentials: $DEENTIME_SUPERUSER_EMAIL / $DEENTIME_SUPERUSER_PASSWORD" >&2
 fi
 
 # ── API ──────────────────────────────────────────────────────────────────────
@@ -94,7 +96,9 @@ ASPNETCORE_ENVIRONMENT=Development \
 ASPNETCORE_URLS="http://127.0.0.1:${api_port}" \
 ConnectionStrings__Default="Host=localhost;Port=${db_port};Database=deentime;Username=postgres;Password=postgres" \
 Auth__SigningKey="$DEENTIME_AUTH_SIGNING_KEY" \
+SuperUser__Email="$DEENTIME_SUPERUSER_EMAIL" \
 SuperUser__Password="$DEENTIME_SUPERUSER_PASSWORD" \
+Support__Email="$DEENTIME_SUPPORT_EMAIL" \
 IslamicContent__HadithApiKey="${DEENTIME_HADITH_API_KEY:-}" \
 Frontend__PublicBaseUrl="$DEENTIME_PUBLIC_BASE_URL" \
 dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj &

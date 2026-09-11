@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { catchError, shareReplay, tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LoginRequest, RegisterRequest, AuthResponse, AuthSession, RegistrationResponse, AuthPublicConfig, MasjidInvitationPrefill, AddressSuggestion, VerifiedAddress, PostalCodeLocation } from '../models';
+import { LoginRequest, RegisterRequest, AuthResponse, AuthSession, RegistrationResponse, AuthPublicConfig, EmailVerificationResponse, MasjidInvitationPrefill, AddressSuggestion, VerifiedAddress, PostalCodeLocation } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -28,10 +28,9 @@ export class AuthService {
     return this.http.post<RegistrationResponse>(`${this.base}/api/v1/auth/register`, req);
   }
 
+  /** Activates the account; it does not sign the browser in — the administrator signs in next. */
   verifyEmail(token: string) {
-    return this.http.post<AuthResponse>(`${this.base}/api/v1/auth/verify-email`, { token }).pipe(
-      tap(res => this.storeToken(res.token))
-    );
+    return this.http.post<EmailVerificationResponse>(`${this.base}/api/v1/auth/verify-email`, { token });
   }
 
   getPublicConfig() {

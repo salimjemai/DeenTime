@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,8 +72,10 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
             builder.UseSetting("SuperUser:Latitude", "30.5119418");
             builder.UseSetting("SuperUser:Longitude", "-97.8177601");
             builder.UseSetting("SuperUser:TimezoneId", "America/Chicago");
+            builder.UseSetting("Support:Email", "support@deentime.test");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Support:Email"] = "support@deentime.test",
                 ["ConnectionStrings:Default"] = databaseConnectionString,
                 ["Auth:Issuer"] = "deentime-test",
                 ["Auth:Audience"] = "deentime-api-test",
@@ -153,10 +156,14 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Registration_verifies_email_creates_one_admin_and_blocks_duplicate_masjid()
+    public async Task Registration_requires_an_invitation_and_sign_in_page_config_lists_support_contact()
     {
         using var anonymous = factory!.CreateClient();
-        var registration = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        var config = await anonymous.GetFromJsonAsync<JsonElement>("/api/v1/auth/config");
+        Assert.True(config.GetProperty("registrationByInvitationOnly").GetBoolean());
+        Assert.Equal("support@deentime.test", config.GetProperty("supportEmail").GetString());
+
+        var uninvited = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "new-admin@masjid.test",
             password = "A-strong-test-password-1234",
@@ -168,45 +175,170 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
             state = "TX",
             zipCode = "78613"
         });
+        Assert.Equal(HttpStatusCode.BadRequest, uninvited.StatusCode);
+        using var uninvitedBody = JsonDocument.Parse(await uninvited.Content.ReadAsStringAsync());
+        Assert.Equal("invitation_required", uninvitedBody.RootElement.GetProperty("code").GetString());
+        Assert.Null(registrationEmailSender.LastVerificationUrl);
+
+        var forged = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "new-admin@masjid.test",
+            password = "A-strong-test-password-1234",
+            confirmPassword = "A-strong-test-password-1234",
+            organizationName = "Cedar Park Test Masjid",
+            websiteUrl = "https://www.cedar-park-test.example/about",
+            addressLine = "123 Masjid Way",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613",
+            invitationToken = "not-a-real-invitation"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, forged.StatusCode);
+        using var forgedBody = JsonDocument.Parse(await forged.Content.ReadAsStringAsync());
+        Assert.Equal("invitation_invalid", forgedBody.RootElement.GetProperty("code").GetString());
+        Assert.Null(registrationEmailSender.LastVerificationUrl);
+    }
+
+    [Fact]
+    public async Task Invited_masjid_registers_verifies_email_then_signs_in_to_a_fully_set_up_masjid()
+    {
+        var invitationToken = await InviteAsync("new-admin@masjid.test", "Cedar Park Test Masjid", "https://www.cedar-park-test.example/about");
+
+        using var anonymous = factory!.CreateClient();
+        var registration = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "new-admin@masjid.test",
+            password = "A-strong-test-password-1234",
+            confirmPassword = "A-strong-test-password-1234",
+            organizationName = "Cedar Park Test Masjid",
+            websiteUrl = "https://www.cedar-park-test.example/about",
+            addressLine = "123 Masjid Way",
+            city = "Cedar Park",
+            state = "TX",
+            zipCode = "78613",
+            invitationToken
+        });
         Assert.Equal(HttpStatusCode.Accepted, registration.StatusCode);
         Assert.NotNull(registrationEmailSender.LastVerificationUrl);
+
+        // Signing in before the email is verified is refused.
+        var early = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "new-admin@masjid.test", password = "A-strong-test-password-1234" });
+        Assert.Equal(HttpStatusCode.Unauthorized, early.StatusCode);
 
         var verificationUri = new Uri(registrationEmailSender.LastVerificationUrl!);
         var token = Uri.UnescapeDataString(verificationUri.Query["?token=".Length..]);
         var verify = await anonymous.PostAsJsonAsync("/api/v1/auth/verify-email", new { token });
         verify.EnsureSuccessStatusCode();
         using var verifyBody = JsonDocument.Parse(await verify.Content.ReadAsStringAsync());
-        var adminToken = verifyBody.RootElement.GetProperty("token").GetString();
+        Assert.True(verifyBody.RootElement.GetProperty("verified").GetBoolean());
+        Assert.Equal("Cedar Park Test Masjid", verifyBody.RootElement.GetProperty("organizationName").GetString());
+        Assert.False(verifyBody.RootElement.TryGetProperty("token", out _), "verification must not sign the browser in");
+
+        // The verification link is single-use.
+        Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/v1/auth/verify-email", new { token })).StatusCode);
+
+        var login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "new-admin@masjid.test", password = "A-strong-test-password-1234" });
+        login.EnsureSuccessStatusCode();
+        using var loginBody = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
+        var adminToken = loginBody.RootElement.GetProperty("token").GetString();
 
         using var masjidAdmin = factory.CreateClient();
         masjidAdmin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var session = await masjidAdmin.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
+        Assert.Equal("Cedar Park Test Masjid", session.GetProperty("organizationName").GetString());
+        Assert.Contains("Admin", session.GetProperty("roles").EnumerateArray().Select(role => role.GetString()));
+        Assert.DoesNotContain("SuperUser", session.GetProperty("roles").EnumerateArray().Select(role => role.GetString()));
+
         var organizations = await masjidAdmin.GetFromJsonAsync<JsonElement>("/api/v1/orgs?page=1");
         Assert.Equal(1, organizations.GetProperty("total").GetInt32());
         var ownOrganizationId = organizations.GetProperty("items")[0].GetProperty("id").GetGuid();
         Assert.NotEqual(Guid.Parse(organizationId), ownOrganizationId);
 
+        // Everything a masjid needs is created at verification: prayer criteria from the
+        // ZIP code and a default display design.
         var criteria = await masjidAdmin.GetFromJsonAsync<JsonElement>($"/api/v1/orgs/{ownOrganizationId}/criteria");
         Assert.Equal("78613", criteria.GetProperty("zipCode").GetString());
         Assert.Equal(30.5052m, criteria.GetProperty("latitude").GetDecimal());
         Assert.Equal(-97.8203m, criteria.GetProperty("longitude").GetDecimal());
+        Assert.Equal("America/Chicago", criteria.GetProperty("timezoneId").GetString());
+        var design = await masjidAdmin.GetFromJsonAsync<JsonElement>($"/api/v1/design/{ownOrganizationId}");
+        Assert.Equal("default", design.GetProperty("theme").GetString());
 
         Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync($"/api/v1/orgs/{organizationId}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync($"/api/v1/orgs/{organizationId}/criteria")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync("/api/v1/islamic-content/summary")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await masjidAdmin.GetAsync("/api/v1/admin/masjids")).StatusCode);
 
-        var duplicate = await anonymous.PostAsJsonAsync("/api/v1/auth/register", new
+        // The same masjid cannot be invited a second time under another administrator.
+        var duplicateInvite = await client!.PostAsJsonAsync("/api/v1/admin/masjids/invitations", new
         {
             email = "different-admin@masjid.test",
-            password = "A-different-test-password-1234",
-            confirmPassword = "A-different-test-password-1234",
             organizationName = "Cedar Park Test Masjid",
-            websiteUrl = "https://cedar-park-test.example",
+            websiteUrl = "https://cedar-park-test.example"
+        });
+        Assert.Equal(HttpStatusCode.Conflict, duplicateInvite.StatusCode);
+    }
+
+    [Fact]
+    public async Task Super_user_account_follows_the_configured_email_and_password()
+    {
+        var superUserId = (await client!.GetFromJsonAsync<JsonElement>("/api/v1/auth/session")).GetProperty("userId").GetString();
+
+        // A restart with a different SuperUser email/password renames the seeded
+        // account and rotates its password instead of creating a second super user.
+        using var restarted = factory!.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("SuperUser:Email", "owner@deentime.test");
+            builder.UseSetting("SuperUser:Password", "Rotated-Password-5678");
+            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SuperUser:Email"] = "owner@deentime.test",
+                ["SuperUser:Password"] = "Rotated-Password-5678"
+            }));
+        });
+        using var anonymous = restarted.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "admin@deentime.test", password = Password })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "owner@deentime.test", password = Password })).StatusCode);
+
+        var login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "owner@deentime.test", password = "Rotated-Password-5678" });
+        login.EnsureSuccessStatusCode();
+        using var loginBody = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
+        using var owner = restarted.CreateClient();
+        owner.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody.RootElement.GetProperty("token").GetString());
+
+        var session = await owner.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
+        Assert.Equal(superUserId, session.GetProperty("userId").GetString());
+        Assert.Equal("owner@deentime.test", session.GetProperty("email").GetString());
+        Assert.Contains("SuperUser", session.GetProperty("roles").EnumerateArray().Select(role => role.GetString()));
+        Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync("/api/v1/admin/masjids")).StatusCode);
+
+        await using var scope = restarted.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, await db.OrgUsers.CountAsync(membership => membership.Roles.Contains("SuperUser")));
+        Assert.Equal(1, await db.AppUsers.CountAsync());
+    }
+
+    private async Task<string> InviteAsync(string email, string organizationName, string websiteUrl)
+    {
+        var invite = await client!.PostAsJsonAsync("/api/v1/admin/masjids/invitations", new
+        {
+            email,
+            organizationName,
+            websiteUrl,
             addressLine = "123 Masjid Way",
             city = "Cedar Park",
             state = "TX",
             zipCode = "78613"
         });
-        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, invite.StatusCode);
+        using var inviteBody = JsonDocument.Parse(await invite.Content.ReadAsStringAsync());
+        Assert.False(inviteBody.RootElement.GetProperty("emailDelivered").GetBoolean());
+        var invitationUrl = inviteBody.RootElement.GetProperty("invitationUrl").GetString();
+        Assert.Equal(registrationEmailSender.LastInvitationUrl, invitationUrl);
+        return Uri.UnescapeDataString(new Uri(invitationUrl!).Query["?invite=".Length..]);
     }
 
     [Fact]
@@ -293,8 +425,11 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         var verificationToken = Uri.UnescapeDataString(verificationUri.Query["?token=".Length..]);
         var verify = await anonymous.PostAsJsonAsync("/api/v1/auth/verify-email", new { token = verificationToken });
         verify.EnsureSuccessStatusCode();
-        using var verifyBody = JsonDocument.Parse(await verify.Content.ReadAsStringAsync());
-        var masjidAdminToken = verifyBody.RootElement.GetProperty("token").GetString();
+
+        var login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = "invited-admin@masjid.test", password = "An-invited-test-password-1234" });
+        login.EnsureSuccessStatusCode();
+        using var loginBody = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
+        var masjidAdminToken = loginBody.RootElement.GetProperty("token").GetString();
 
         var dashboardAfterVerification = await client!.GetFromJsonAsync<JsonElement>("/api/v1/admin/masjids");
         var invitedAfterVerification = dashboardAfterVerification.GetProperty("items").EnumerateArray()

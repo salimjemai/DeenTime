@@ -63,6 +63,10 @@ b.Services.AddOptions<EmailDeliveryOptions>()
   .ValidateOnStart();
 b.Services.AddSingleton<IRegistrationEmailSender, CyberPanelEmailSender>();
 
+// Contact details shown on the sign-in page (registration is by invitation only).
+b.Services.AddOptions<SupportOptions>()
+  .Bind(b.Configuration.GetSection(SupportOptions.SectionName));
+
 b.Services.AddOptions<GooglePlacesOptions>()
   .Bind(b.Configuration.GetSection(GooglePlacesOptions.SectionName))
   .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ApiKey),
@@ -307,7 +311,7 @@ var app = b.Build();
 if (string.IsNullOrWhiteSpace(app.Configuration["IslamicContent:HadithApiKey"]))
     app.Logger.LogWarning("Hadith provider is not configured. Set IslamicContent__HadithApiKey through a secret store or environment variable; it will never be returned to clients.");
 
-// Seed super user (dev / staging convenience account from appsettings)
+// Seed the super user (IqamaTime administrator) from the SuperUser configuration section.
 await SeedSuperUserAsync(app);
 
 if (app.Environment.IsDevelopment())
@@ -431,27 +435,64 @@ static async Task SeedSuperUserAsync(WebApplication app)
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)) return;
 
+    // The SuperUser section is the source of truth for the IqamaTime administrator
+    // account: the configured email always signs in with the configured password.
+    //  - New database: the account, its administration organization and defaults are created.
+    //  - Email changed in configuration: the seeded account is renamed rather than duplicated.
+    //  - Email belongs to an existing user: that user is granted the SuperUser role.
+    //  - Password changed in configuration: the stored hash is replaced on the next start.
     email = email.Trim().ToLowerInvariant();
-    var existingUser = await db.AppUsers.FirstOrDefaultAsync(u => u.Email == email);
-    if (existingUser is not null)
+    var user = await db.AppUsers.FirstOrDefaultAsync(u => u.Email == email);
+    if (user is null)
     {
-        var existingOrganizations = await db.OrgUsers
-            .Where(membership => membership.Subject == existingUser.Id)
-            .Include(membership => membership.Organization)
-            .Select(membership => membership.Organization)
-            .ToArrayAsync();
-        foreach (var existingOrganization in existingOrganizations)
+        var seededMembership = await FindSeededSuperUserMembershipAsync(db);
+        var seededUser = seededMembership is null
+            ? null
+            : await db.AppUsers.FirstOrDefaultAsync(u => u.Id == seededMembership.Subject);
+        if (seededMembership is not null && seededUser is not null)
         {
-            if (existingOrganization is null) continue;
-            existingOrganization.AdminUserId ??= existingUser.Id;
-            BackfillOrganizationIdentity(existingOrganization);
+            app.Logger.LogInformation("Super user email changed from {PreviousEmail} to {Email}", seededUser.Email, email);
+            seededUser.Email = email;
+            seededMembership.Email = email;
+            user = seededUser;
+        }
+    }
+
+    if (user is not null)
+    {
+        var membership = await db.OrgUsers
+            .Include(item => item.Organization)
+            .FirstOrDefaultAsync(item => item.Subject == user.Id);
+        if (membership is not null)
+        {
+            var roles = membership.Roles ?? Array.Empty<string>();
+            if (!roles.Contains("SuperUser", StringComparer.OrdinalIgnoreCase))
+            {
+                membership.Roles = roles.Union(new[] { "Admin", "SuperUser" }, StringComparer.OrdinalIgnoreCase).ToArray();
+                app.Logger.LogInformation("Granted the SuperUser role to {Email}", email);
+            }
+            if (membership.Organization is not null)
+            {
+                membership.Organization.AdminUserId ??= user.Id;
+                BackfillOrganizationIdentity(membership.Organization);
+            }
+        }
+        else
+        {
+            CreateSuperUserOrganization(app, db, cfg, user, orgName, await UniqueSlugAsync(db, "admin"));
+        }
+
+        if (!hasher.Verify(password, user.PasswordHash, user.PasswordSalt))
+        {
+            (user.PasswordHash, user.PasswordSalt) = hasher.HashPassword(password);
+            app.Logger.LogInformation("Super user password updated from configuration for {Email}", email);
         }
         await db.SaveChangesAsync();
         return;
     }
 
     var (hash, salt) = hasher.HashPassword(password);
-    var user = new DeenTime.Core.Entities.AppUser
+    user = new DeenTime.Core.Entities.AppUser
     {
         Id = Guid.NewGuid().ToString(),
         Email = email,
@@ -460,11 +501,45 @@ static async Task SeedSuperUserAsync(WebApplication app)
         PasswordSalt = salt
     };
     db.AppUsers.Add(user);
+    CreateSuperUserOrganization(app, db, cfg, user, orgName, await UniqueSlugAsync(db, "admin"));
+    await db.SaveChangesAsync();
+    app.Logger.LogInformation("Super user seeded: {Email}", email);
+}
 
+/// <summary>
+/// Finds the membership of the previously seeded super user so a changed
+/// <c>SuperUser:Email</c> renames that account instead of creating a second one.
+/// Prefers the seeded administration organization (slug "admin"); otherwise only a
+/// single, unambiguous SuperUser membership is used.
+/// </summary>
+static async Task<DeenTime.Core.Entities.OrgUser?> FindSeededSuperUserMembershipAsync(AppDbContext db)
+{
+    var superUsers = await db.OrgUsers
+        .Include(item => item.Organization)
+        .Where(item => item.Roles.Contains("SuperUser"))
+        .ToListAsync();
+    return superUsers.FirstOrDefault(item => item.Organization?.Slug == "admin")
+        ?? (superUsers.Count == 1 ? superUsers[0] : null);
+}
+
+static async Task<string> UniqueSlugAsync(AppDbContext db, string slug) =>
+    await db.Organizations.AnyAsync(org => org.Slug == slug)
+        ? $"{slug}-{System.Security.Cryptography.RandomNumberGenerator.GetHexString(4).ToLowerInvariant()}"
+        : slug;
+
+static void CreateSuperUserOrganization(
+    WebApplication app,
+    AppDbContext db,
+    IConfiguration cfg,
+    DeenTime.Core.Entities.AppUser user,
+    string orgName,
+    string slug)
+{
+    var email = user.Email ?? "";
     var org = new DeenTime.Core.Entities.Organization
     {
         Id   = Guid.NewGuid(),
-        Slug = "admin",
+        Slug = slug,
         Name = orgName,
         NormalizedName = RegistrationIdentityNormalizer.NormalizeWords(orgName),
         AddressLine = app.Configuration["SuperUser:AddressLine"],
@@ -524,9 +599,6 @@ static async Task SeedSuperUserAsync(WebApplication app)
         DisplayName    = user.DisplayName,
         Roles          = new[] { "Admin", "SuperUser" }
     });
-
-    await db.SaveChangesAsync();
-    app.Logger.LogInformation("Super user seeded: {Email}", email);
 }
 
 static void BackfillOrganizationIdentity(DeenTime.Core.Entities.Organization organization)

@@ -32,12 +32,20 @@ namespace DeenTime.Api.Controllers
 			string[] Roles);
 
 		[HttpGet("config")]
-			public IActionResult Config([FromServices] IOptions<CaptchaOptions> captcha) => Ok(new
+		public IActionResult Config(
+			[FromServices] IOptions<CaptchaOptions> captcha,
+			[FromServices] IOptions<SupportOptions> support) => Ok(new
 			{
 				captchaEnabled = captcha.Value.Enabled,
 				captchaSiteKey = captcha.Value.Enabled ? captcha.Value.SiteKey : null,
 				addressAutocompleteEnabled = HttpContext.RequestServices
-					.GetRequiredService<GoogleAddressResolver>().IsEnabled
+					.GetRequiredService<GoogleAddressResolver>().IsEnabled,
+				// Masjids are registered from an administrator invitation only; the sign-in
+				// page shows these so anyone without an invitation knows whom to contact.
+				registrationByInvitationOnly = true,
+				supportEmail = NullIfBlank(support.Value.Email),
+				supportPhone = NullIfBlank(support.Value.Phone),
+				supportUrl = NullIfBlank(support.Value.Url)
 			});
 
 		[HttpGet("invitations/{token}")]
@@ -83,6 +91,11 @@ namespace DeenTime.Api.Controllers
 			[FromServices] IWebHostEnvironment environment,
 			CancellationToken cancellationToken)
 		{
+			// Registration is by invitation only: the IqamaTime administrator invites a masjid
+			// and the invited email completes the form from the link in that invitation.
+			if (string.IsNullOrWhiteSpace(req.InvitationToken))
+				return BadRequest(new { code = "invitation_required", message = "Masjid registration is by invitation only. Contact the IqamaTime administrator to request an invitation." });
+
 			if (!await captcha.VerifyAsync(req.CaptchaToken, "register", HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken))
 				return BadRequest(new { code = "captcha_failed", message = "Please complete the security verification and try again." });
 
@@ -128,24 +141,13 @@ namespace DeenTime.Api.Controllers
 				return ValidationProblem(ModelState);
 			}
 
-			MasjidInvitation? invitation = null;
 			var now = DateTime.UtcNow;
-			if (!string.IsNullOrWhiteSpace(req.InvitationToken))
-			{
-				invitation = await db.MasjidInvitations.FirstOrDefaultAsync(
-					item => item.InvitationTokenHash == HashToken(req.InvitationToken), cancellationToken);
-				if (invitation is null || invitation.ExpiresAtUtc <= now || invitation.RevokedAtUtc is not null || invitation.AcceptedAtUtc is not null)
-					return BadRequest(new { code = "invitation_invalid", message = "This invitation is invalid or has expired." });
-				if (!string.Equals(invitation.NormalizedEmail, identity.Email, StringComparison.Ordinal))
-					return BadRequest(new { code = "invitation_email_mismatch", message = "Register with the email address that received this invitation." });
-			}
-			else
-			{
-				invitation = await db.MasjidInvitations.FirstOrDefaultAsync(item =>
-					item.NormalizedEmail == identity.Email && item.AcceptedAtUtc == null &&
-					item.RevokedAtUtc == null && item.ExpiresAtUtc > now,
-					cancellationToken);
-			}
+			var invitation = await db.MasjidInvitations.FirstOrDefaultAsync(
+				item => item.InvitationTokenHash == HashToken(req.InvitationToken), cancellationToken);
+			if (invitation is null || invitation.ExpiresAtUtc <= now || invitation.RevokedAtUtc is not null || invitation.AcceptedAtUtc is not null)
+				return BadRequest(new { code = "invitation_invalid", message = "This invitation is invalid or has expired. Contact the IqamaTime administrator for a new one." });
+			if (!string.Equals(invitation.NormalizedEmail, identity.Email, StringComparison.Ordinal))
+				return BadRequest(new { code = "invitation_email_mismatch", message = "Register with the email address that received this invitation." });
 
 				var postalCode = PostalCodeResolver.NormalizeUsPostalCode(zipCode)!;
 			PostalCodeLocation? location;
@@ -193,7 +195,7 @@ namespace DeenTime.Api.Controllers
 			var pending = new PendingRegistration
 			{
 				Id = Guid.NewGuid(),
-				InvitationId = invitation?.Id,
+				InvitationId = invitation.Id,
 				Email = identity.Email,
 				NormalizedEmail = identity.Email,
 				PasswordHash = passwordHash,
@@ -214,7 +216,7 @@ namespace DeenTime.Api.Controllers
 				VerificationTokenHash = HashToken(rawToken),
 				VerificationExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
 			};
-			if (invitation is not null) invitation.RegistrationStartedAtUtc = DateTime.UtcNow;
+			invitation.RegistrationStartedAtUtc = DateTime.UtcNow;
 			db.PendingRegistrations.Add(pending);
 			try
 			{
@@ -234,7 +236,7 @@ namespace DeenTime.Api.Controllers
 			catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException)
 			{
 				db.PendingRegistrations.Remove(pending);
-				if (invitation is not null) invitation.RegistrationStartedAtUtc = null;
+				invitation.RegistrationStartedAtUtc = null;
 				await db.SaveChangesAsync(cancellationToken);
 				return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Verification email could not be sent.");
 			}
@@ -337,7 +339,16 @@ namespace DeenTime.Api.Controllers
 				return Conflict(new { code = "registration_unavailable", message = "This email or masjid has already been registered." });
 			}
 
-			return Ok(new { token = IssueJwt(cfg, user, org.Id, ["Admin"]) });
+			// Verification activates the account but deliberately does not sign the browser
+			// in: the administrator signs in with the password they chose, which also proves
+			// the credentials work before the masjid dashboard is opened for the first time.
+			return Ok(new
+			{
+				verified = true,
+				email = user.Email,
+				organizationName = org.Name,
+				message = "Your email is verified. Sign in with the password you chose to open your masjid dashboard."
+			});
 		}
 
 		[HttpPost("login")]
@@ -455,6 +466,7 @@ namespace DeenTime.Api.Controllers
 			return new JwtSecurityTokenHandler().WriteToken(jwt);
 		}
 
+		private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 		private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 		private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 	}

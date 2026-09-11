@@ -4,6 +4,7 @@ import { environment } from '../../environments/environment';
 import {
   CreateMasjidInvitationRequest,
   MasjidAdminDashboard,
+  MasjidInvitationResendResponse,
   MasjidInvitationResponse
 } from '../models';
 
@@ -21,8 +22,7 @@ export class AdminMasjidsService {
   }
 
   resend(id: string) {
-    return this.http.post<{ message: string; expiresAtUtc: string; developmentInvitationUrl?: string }>(
-      `${this.base}/invitations/${id}/resend`, {});
+    return this.http.post<MasjidInvitationResendResponse>(`${this.base}/invitations/${id}/resend`, {});
   }
 
   revoke(id: string) {

@@ -340,10 +340,47 @@ app-turnstile { margin: 4px 0 10px; }
 
 mat-card-actions {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   padding: 12px 0 0;
 }
 mat-card-actions button { color: #286f48; font-weight: 700; }
+
+.login-notice.success {
+  border-color: #b8d8c2;
+  background: #edf8f0;
+  color: #205f3a;
+}
+
+.contact-support {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px dashed #b9c7bc;
+  border-radius: 14px;
+  background: rgba(238, 246, 240, .55);
+  color: #365b43;
+  font-size: .84rem;
+  line-height: 1.5;
+  text-align: left;
+
+  strong { color: #163d2b; font-size: .9rem; }
+  p { margin: 0; color: #66766d; }
+}
+
+.contact-links {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+  span { min-width: 44px; color: #7c8880; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  a { overflow-wrap: anywhere; color: #286f48; font-weight: 700; text-decoration: none; }
+  a:hover, a:focus-visible { text-decoration: underline; }
+}
 
 .dev-banner {
   display: flex;

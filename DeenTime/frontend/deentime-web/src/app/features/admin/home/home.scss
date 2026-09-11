@@ -65,7 +65,29 @@
 .invite-form mat-form-field:nth-child(2) { grid-column: span 2; }
 .send-button { min-height: 48px; align-self: start; border-radius: 13px; }
 .send-button mat-spinner { display: inline-block; }
-.development-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--app-primary); font-weight: 700; }
+.shareable-invitation {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 35%, var(--app-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-primary) 8%, var(--app-surface));
+}
+.shareable-invitation strong { color: var(--app-heading); }
+.shareable-invitation p { margin: 0; color: var(--app-muted); font-size: .86rem; line-height: 1.5; }
+.shareable-invitation code {
+  display: block;
+  padding: 9px 11px;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
+  background: var(--app-surface-muted);
+  color: var(--app-primary);
+  font-size: .8rem;
+  user-select: all;
+}
+.shareable-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.shareable-actions mat-icon { margin-right: 4px; font-size: 18px; width: 18px; height: 18px; }
 
 .tracking-heading { align-items: flex-start; }
 .filters { gap: 10px; margin-left: auto; }

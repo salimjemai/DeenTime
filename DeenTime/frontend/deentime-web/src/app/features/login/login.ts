@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -52,6 +52,11 @@ export class LoginComponent implements OnInit {
   readonly developmentVerificationUrl = signal<string | null>(null);
   readonly invitation = signal<MasjidInvitationPrefill | null>(null);
   readonly invitationLoading = signal(false);
+  readonly invitationError = signal('');
+  readonly supportEmail = signal('');
+  readonly supportPhone = signal('');
+  readonly supportUrl = signal('');
+  readonly supportPhoneHref = computed(() => `tel:${this.supportPhone().replace(/[^\d+]/g, '')}`);
   readonly addressAutocompleteEnabled = signal(false);
   readonly addressSuggestions = signal<{ placeId: string; description: string }[]>([]);
   readonly addressSearching = signal(false);
@@ -88,6 +93,9 @@ export class LoginComponent implements OnInit {
         this.captchaEnabled.set(config.captchaEnabled);
         this.captchaSiteKey.set(config.captchaSiteKey ?? '');
         this.addressAutocompleteEnabled.set(config.addressAutocompleteEnabled);
+        this.supportEmail.set(config.supportEmail ?? '');
+        this.supportPhone.set(config.supportPhone ?? '');
+        this.supportUrl.set(config.supportUrl ?? '');
         this.applyModeValidators();
       },
       error: () => this.snack.open('Security verification could not be loaded. Please refresh.', 'Dismiss', { duration: 5000 })
@@ -101,8 +109,18 @@ export class LoginComponent implements OnInit {
     this.submit();
   }
 
-  toggle(): void {
-    this.isRegister.update(value => !value);
+  /** Back to the sign-in form (registration stays reachable only through a valid invitation). */
+  showSignIn(): void {
+    this.switchMode(false);
+  }
+
+  /** Re-open the invited registration form after switching to sign in. */
+  resumeInvitation(): void {
+    if (this.invitation()) this.switchMode(true);
+  }
+
+  private switchMode(register: boolean): void {
+    this.isRegister.set(register);
     this.registrationPending.set(false);
     this.developmentVerificationUrl.set(null);
     this.captchaToken.set('');
@@ -114,7 +132,7 @@ export class LoginComponent implements OnInit {
     this.addressSessionToken = this.newAddressSessionToken();
     this.form.reset();
     this.applyModeValidators();
-    if (this.isRegister() && this.invitation()) this.prefillInvitation(this.invitation()!);
+    if (register && this.invitation()) this.prefillInvitation(this.invitation()!);
   }
 
   onCaptchaToken(token: string): void {
@@ -271,6 +289,7 @@ export class LoginComponent implements OnInit {
 
   private loadInvitation(token: string): void {
     this.invitationLoading.set(true);
+    this.invitationError.set('');
     this.auth.getInvitation(token).subscribe({
       next: invitation => {
         this.invitationLoading.set(false);
@@ -279,9 +298,14 @@ export class LoginComponent implements OnInit {
         this.applyModeValidators();
         this.prefillInvitation(invitation);
       },
-      error: error => {
+      error: (error: { status?: number; error?: { message?: string } }) => {
         this.invitationLoading.set(false);
-        this.handleError(error);
+        this.invitation.set(null);
+        this.isRegister.set(false);
+        this.applyModeValidators();
+        this.invitationError.set(error.status === 400 || error.status === 404
+          ? 'This invitation link is invalid, has expired, or was already used. Contact the IqamaTime administrator for a new invitation.'
+          : (error.error?.message ?? 'The invitation could not be loaded. Please try the link again.'));
       }
     });
   }

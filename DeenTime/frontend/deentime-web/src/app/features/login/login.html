@@ -29,21 +29,23 @@
             <span class="success-mark" aria-hidden="true">✓</span>
             <span class="form-kicker">ONE LAST STEP</span>
             <h2>Check your email</h2>
-            <p>We sent a verification link to <strong>{{ form.controls.email.value }}</strong>. The link expires in 30 minutes.</p>
+            <p>We sent a verification link to <strong>{{ invitation()?.email ?? form.controls.email.value }}</strong>. The link expires in 30 minutes. After verifying, sign in with the password you chose to open your masjid dashboard.</p>
             @if (developmentVerificationUrl()) {
               <a mat-flat-button color="primary" [href]="developmentVerificationUrl()">Open development verification link</a>
             }
-            <button mat-button type="button" (click)="toggle()">Return to sign in</button>
+            <button mat-button type="button" (click)="showSignIn()">Go to sign in</button>
           </section>
         } @else {
           <div class="login-card-header">
-            <span class="form-kicker">{{ isRegister() ? 'WELCOME TO IQAMATIME' : 'WELCOME BACK' }}</span>
-            <h2>{{ isRegister() ? 'Register your masjid' : 'Sign In' }}</h2>
-            <p>{{ isRegister() ? 'One verified administrator account is created for each unique masjid.' : 'Continue to your masjid dashboard.' }}</p>
+            <span class="form-kicker">{{ isRegister() ? 'COMPLETE YOUR INVITATION' : 'WELCOME BACK' }}</span>
+            <h2>{{ isRegister() ? 'Register ' + invitation()!.organizationName : 'Sign In' }}</h2>
+            <p>{{ isRegister() ? 'Choose a password and confirm the masjid details. Then verify your email and sign in.' : 'Continue to your masjid dashboard.' }}</p>
           </div>
 
           <mat-card-content>
-            @if (reason === 'organization-unavailable') {
+            @if (reason === 'verified') {
+              <p class="login-notice success">Your email is verified and your masjid is ready. Sign in with the password you chose.</p>
+            } @else if (reason === 'organization-unavailable') {
               <p class="login-notice">Your session no longer has access to that organization. Sign in again or ask an administrator to restore access.</p>
             } @else if (reason === 'session-expired') {
               <p class="login-notice">Your session expired. Sign in again to continue.</p>
@@ -53,16 +55,20 @@
               <p class="login-notice">The masjid administration dashboard is available only to IqamaTime administrators.</p>
             }
 
-            @if (invitation()) {
+            @if (invitationError()) {
+              <p class="login-notice">{{ invitationError() }}</p>
+            }
+
+            @if (isRegister()) {
               <p class="invitation-notice">
                 <strong>Invitation confirmed</strong>
-                IqamaTime invited this email to register {{ invitation()!.organizationName }}. Complete the form and verify your email as usual.
+                IqamaTime invited this email to register {{ invitation()!.organizationName }}. Choose a password, confirm the masjid details, then verify your email. Once verified, sign in with your new password and the masjid is ready to use.
               </p>
             }
 
             <form [formGroup]="form" (ngSubmit)="submit()">
               <div class="registration-grid">
-                @if (invitation()) {
+                @if (isRegister()) {
                   <div class="invited-email-field span-all">
                     <span>Email</span>
                     <strong>{{ invitation()!.email }}</strong>
@@ -187,9 +193,32 @@
           </mat-card-content>
 
           <mat-card-actions>
-            <button mat-button type="button" (click)="toggle()">
-              {{ isRegister() ? 'Already have an account? Sign in' : 'New masjid? Register it' }}
-            </button>
+            @if (isRegister()) {
+              <button mat-button type="button" (click)="showSignIn()">Already have an account? Sign in</button>
+            } @else {
+              @if (invitation()) {
+                <button mat-button type="button" (click)="resumeInvitation()">
+                  Continue registering {{ invitation()!.organizationName }}
+                </button>
+              }
+              <div class="contact-support" aria-labelledby="contact-support-heading">
+                <strong id="contact-support-heading">Need help or an account?</strong>
+                <p>Contact the IqamaTime administrator or support.</p>
+                @if (supportEmail() || supportPhone() || supportUrl()) {
+                  <ul class="contact-links">
+                    @if (supportEmail()) {
+                      <li><span>Email</span><a [href]="'mailto:' + supportEmail()">{{ supportEmail() }}</a></li>
+                    }
+                    @if (supportPhone()) {
+                      <li><span>Phone</span><a [href]="supportPhoneHref()">{{ supportPhone() }}</a></li>
+                    }
+                    @if (supportUrl()) {
+                      <li><span>Web</span><a [href]="supportUrl()" target="_blank" rel="noopener">{{ supportUrl() }}</a></li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
           </mat-card-actions>
         }
       </mat-card>

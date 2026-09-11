@@ -79,10 +79,18 @@
       </button>
     </form>
 
-    @if (developmentInvitationUrl()) {
-      <a class="development-link" [href]="developmentInvitationUrl()" target="_blank" rel="noopener">
-        <mat-icon>open_in_new</mat-icon> Open development invitation
-      </a>
+    @if (shareableInvitation(); as invitation) {
+      <div class="shareable-invitation" role="status">
+        <strong>{{ invitation.emailDelivered ? 'Invitation link (development)' : 'Send this link to ' + invitation.email }}</strong>
+        @if (!invitation.emailDelivered) {
+          <p>Email delivery is not configured on this server, so the invitation was not emailed. Copy the link and send it to the masjid administrator yourself. It expires in 7 days.</p>
+        }
+        <code>{{ invitation.url }}</code>
+        <div class="shareable-actions">
+          <button mat-stroked-button type="button" (click)="copyInvitationLink()"><mat-icon>content_copy</mat-icon> Copy link</button>
+          <a mat-button [href]="invitation.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon> Open</a>
+        </div>
+      </div>
     }
   </mat-card>
 
@@ -91,7 +99,7 @@
       <span class="section-icon"><mat-icon>domain</mat-icon></span>
       <div>
         <h3>Registration tracking</h3>
-        <p>Invitations and self-registered masjids are shown together.</p>
+        <p>Masjids join by invitation only. Masjids registered before invitations were required are listed too.</p>
       </div>
       <div class="filters">
         <label>

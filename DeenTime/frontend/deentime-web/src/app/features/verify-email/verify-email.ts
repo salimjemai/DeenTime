@@ -20,29 +20,41 @@ export class VerifyEmailComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly verified = signal(false);
+  readonly organizationName = signal('');
   readonly error = signal('');
+  readonly supportEmail = signal('');
 
   ngOnInit(): void {
+    this.auth.getPublicConfig().subscribe({
+      next: config => this.supportEmail.set(config.supportEmail ?? ''),
+      error: () => undefined
+    });
+
     const token = this.route.snapshot.queryParamMap.get('token');
     if (!token) {
       this.loading.set(false);
-      this.error.set('This verification link is incomplete. Please register again.');
+      this.error.set('This verification link is incomplete. Open the link from your verification email again.');
       return;
     }
 
+    // Verification activates the account only; any session left in this browser
+    // (for example the IqamaTime administrator testing an invitation) is cleared so
+    // the next sign-in is the new masjid administrator's own.
     this.auth.verifyEmail(token).subscribe({
-      next: () => {
+      next: response => {
         this.loading.set(false);
         this.verified.set(true);
+        this.organizationName.set(response.organizationName ?? '');
+        this.auth.clearSession();
       },
       error: response => {
         this.loading.set(false);
-        this.error.set(response.error?.message ?? 'This verification link is invalid or has expired. Please register again.');
+        this.error.set(response.error?.message ?? 'This verification link is invalid or has expired. Ask the IqamaTime administrator to resend your invitation.');
       }
     });
   }
 
-  continue(): void {
-    this.router.navigate(['/org', this.auth.getOrgId(), 'timings']);
+  signIn(): void {
+    this.router.navigate(['/login'], { queryParams: { reason: 'verified' } });
   }
 }

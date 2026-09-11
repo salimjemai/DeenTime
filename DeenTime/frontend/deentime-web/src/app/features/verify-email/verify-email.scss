@@ -45,4 +45,6 @@
 .result-mark.error { background: #fde8e6; color: #a33e37; }
 h1 { margin: 18px 0 8px; font-size: clamp(1.75rem, 5vw, 2.3rem); letter-spacing: -.035em; }
 p { max-width: 410px; margin: 0 0 26px; color: #66766d; line-height: 1.6; }
+p strong { color: #173429; }
 mat-spinner { margin: 8px 0; }
+.result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }

@@ -147,14 +147,34 @@ Publishing Service) → the DeenTime app pool preloads → migrations → worker
 If the app ever starts before PostgreSQL is ready it retries the readiness
 check; `Restart-WebAppPool DeenTime` forces a fresh start.
 
+## The administrator account
+
+The `SuperUser` section of `appsettings.Production.json` defines the IqamaTime
+administrator. Its `Email` and `Password` are authoritative: on every start the
+API creates the account if it is missing, renames the seeded account when the
+email changes, and replaces the stored password when the password changes. To
+change either, edit the file and `Restart-WebAppPool DeenTime`.
+
+`Support.Email` (optionally `Support.Phone` / `Support.Url`) is shown on the
+sign-in page so a masjid without an invitation knows whom to contact. The
+installer sets it to the administrator email.
+
 ## Registering masjids
 
-Email delivery is off by default (`EmailDelivery.Enabled=false`), so
-registration links are written to the log instead of emailed. After someone
-registers, open the newest file in `C:\DeenTime\logs`, find the line
-containing `verification URL for`, and open that link. To send real emails,
-fill in the `EmailDelivery` section (any SMTP account) and set `Enabled` to
-true.
+Masjids join by invitation only. Sign in as the administrator, open
+**Masjids** (`/admin`), and send an invitation with the masjid administrator's
+email and the masjid name. The invited email opens the link, chooses a
+password, completes the masjid details, verifies the email address, and then
+signs in; prayer-time criteria and the display design are created at
+verification, so the masjid is ready to use on first sign-in.
+
+Email delivery is off by default (`EmailDelivery.Enabled=false`), so the
+invitation link is shown on the Masjids page right after it is created ("Send
+this link to …") for you to forward yourself, and links are also written to the
+log. For the verification link, open the newest file in `C:\DeenTime\logs`,
+find the line containing `verification URL for`, and pass that link on (or open
+it). To send real emails, fill in the `EmailDelivery` section (any SMTP
+account) and set `Enabled` to true.
 
 ## Operations
 

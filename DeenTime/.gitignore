@@ -54,3 +54,8 @@ coverage/
 
 # Docker volumes (local)
 pgdata/
+
+
+*.dll
+deploy/iis/.publish/*
+deploy/iis/local.env
