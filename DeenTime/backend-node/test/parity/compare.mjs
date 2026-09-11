@@ -13,17 +13,20 @@ const node = (process.env.PARITY_NODE ?? 'http://127.0.0.1:8081').replace(/\/$/,
 const email = process.env.DEENTIME_SUPERUSER_EMAIL ?? 'salim_jemai@yahoo.com';
 const password = process.env.DEENTIME_SUPERUSER_PASSWORD;
 
-const IGNORED_KEYS = new Set(['updatedAtUtc', 'retrievedAtUtc', 'buildTimeUtc', 'createdAtUtc', 'lastSeenUtc', 'lastUsedAtUtc', 'syncedAtUtc', 'startedAtUtc', 'completedAtUtc', 'schemaVersion', 'commitSha']);
+// Timestamps: .NET prints the stored microseconds while JavaScript Dates carry milliseconds.
+const IGNORED_KEYS = new Set(['updatedAtUtc', 'retrievedAtUtc', 'buildTimeUtc', 'createdAtUtc', 'lastSeenUtc', 'lastUsedAtUtc', 'syncedAtUtc', 'startedAtUtc', 'completedAtUtc', 'registeredAtUtc', 'invitedAtUtc', 'sentAtUtc', 'expiresAtUtc', 'registrationStartedAtUtc', 'schemaVersion', 'commitSha']);
+// Fields that are generated per request on both sides (e.g. the unsaved TV-config default id).
+const VOLATILE_BY_PATH = [{ pattern: /\/publish\/tv-config\//, keys: ['id'] }];
 const COMPARED_HEADERS = ['content-type', 'cache-control', 'access-control-allow-origin', 'x-iqamatime-source'];
 
-function normalize(value) {
-  if (Array.isArray(value)) return value.map(normalize);
+function normalize(value, volatileKeys = new Set()) {
+  if (Array.isArray(value)) return value.map((item) => normalize(item, volatileKeys));
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.keys(value)
-        .filter((key) => !IGNORED_KEYS.has(key))
+        .filter((key) => !IGNORED_KEYS.has(key) && !volatileKeys.has(key))
         .sort()
-        .map((key) => [key, normalize(value[key])]),
+        .map((key) => [key, normalize(value[key], volatileKeys)]),
     );
   }
   if (typeof value === 'number') return Number(value.toFixed(6));
@@ -139,7 +142,8 @@ async function main() {
       const b = right.headers[name]?.split(';')[0];
       if ((a ?? null) !== (b ?? null)) problems.push(`header ${name}: ${a} vs ${b}`);
     }
-    if (left.json !== null || right.json !== null) problems.push(...diff(normalize(left.json), normalize(right.json)));
+    const volatileKeys = new Set(VOLATILE_BY_PATH.filter((entry) => entry.pattern.test(path)).flatMap((entry) => entry.keys));
+    if (left.json !== null || right.json !== null) problems.push(...diff(normalize(left.json, volatileKeys), normalize(right.json, volatileKeys)));
     else if (left.text !== right.text) problems.push(`body: ${left.text.slice(0, 80)} vs ${right.text.slice(0, 80)}`);
     if (problems.length) {
       failures += 1;

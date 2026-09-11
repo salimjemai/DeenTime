@@ -26,7 +26,13 @@ export function configureHttp(app: NestExpressApplication, config: AppConfig): s
 
   const dashboard = dashboardCors(config.getArray('Cors:AllowedOrigins'));
   app.enableCors((request, callback) => {
-    const path = (request as express.Request).path ?? '';
+    const req = request as express.Request;
+    const path = req.path ?? '';
+    // ASP.NET only emits CORS headers for requests that carry an Origin header.
+    if (!req.headers.origin) {
+      callback(null, { origin: false });
+      return;
+    }
     callback(null, path === '/public/content' || path.startsWith('/public/content/') ? PUBLIC_CONTENT_CORS : dashboard);
   });
 
