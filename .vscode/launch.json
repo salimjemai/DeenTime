@@ -1,0 +1,57 @@
+{
+  // Launch configurations for opening the REPOSITORY ROOT in VS Code.
+  // DeenTime/.vscode/launch.json holds the same configurations for people who
+  // open the DeenTime/ folder directly; keep the two files in sync.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "DeenTime API",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj --no-launch-profile -- --urls http://localhost:8080",
+      "cwd": "${workspaceFolder}/DeenTime",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      // NestJS backend in watch mode. The JavaScript debug terminal auto-attaches,
+      // so breakpoints in DeenTime/backend-node/src/**/*.ts work without --inspect.
+      // PORT is pinned to 8080 because the Angular proxy (proxy.conf.json) and
+      // src/environments/environment.ts both point the frontend at localhost:8080.
+      "name": "DeenTime Node API",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run start:dev",
+      "cwd": "${workspaceFolder}/DeenTime/backend-node",
+      "env": {
+        "PORT": "8080"
+      }
+    },
+    {
+      "name": "DeenTime Frontend",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm start -- --host localhost --port 4200",
+      "cwd": "${workspaceFolder}/DeenTime/frontend/deentime-web"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "DeenTime API + Frontend",
+      "configurations": [
+        "DeenTime API",
+        "DeenTime Frontend"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "DeenTime Node API + Frontend",
+      "configurations": [
+        "DeenTime Node API",
+        "DeenTime Frontend"
+      ],
+      "stopAll": true
+    }
+  ]
+}
