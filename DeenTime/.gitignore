@@ -45,7 +45,6 @@ coverage/
 *.coveragexml
 
 # Runtime-generated public files and local render previews
-/backend/DeenTime.Api/wwwroot/uploads/
 /tmp/
 
 # NuGet

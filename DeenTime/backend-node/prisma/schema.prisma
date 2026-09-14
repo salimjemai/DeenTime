@@ -1,0 +1,345 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ApiClientUsage {
+  id          String    @id(map: "PK_ApiClientUsage") @map("Id") @db.Uuid
+  apiClientId String    @map("ApiClientId") @db.Uuid
+  endpoint    String    @map("Endpoint")
+  usedAtUtc   DateTime  @map("UsedAtUtc") @db.Timestamptz(6)
+  apiClient   ApiClient @relation(fields: [apiClientId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_ApiClientUsage_ApiClients_ApiClientId")
+
+  @@index([apiClientId, usedAtUtc], map: "IX_ApiClientUsage_ApiClientId_UsedAtUtc")
+}
+
+model ApiClient {
+  id                String           @id(map: "PK_ApiClients") @map("Id") @db.Uuid
+  organizationId    String           @map("OrganizationId") @db.Uuid
+  name              String           @map("Name")
+  keyPrefix         String           @unique(map: "IX_ApiClients_KeyPrefix") @map("KeyPrefix")
+  secretHash        String           @map("SecretHash")
+  scopes            String[]         @map("Scopes")
+  requestsPerMinute Int              @map("RequestsPerMinute")
+  createdAtUtc      DateTime         @map("CreatedAtUtc") @db.Timestamptz(6)
+  lastUsedAtUtc     DateTime?        @map("LastUsedAtUtc") @db.Timestamptz(6)
+  revokedAtUtc      DateTime?        @map("RevokedAtUtc") @db.Timestamptz(6)
+  usage             ApiClientUsage[]
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_ApiClients_Organizations_OrganizationId")
+
+  @@unique([organizationId, name], map: "IX_ApiClients_OrganizationId_Name")
+  @@map("ApiClients")
+}
+
+model AppUser {
+  id                        String    @id(map: "PK_AppUsers") @map("Id")
+  displayName               String?   @map("DisplayName")
+  email                     String?   @unique(map: "IX_AppUsers_Email") @map("Email") @db.VarChar(320)
+  passwordHash              String    @map("PasswordHash")
+  passwordSalt              String    @map("PasswordSalt")
+  passwordResetExpiresAtUtc DateTime? @map("PasswordResetExpiresAtUtc") @db.Timestamptz(6)
+  passwordResetTokenHash    String?   @unique(map: "IX_AppUsers_PasswordResetTokenHash", where: raw("(\"PasswordResetTokenHash\" IS NOT NULL)")) @map("PasswordResetTokenHash") @db.VarChar(64)
+
+  @@map("AppUsers")
+}
+
+model DesignSettings {
+  id                String       @id(map: "PK_DesignSettings") @map("Id") @db.Uuid
+  organizationId    String       @unique(map: "IX_DesignSettings_OrganizationId") @map("OrganizationId") @db.Uuid
+  headerImageUrl    String?      @map("HeaderImageUrl")
+  iqamaHeadings     String[]     @map("IqamaHeadings")
+  footerHtml        String?      @map("FooterHtml")
+  theme             String       @map("Theme")
+  updatedAtUtc      DateTime     @map("UpdatedAtUtc") @db.Timestamptz(6)
+  compactFontFamily String       @default("system") @map("CompactFontFamily")
+  compactFontScale  Int          @default(100) @map("CompactFontScale")
+  tvFontFamily      String       @default("system") @map("TvFontFamily")
+  tvFontScale       Int          @default(100) @map("TvFontScale")
+  widgetFontFamily  String       @default("system") @map("WidgetFontFamily")
+  widgetFontScale   Int          @default(100) @map("WidgetFontScale")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_DesignSettings_Organizations_OrganizationId")
+}
+
+model HadithBook {
+  providerId   Int      @id(map: "PK_HadithBooks") @map("ProviderId")
+  bookSlug     String   @unique(map: "IX_HadithBooks_BookSlug") @map("BookSlug") @db.VarChar(80)
+  bookName     String   @map("BookName")
+  writerName   String   @map("WriterName")
+  aboutWriter  String?  @map("AboutWriter")
+  writerDeath  String?  @map("WriterDeath")
+  hadithCount  Int      @map("HadithCount")
+  chapterCount Int      @map("ChapterCount")
+  syncedAtUtc  DateTime @map("SyncedAtUtc") @db.Timestamptz(6)
+
+  @@map("HadithBooks")
+}
+
+model HadithChapter {
+  id             String   @id(map: "PK_HadithChapters") @map("Id") @db.Uuid
+  providerId     Int      @map("ProviderId")
+  bookSlug       String   @map("BookSlug") @db.VarChar(80)
+  chapterNumber  Int      @map("ChapterNumber")
+  chapterEnglish String?  @map("ChapterEnglish")
+  chapterUrdu    String?  @map("ChapterUrdu")
+  chapterArabic  String?  @map("ChapterArabic")
+  syncedAtUtc    DateTime @map("SyncedAtUtc") @db.Timestamptz(6)
+
+  @@unique([bookSlug, chapterNumber], map: "IX_HadithChapters_BookSlug_ChapterNumber")
+  @@index([providerId], map: "IX_HadithChapters_ProviderId")
+  @@map("HadithChapters")
+}
+
+model HadithRecord {
+  id              String   @id(map: "PK_HadithRecords") @map("Id") @db.Uuid
+  providerId      Int      @map("ProviderId")
+  hadithNumber    String   @map("HadithNumber") @db.VarChar(80)
+  bookSlug        String   @map("BookSlug") @db.VarChar(80)
+  chapterNumber   Int?     @map("ChapterNumber")
+  volume          Int?     @map("Volume")
+  status          String?  @map("Status") @db.VarChar(80)
+  englishNarrator String?  @map("EnglishNarrator")
+  urduNarrator    String?  @map("UrduNarrator")
+  hadithEnglish   String?  @map("HadithEnglish")
+  hadithUrdu      String?  @map("HadithUrdu")
+  hadithArabic    String?  @map("HadithArabic")
+  headingEnglish  String?  @map("HeadingEnglish")
+  headingUrdu     String?  @map("HeadingUrdu")
+  headingArabic   String?  @map("HeadingArabic")
+  syncedAtUtc     DateTime @map("SyncedAtUtc") @db.Timestamptz(6)
+
+  @@unique([bookSlug, hadithNumber], map: "IX_HadithRecords_BookSlug_HadithNumber")
+  @@index([bookSlug, chapterNumber], map: "IX_HadithRecords_BookSlug_ChapterNumber")
+  @@index([providerId], map: "IX_HadithRecords_ProviderId")
+  @@index([status], map: "IX_HadithRecords_Status")
+  @@map("HadithRecords")
+}
+
+model HijriMonthMap {
+  id                String   @id(map: "PK_HijriMonthMaps") @map("Id") @db.Uuid
+  organizationId    String   @map("OrganizationId") @db.Uuid
+  year              Int      @map("Year")
+  month             Int      @map("Month")
+  hijriDayOnFirst   Int      @map("HijriDayOnFirst")
+  locked            Boolean  @map("Locked")
+  updatedAtUtc      DateTime @map("UpdatedAtUtc") @db.Timestamptz(6)
+  hijriMonthOnFirst Int      @default(1) @map("HijriMonthOnFirst")
+  hijriYearOnFirst  Int      @default(1) @map("HijriYearOnFirst")
+
+  @@unique([organizationId, year, month], map: "IX_HijriMonthMaps_OrganizationId_Year_Month")
+  @@map("HijriMonthMaps")
+}
+
+model IqamaEntry {
+  id             String       @id(map: "PK_IqamaEntries") @map("Id") @db.Uuid
+  organizationId String       @map("OrganizationId") @db.Uuid
+  date           DateTime     @map("Date") @db.Date
+  salah          Int          @map("Salah")
+  time           DateTime     @map("Time") @db.Time(6)
+  note           String?      @map("Note")
+  updatedAtUtc   DateTime     @map("UpdatedAtUtc") @db.Timestamptz(6)
+  offsetMinutes  Int?         @map("OffsetMinutes")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_IqamaEntries_Organizations_OrganizationId")
+
+  @@unique([organizationId, date, salah], map: "IX_IqamaEntries_OrganizationId_Date_Salah")
+  @@map("IqamaEntries")
+}
+
+model IslamicContentCacheEntry {
+  id             String   @id(map: "PK_IslamicContentCacheEntries") @map("Id") @db.Uuid
+  provider       String   @map("Provider") @db.VarChar(40)
+  cacheKey       String   @map("CacheKey") @db.VarChar(600)
+  payloadJson    Json     @map("PayloadJson")
+  contentType    String   @map("ContentType") @db.VarChar(80)
+  retrievedAtUtc DateTime @map("RetrievedAtUtc") @db.Timestamptz(6)
+  expiresAtUtc   DateTime @map("ExpiresAtUtc") @db.Timestamptz(6)
+  payloadBytes   BigInt   @default(0) @map("PayloadBytes")
+
+  @@unique([provider, cacheKey], map: "IX_IslamicContentCacheEntries_Provider_CacheKey")
+  @@index([expiresAtUtc], map: "IX_IslamicContentCacheEntries_ExpiresAtUtc")
+  @@map("IslamicContentCacheEntries")
+}
+
+model IslamicContentSyncState {
+  key            String    @id(map: "PK_IslamicContentSyncStates") @map("Key") @db.VarChar(120)
+  provider       String    @map("Provider") @db.VarChar(40)
+  scope          String    @map("Scope") @db.VarChar(40)
+  status         String    @map("Status") @db.VarChar(24)
+  processedItems Int       @map("ProcessedItems")
+  totalItems     Int       @map("TotalItems")
+  message        String?   @map("Message")
+  startedAtUtc   DateTime? @map("StartedAtUtc") @db.Timestamptz(6)
+  completedAtUtc DateTime? @map("CompletedAtUtc") @db.Timestamptz(6)
+  updatedAtUtc   DateTime  @map("UpdatedAtUtc") @db.Timestamptz(6)
+
+  @@map("IslamicContentSyncStates")
+}
+
+model MasjidInvitation {
+  id                         String                @id(map: "PK_MasjidInvitations") @map("Id") @db.Uuid
+  email                      String                @map("Email") @db.VarChar(320)
+  normalizedEmail            String                @map("NormalizedEmail") @db.VarChar(320)
+  organizationName           String                @map("OrganizationName") @db.VarChar(160)
+  normalizedOrganizationName String                @map("NormalizedOrganizationName") @db.VarChar(160)
+  websiteUrl                 String?               @map("WebsiteUrl") @db.VarChar(2048)
+  addressLine                String?               @map("AddressLine") @db.VarChar(240)
+  city                       String?               @map("City") @db.VarChar(120)
+  state                      String?               @map("State") @db.VarChar(2)
+  zipCode                    String?               @map("ZipCode") @db.VarChar(10)
+  invitationTokenHash        String                @unique(map: "IX_MasjidInvitations_InvitationTokenHash") @map("InvitationTokenHash") @db.VarChar(64)
+  invitedBySubject           String                @map("InvitedBySubject") @db.VarChar(120)
+  createdAtUtc               DateTime              @map("CreatedAtUtc") @db.Timestamptz(6)
+  sentAtUtc                  DateTime              @map("SentAtUtc") @db.Timestamptz(6)
+  expiresAtUtc               DateTime              @map("ExpiresAtUtc") @db.Timestamptz(6)
+  registrationStartedAtUtc   DateTime?             @map("RegistrationStartedAtUtc") @db.Timestamptz(6)
+  acceptedAtUtc              DateTime?             @map("AcceptedAtUtc") @db.Timestamptz(6)
+  revokedAtUtc               DateTime?             @map("RevokedAtUtc") @db.Timestamptz(6)
+  sendCount                  Int                   @map("SendCount")
+  organizationId             String?               @map("OrganizationId") @db.Uuid
+  organization               Organization?         @relation(fields: [organizationId], references: [id], onUpdate: NoAction, map: "FK_MasjidInvitations_Organizations_OrganizationId")
+  pendingRegistrations       PendingRegistration[]
+
+  @@index([expiresAtUtc], map: "IX_MasjidInvitations_ExpiresAtUtc")
+  @@index([normalizedEmail], map: "IX_MasjidInvitations_NormalizedEmail")
+  @@index([organizationId], map: "IX_MasjidInvitations_OrganizationId")
+  @@map("MasjidInvitations")
+}
+
+model OrgUser {
+  id             String       @id(map: "PK_OrgUsers") @map("Id") @db.Uuid
+  organizationId String       @map("OrganizationId") @db.Uuid
+  issuer         String       @map("Issuer")
+  subject        String       @map("Subject")
+  email          String?      @map("Email")
+  displayName    String?      @map("DisplayName")
+  roles          String[]     @map("Roles")
+  lastSeenUtc    DateTime     @map("LastSeenUtc") @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_OrgUsers_Organizations_OrganizationId")
+
+  @@unique([organizationId, issuer, subject], map: "IX_OrgUsers_OrganizationId_Issuer_Subject")
+  @@map("OrgUsers")
+}
+
+model Organization {
+  id                    String                @id(map: "PK_Organizations") @map("Id") @db.Uuid
+  slug                  String                @unique(map: "IX_Organizations_Slug") @map("Slug")
+  name                  String                @map("Name") @db.VarChar(160)
+  addressLine           String?               @map("AddressLine")
+  city                  String?               @map("City")
+  state                 String?               @map("State")
+  zipCode               String?               @map("ZipCode")
+  phone                 String?               @map("Phone")
+  websiteUrl            String?               @map("WebsiteUrl")
+  email                 String?               @map("Email")
+  socialUrl             String?               @map("SocialUrl")
+  updatedAtUtc          DateTime              @map("UpdatedAtUtc") @db.Timestamptz(6)
+  addressFingerprint    String?               @unique(map: "IX_Organizations_AddressFingerprint", where: raw("(\"AddressFingerprint\" IS NOT NULL)")) @map("AddressFingerprint") @db.VarChar(64)
+  adminUserId           String?               @map("AdminUserId") @db.VarChar(120)
+  masjidIdentityKey     String?               @unique(map: "IX_Organizations_MasjidIdentityKey", where: raw("(\"MasjidIdentityKey\" IS NOT NULL)")) @map("MasjidIdentityKey") @db.VarChar(64)
+  normalizedName        String                @default("") @map("NormalizedName") @db.VarChar(160)
+  normalizedWebsiteHost String?               @unique(map: "IX_Organizations_NormalizedWebsiteHost", where: raw("(\"NormalizedWebsiteHost\" IS NOT NULL)")) @map("NormalizedWebsiteHost") @db.VarChar(253)
+  apiClients            ApiClient[]
+  design                DesignSettings?
+  iqamaEntries          IqamaEntry[]
+  invitations           MasjidInvitation[]
+  members               OrgUser[]
+  criteria              PrayerTimingCriteria?
+  artifacts             PublishArtifact[]
+
+  @@index([name], map: "IX_Organizations_Name")
+  @@map("Organizations")
+}
+
+model PendingRegistration {
+  id                       String            @id(map: "PK_PendingRegistrations") @map("Id") @db.Uuid
+  email                    String            @map("Email") @db.VarChar(320)
+  normalizedEmail          String            @unique(map: "IX_PendingRegistrations_NormalizedEmail") @map("NormalizedEmail") @db.VarChar(320)
+  passwordHash             String            @map("PasswordHash")
+  passwordSalt             String            @map("PasswordSalt")
+  organizationName         String            @map("OrganizationName") @db.VarChar(160)
+  normalizedName           String            @map("NormalizedName") @db.VarChar(160)
+  websiteUrl               String            @map("WebsiteUrl") @db.VarChar(2048)
+  normalizedWebsiteHost    String            @unique(map: "IX_PendingRegistrations_NormalizedWebsiteHost") @map("NormalizedWebsiteHost") @db.VarChar(253)
+  addressLine              String            @map("AddressLine") @db.VarChar(240)
+  city                     String            @map("City") @db.VarChar(120)
+  state                    String            @map("State") @db.VarChar(2)
+  zipCode                  String            @map("ZipCode") @db.VarChar(10)
+  addressFingerprint       String            @unique(map: "IX_PendingRegistrations_AddressFingerprint") @map("AddressFingerprint") @db.VarChar(64)
+  masjidIdentityKey        String            @unique(map: "IX_PendingRegistrations_MasjidIdentityKey") @map("MasjidIdentityKey") @db.VarChar(64)
+  latitude                 Decimal           @map("Latitude") @db.Decimal
+  longitude                Decimal           @map("Longitude") @db.Decimal
+  timezoneId               String            @map("TimezoneId")
+  verificationTokenHash    String            @unique(map: "IX_PendingRegistrations_VerificationTokenHash") @map("VerificationTokenHash") @db.VarChar(64)
+  verificationExpiresAtUtc DateTime          @map("VerificationExpiresAtUtc") @db.Timestamptz(6)
+  createdAtUtc             DateTime          @map("CreatedAtUtc") @db.Timestamptz(6)
+  invitationId             String?           @map("InvitationId") @db.Uuid
+  invitation               MasjidInvitation? @relation(fields: [invitationId], references: [id], onUpdate: NoAction, map: "FK_PendingRegistrations_MasjidInvitations_InvitationId")
+
+  @@index([invitationId], map: "IX_PendingRegistrations_InvitationId")
+  @@index([verificationExpiresAtUtc], map: "IX_PendingRegistrations_VerificationExpiresAtUtc")
+  @@map("PendingRegistrations")
+}
+
+model PrayerTimingCriteria {
+  id                  String       @id(map: "PK_PrayerTimingCriteria") @map("Id") @db.Uuid
+  organizationId      String       @unique(map: "IX_PrayerTimingCriteria_OrganizationId") @map("OrganizationId") @db.Uuid
+  method              String       @map("Method")
+  juristicMethodAsr   String       @map("JuristicMethodAsr")
+  latitude            Decimal      @map("Latitude") @db.Decimal
+  longitude           Decimal      @map("Longitude") @db.Decimal
+  timezoneId          String       @map("TimezoneId")
+  dstObserved         Boolean      @map("DstObserved")
+  dstBegins           DateTime?    @map("DstBegins") @db.Date
+  dstEnds             DateTime?    @map("DstEnds") @db.Date
+  zipCode             String       @map("ZipCode")
+  minutesAfterZawal   Int          @map("MinutesAfterZawal")
+  minutesAfterMaghrib Int          @map("MinutesAfterMaghrib")
+  khutbahTimeMinutes  Int          @map("KhutbahTimeMinutes")
+  updatedAtUtc        DateTime     @map("UpdatedAtUtc") @db.Timestamptz(6)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PrayerTimingCriteria_Organizations_OrganizationId")
+}
+
+model PublishArtifact {
+  id             String       @id(map: "PK_PublishArtifacts") @map("Id") @db.Uuid
+  organizationId String       @map("OrganizationId") @db.Uuid
+  year           Int          @map("Year")
+  month          Int          @map("Month")
+  size           Int          @map("Size")
+  orientation    Int          @map("Orientation")
+  storageUrl     String       @map("StorageUrl")
+  createdAtUtc   DateTime     @map("CreatedAtUtc") @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PublishArtifacts_Organizations_OrganizationId")
+
+  @@index([organizationId, year, month], map: "IX_PublishArtifacts_OrganizationId_Year_Month")
+  @@map("PublishArtifacts")
+}
+
+model QuranEdition {
+  identifier  String   @id(map: "PK_QuranEditions") @map("Identifier") @db.VarChar(120)
+  language    String   @map("Language") @db.VarChar(12)
+  name        String   @map("Name")
+  englishName String   @map("EnglishName")
+  format      String   @map("Format") @db.VarChar(24)
+  type        String   @map("Type") @db.VarChar(40)
+  direction   String?  @map("Direction") @db.VarChar(8)
+  syncedAtUtc DateTime @map("SyncedAtUtc") @db.Timestamptz(6)
+
+  @@index([language, format, type], map: "IX_QuranEditions_Language_Format_Type")
+  @@map("QuranEditions")
+}
+
+model TvDisplayConfig {
+  id                 String  @id(map: "PK_TvDisplayConfigs") @map("Id") @db.Uuid
+  organizationId     String  @unique(map: "IX_TvDisplayConfigs_OrganizationId") @map("OrganizationId") @db.Uuid
+  showSeconds        Boolean @map("ShowSeconds")
+  showHijri          Boolean @map("ShowHijri")
+  accentColor        String  @map("AccentColor")
+  autoRefreshSeconds Int     @map("AutoRefreshSeconds")
+  clockFontScale     Int     @default(160) @map("ClockFontScale")
+
+  @@map("TvDisplayConfigs")
+}

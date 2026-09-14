@@ -4,8 +4,11 @@
   Install or update IqamaTime (DeenTime) as a Windows service on this PC.
 
 .DESCRIPTION
-  Run from the unzipped release folder (the one containing app\DeenTime.Api.exe)
-  in an elevated PowerShell:
+  Run from the unzipped release folder (the one containing app\dist\main.js)
+  in an elevated PowerShell. Requires Node.js LTS and NSSM on the PC:
+
+      winget install OpenJS.NodeJS.LTS
+      winget install NSSM.NSSM
 
       Set-ExecutionPolicy -Scope Process Bypass -Force
       .\install-deentime.ps1
@@ -34,9 +37,13 @@ $logDir  = Join-Path $InstallDir 'logs'
 $settings = Join-Path $appDir 'appsettings.Production.json'
 $service = 'DeenTime'
 
-if (-not (Test-Path (Join-Path $src 'DeenTime.Api.exe'))) {
-  throw "app\DeenTime.Api.exe not found next to this script. Unzip the release first."
+if (-not (Test-Path (Join-Path $src 'dist\main.js'))) {
+  throw "app\dist\main.js not found next to this script. Unzip the release first."
 }
+$node = (Get-Command node -ErrorAction SilentlyContinue).Source
+if (-not $node) { throw "Node.js is not installed. Install it first:  winget install OpenJS.NodeJS.LTS" }
+$nssm = (Get-Command nssm -ErrorAction SilentlyContinue).Source
+if (-not $nssm) { throw "NSSM is required to run the Node.js API as a Windows service:  winget install NSSM.NSSM" }
 
 # ── PostgreSQL ───────────────────────────────────────────────────────────────
 if (-not $PgBin) {
@@ -101,19 +108,27 @@ if (Test-Path (Join-Path $keep 'appsettings.Production.json')) { Copy-Item (Join
 if (Test-Path (Join-Path $keep 'uploads')) { Copy-Item (Join-Path $keep 'uploads') $uploads -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $uploads | Out-Null
 
-# ── Windows service ──────────────────────────────────────────────────────────
-$exe = Join-Path $appDir 'DeenTime.Api.exe'
+# ── Windows service (NSSM hosts node.exe) ────────────────────────────────────
+$entry = Join-Path $appDir 'dist\main.js'
 if (-not $existing) {
-  New-Service -Name $service -DisplayName 'IqamaTime (DeenTime API + site)' `
-    -BinaryPathName "`"$exe`" --contentRoot `"$appDir`"" -StartupType Automatic | Out-Null
-  & sc.exe failure $service reset= 86400 actions= restart/5000/restart/5000/restart/5000 | Out-Null
-  & sc.exe config $service depend= $($pgService.Name) 2>$null | Out-Null
+  & $nssm install $service $node $entry | Out-Null
+  & $nssm set $service DisplayName 'IqamaTime (DeenTime API + site)' | Out-Null
+  & $nssm set $service Description 'IqamaTime prayer-time API and website (Node.js)' | Out-Null
+  & $nssm set $service Start SERVICE_AUTO_START | Out-Null
+  if ($pgService) { & $nssm set $service DependOnService $pgService.Name | Out-Null }
 }
-# Scope ASPNETCORE_ENVIRONMENT=Production to this service only (not machine-wide)
-# so it loads appsettings.Production.json.
-$regKey = "HKLM:\SYSTEM\CurrentControlSet\Services\$service"
-New-ItemProperty -Path $regKey -Name 'Environment' -PropertyType MultiString `
-  -Value @('ASPNETCORE_ENVIRONMENT=Production') -Force | Out-Null
+& $nssm set $service Application $node | Out-Null
+& $nssm set $service AppParameters "`"$entry`"" | Out-Null
+& $nssm set $service AppDirectory $appDir | Out-Null
+# ASPNETCORE_ENVIRONMENT=Production makes the API load appsettings.Production.json
+# (the same file the .NET build used); the port comes from its "Urls" setting.
+& $nssm set $service AppEnvironmentExtra 'ASPNETCORE_ENVIRONMENT=Production' 'NODE_ENV=production' | Out-Null
+& $nssm set $service AppStdout (Join-Path $logDir 'deentime-api.log') | Out-Null
+& $nssm set $service AppStderr (Join-Path $logDir 'deentime-api.log') | Out-Null
+& $nssm set $service AppRotateFiles 1 | Out-Null
+& $nssm set $service AppRotateBytes 10485760 | Out-Null
+& $nssm set $service AppExit Default Restart | Out-Null
+& $nssm set $service AppRestartDelay 5000 | Out-Null
 Start-Service $service
 
 # ── Health check ─────────────────────────────────────────────────────────────
@@ -127,5 +142,5 @@ if ($ok) {
   Write-Host "`nIqamaTime is running: http://localhost:8080  ($v)" -ForegroundColor Green
   Write-Host "Logs: $logDir"
 } else {
-  Write-Warning "Service did not become healthy. Check $logDir and:  Get-EventLog -LogName Application -Source DeenTime -Newest 20"
+  Write-Warning "Service did not become healthy. Check $logDir\deentime-api.log and:  nssm status $service"
 }

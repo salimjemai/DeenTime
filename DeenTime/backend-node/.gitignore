@@ -1,0 +1,10 @@
+node_modules
+node_modules.nosync
+dist
+coverage
+wwwroot
+.env
+*.tsbuildinfo
+src/generated
+
+/src/generated/prisma

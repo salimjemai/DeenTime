@@ -11,13 +11,13 @@ Wants=postgresql.service
 User=deentime
 Group=deentime
 WorkingDirectory=/opt/deentime/current/api
-ExecStart=/opt/deentime/current/api/DeenTime.Api
+ExecStart=/usr/bin/node /opt/deentime/current/api/dist/main.js
 EnvironmentFile=/etc/deentime/deentime.env
 EnvironmentFile=-/opt/deentime/current/release.env
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://127.0.0.1:5080
 Environment=ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-Environment=DOTNET_NOLOGO=1
+Environment=NODE_ENV=production
 Restart=always
 RestartSec=5
 NoNewPrivileges=true

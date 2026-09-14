@@ -4,7 +4,7 @@
 #   bash /opt/deentime/deploy-staging.sh <commit-sha>
 #
 # Expects in /opt/deentime/incoming:
-#   deentime-api-<sha>.tar.gz   self-contained linux-x64 API publish output
+#   deentime-api-<sha>.tar.gz   Node.js API build (dist/, node_modules/, prisma/, appsettings.json)
 #   deentime-web-<sha>.tar.gz   Angular static bundle (dist/deentime-web/browser)
 # and, alongside this script, deentime-api.service (installed on every release).
 set -euo pipefail
@@ -30,7 +30,7 @@ if ! id "$service_user" >/dev/null 2>&1; then
   echo "System user '$service_user' does not exist." >&2
   exit 1
 fi
-for required_command in curl install rsync systemctl tar; do
+for required_command in curl install node rsync systemctl tar; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     echo "Required server command is missing: $required_command" >&2
     exit 1
@@ -57,7 +57,10 @@ rm -rf "$release_dir"
 mkdir -p "$release_dir/api" "$release_dir/web" "$deploy_dir/shared/uploads" "$web_root"
 tar -xzf "$api_tar" -C "$release_dir/api"
 tar -xzf "$web_tar" -C "$release_dir/web"
-chmod +x "$release_dir/api/DeenTime.Api"
+if [[ ! -f "$release_dir/api/dist/main.js" ]]; then
+  echo "The API archive does not contain dist/main.js." >&2
+  exit 1
+fi
 cat > "$release_dir/release.env" <<EOF
 Build__CommitSha=$release_tag
 Build__TimeUtc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
