@@ -19,7 +19,7 @@ async function signIn(page: Page) {
     test.skip(true, 'Set DEENTIME_SUPERUSER_PASSWORD to run the browser regression matrix.');
   }
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password!);
+  await page.getByLabel('Password', { exact: true }).fill(password!);
   await page.getByRole('button', { name: 'Sign In' }).click();
   await page.waitForURL(/\/org\/[0-9a-f-]+\/timings/);
 }

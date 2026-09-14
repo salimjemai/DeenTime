@@ -13,7 +13,9 @@ export type AppIconName =
   | 'logout'
   | 'menu'
   | 'collapse'
-  | 'expand';
+  | 'expand'
+  | 'eye'
+  | 'eye-off';
 
 @Component({
   selector: 'app-icon',
@@ -72,6 +74,15 @@ export type AppIconName =
         }
         @case ('expand') {
           <path d="M4.5 4v16M8.5 7.5 13 12l-4.5 4.5M13.5 7.5h6M14.5 12h5M13.5 16.5h6" />
+        }
+        @case ('eye') {
+          <path d="M2.75 12S6 5.75 12 5.75 21.25 12 21.25 12 18 18.25 12 18.25 2.75 12 2.75 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        }
+        @case ('eye-off') {
+          <path d="m3.5 3.5 17 17" />
+          <path d="M10.6 6.05A9.7 9.7 0 0 1 12 5.75c6 0 9.25 6.25 9.25 6.25a17.2 17.2 0 0 1-2.3 3.05M6.6 6.6C4.2 8.35 2.75 12 2.75 12S6 18.25 12 18.25a9.4 9.4 0 0 0 3.6-.7" />
+          <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
         }
       }
     </svg>

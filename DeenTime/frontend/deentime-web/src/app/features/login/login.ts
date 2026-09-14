@@ -44,6 +44,7 @@ export class LoginComponent implements OnInit {
   private addressSessionToken = '';
 
   readonly isRegister = signal(false);
+  readonly showPassword = signal(false);
   readonly loading = signal(false);
   readonly captchaEnabled = signal(false);
   readonly captchaSiteKey = signal('');
@@ -83,6 +84,10 @@ export class LoginComponent implements OnInit {
     zipCode: [''],
     addressPlaceId: ['']
   });
+
+  togglePasswordVisibility(): void {
+    this.showPassword.update(shown => !shown);
+  }
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
