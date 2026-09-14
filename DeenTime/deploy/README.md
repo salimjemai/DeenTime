@@ -3,8 +3,7 @@
 Staging runs on our own plain **Ubuntu 24.04** VPS (`srv1`, **70.36.101.120**)
 with **nginx + systemd + PostgreSQL + Node.js 22**. No CyberPanel, no
 OpenLiteSpeed and no Docker. The API is the Node.js implementation in
-`backend-node` (the original .NET API in `backend` is kept for parity checks
-only and is not deployed).
+`backend-node`.
 
 GitHub Actions (`.github/workflows/staging-ci-cd.yml`) tests the Angular and
 Node.js applications, packages the built API (`dist/`, production

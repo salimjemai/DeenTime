@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   Build IqamaTime (API + Angular) on Windows straight from the source checkout,
-  ready for install-deentime-iis.ps1.
+  ready for install-deentime.ps1.
 
 .DESCRIPTION
   Run from anywhere, e.g. in PowerShell:
@@ -13,7 +13,7 @@
       winget install OpenJS.NodeJS.LTS
 
   Output: <repo>\dist\deentime-windows\  (app\, installers, template, README)
-  Then:   cd dist\deentime-windows ; .\install-deentime-iis.ps1
+  Then:   cd dist\deentime-windows ; .\install-deentime.ps1
 #>
 [CmdletBinding()]
 param()
@@ -62,7 +62,7 @@ Copy-Item (Join-Path $root 'frontend\deentime-web\dist\deentime-web\browser\*') 
 
 Write-Host "==> Adding install files" -ForegroundColor Cyan
 $w = Join-Path $root 'deploy\windows'
-Copy-Item (Join-Path $w 'install-deentime-iis.ps1'), (Join-Path $w 'install-deentime.ps1'),
+Copy-Item (Join-Path $w 'install-deentime.ps1'),
           (Join-Path $w 'appsettings.Production.template.json'), (Join-Path $w 'README.md') $out
 
 Write-Host "`nRelease ready: $out  (commit $sha)" -ForegroundColor Green

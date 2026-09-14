@@ -8,7 +8,7 @@ From the repository root, run:
 ./DeenTime/scripts/start-local.sh
 ```
 
-The launcher verifies native PostgreSQL on port 5432, builds and starts the Node.js API (`DeenTime/backend-node`) on port 8080, waits for database-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. `DEENTIME_API_RUNTIME=dotnet ./DeenTime/scripts/start-local.sh` starts the original ASP.NET Core API instead (kept for parity checks). It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
+The launcher verifies native PostgreSQL on port 5432, builds and starts the Node.js API (`DeenTime/backend-node`) on port 8080, waits for database-backed readiness, and then starts Angular at `http://127.0.0.1:4200`. It generates an ephemeral JWT signing key and local super-user password when those values are not supplied. The generated password is printed once by the launcher; it is not stored in the repository.
 
 Optional secrets are supplied through the environment or an untracked local `.env` file. Copy `DeenTime/.env.example` as a reference. Set `DEENTIME_HADITH_API_KEY` only in a secret store or shell environment; the upstream provider key is never sent to browsers or committed.
 
@@ -43,10 +43,6 @@ IqamaTime also adds the Quran/Hadith content library and rate-limited public JSO
 |------|-------------|
 | `backend-node` | **The API**: NestJS 12 + Prisma 7 on PostgreSQL (see `backend-node/README.md`) |
 | `frontend/deentime-web` | Angular 20 PWA |
-| `backend/DeenTime.Api` | Original ASP.NET Core 9 Web API — reference implementation kept for parity checks until retired |
-| `backend/DeenTime.Core` | Original domain entities and services (ISNA calculator, Hijri service) |
-| `backend/DeenTime.Infrastructure` | Original EF Core DbContext and migrations (the schema the Node API inherits) |
-| `backend/DeenTime.Contracts` | Original shared DTOs |
 
 ---
 

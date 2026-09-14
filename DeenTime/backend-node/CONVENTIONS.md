@@ -1,9 +1,9 @@
 # backend-node conventions
 
-Node.js port of `DeenTime/backend/DeenTime.Api` (ASP.NET Core). The port must be a
-drop-in replacement: same routes, status codes, JSON field names (camelCase), enum
-names, messages, headers and side effects. The .NET code is the source of truth;
-read it before porting anything.
+Node.js port of the original ASP.NET Core API (`DeenTime/backend/DeenTime.Api`,
+removed from the tree; see the `dotnet-backend-last` git tag). The port is a drop-in
+replacement: same routes, status codes, JSON field names (camelCase), enum names,
+messages, headers and side effects. When in doubt, check the .NET code at that tag.
 
 ## Toolchain
 - NestJS 12, TypeScript 6 (strict), **ESM**: every relative import needs a `.js`
@@ -62,7 +62,7 @@ Relation fields: `organization`, `criteria`, `design`, `members`, `iqamaEntries`
   'locations' | 'expensive')` from `src/common/rate-limit.ts` (class or handler).
 - Validation: zod schemas + `@Body(validated(schema))` (`src/common/zod-validation.pipe.ts`);
   failures become 400 `ValidationProblemDetails` with PascalCase keys. Reproduce the
-  FluentValidation rules/messages from `backend/DeenTime.Api/Validators/*.cs`. Query
+  FluentValidation rules/messages from the .NET `Validators/*.cs`. Query
   params arrive as strings — parse them yourself.
 - Errors (`src/common/errors.ts`): `problem(status, title?, detail?)` (ProblemDetails,
   `application/problem+json`), `validationProblem(errors)`, `badRequest(body)`,

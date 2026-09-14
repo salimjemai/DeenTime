@@ -10,9 +10,6 @@ Internet ──HTTPS──> tunnel provider ──> ngrok/cloudflared on the PC 
                                                                                 └── PostgreSQL 127.0.0.1:5432
 ```
 
-(`install-deentime-iis.ps1` is the installer for the retired .NET build and
-needs `app\DeenTime.Api.exe`; it does not apply to the Node.js release.)
-
 ## 1. Build the release
 
 **On the Windows PC itself** (needs Node.js 22 LTS:
@@ -95,11 +92,11 @@ tunnels:
     domain: something.ngrok-free.app
 ```
 
-then `ngrok service start`. Re-run `install-deentime-iis.ps1 -PublicUrl
+then `ngrok service start`. Re-run `install-deentime.ps1 -PublicUrl
 https://something.ngrok-free.app` if you did not pass the URL the first time
 (it only updates the settings when the file does not exist — otherwise edit
 `Frontend.PublicBaseUrl`, `Cors.AllowedOrigins` and `SuperUser.WebsiteUrl` in
-`appsettings.Production.json` and `Restart-WebAppPool DeenTime`).
+`appsettings.Production.json` and `Restart-Service DeenTime`).
 
 Limits of the free ngrok tier: an interstitial "you are about to visit" page
 on first visit for browsers, and bandwidth caps. Fine for testing and for the

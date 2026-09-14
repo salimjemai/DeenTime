@@ -5,16 +5,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "DeenTime API",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "dotnet run --project backend/DeenTime.Api/DeenTime.Api.csproj --no-launch-profile -- --urls http://localhost:8080",
-      "cwd": "${workspaceFolder}/DeenTime",
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    {
       // NestJS backend for local development. `npm run dev` (backend-node/scripts/dev.mjs)
       // loads DeenTime/.env, generates an ephemeral signing key and super-user password
       // when they are not set, regenerates the Prisma client and runs `nest start --watch`.
@@ -39,14 +29,6 @@
     }
   ],
   "compounds": [
-    {
-      "name": "DeenTime API + Frontend",
-      "configurations": [
-        "DeenTime API",
-        "DeenTime Frontend"
-      ],
-      "stopAll": true
-    },
     {
       "name": "DeenTime Node API + Frontend",
       "configurations": [

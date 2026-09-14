@@ -31,11 +31,6 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 9.0.x
-
       - name: Start native PostgreSQL
         run: |
           if ! command -v pg_isready >/dev/null 2>&1; then
@@ -45,11 +40,6 @@ jobs:
           sudo systemctl start postgresql.service
           sudo -u postgres psql --command "ALTER USER postgres WITH PASSWORD 'postgres';"
           pg_isready --host 127.0.0.1 --port 5432
-
-      - name: Test .NET API (reference implementation kept for parity)
-        env:
-          DEENTIME_TEST_POSTGRES_ADMIN: Host=127.0.0.1;Port=5432;Database=postgres;Username=postgres;Password=postgres;Pooling=false
-        run: dotnet test DeenTime/DeenTime.sln --configuration Release
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

@@ -11,7 +11,6 @@ database schema, configuration keys and scripts — so the Angular app in
 ```bash
 # from DeenTime/ (PostgreSQL must be listening on 127.0.0.1:5432)
 scripts/start-local.sh            # Node API on http://127.0.0.1:8080 + Angular on :4200
-DEENTIME_API_RUNTIME=dotnet scripts/start-local.sh   # the original .NET API instead
 ```
 
 Manual run:
