@@ -12,14 +12,16 @@
       }
     },
     {
-      // NestJS backend in watch mode. The JavaScript debug terminal auto-attaches,
-      // so breakpoints in backend-node/src/**/*.ts work without an extra --inspect flag.
-      // PORT is pinned to 8080 because frontend/deentime-web/proxy.conf.json and
-      // src/environments/environment.ts both point the Angular app at localhost:8080.
+      // NestJS backend for local development. `npm run dev` (backend-node/scripts/dev.mjs)
+      // loads DeenTime/.env, generates an ephemeral signing key and super-user password
+      // when they are not set, regenerates the Prisma client and runs `nest start --watch`.
+      // PostgreSQL must be running with the `deentime` database (see scripts/start-local.*).
+      // The JavaScript debug terminal auto-attaches, so breakpoints in src/**/*.ts work.
+      // PORT 8080 matches the Angular proxy (proxy.conf.json) and environment.ts.
       "name": "DeenTime Node API",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run start:dev",
+      "command": "npm run dev",
       "cwd": "${workspaceFolder}/backend-node",
       "env": {
         "PORT": "8080"

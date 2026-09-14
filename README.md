@@ -87,6 +87,15 @@ node dist/main.js
 Migrations run at startup. `appsettings.Development.json` carries the local DB
 connection string and defaults; secrets come from environment variables.
 
+For day-to-day work use the watch-mode launcher instead of the manual block above:
+
+```bash
+cd DeenTime/backend-node
+npm run dev        # loads DeenTime/.env, generates ephemeral secrets when unset, prisma generate, nest start --watch
+```
+
+In VS Code, open the repository root or the `DeenTime/` folder and start the **DeenTime Node API + Frontend** launch configuration (F5): it runs `npm run dev` for the API and `ng serve` for Angular, with breakpoints in both. PostgreSQL must already be running with the `deentime` database.
+
 ### 2 — Angular frontend
 
 ```bash

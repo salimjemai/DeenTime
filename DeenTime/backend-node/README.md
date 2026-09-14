@@ -27,6 +27,13 @@ ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:8080 \
 node dist/main.js
 ```
 
+Watch mode with ephemeral secrets, which is also what the VS Code "DeenTime Node API"
+launch configuration runs:
+
+```bash
+npm run dev   # scripts/dev.mjs: loads ../.env, maps the DEENTIME_* names, prisma generate, nest start --watch
+```
+
 ## Configuration
 
 Identical to the .NET API: `appsettings.json`, `appsettings.{Environment}.json`
