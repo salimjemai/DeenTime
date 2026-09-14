@@ -59,9 +59,6 @@ for (const [alias, key] of Object.entries(aliases)) {
 }
 
 env.ASPNETCORE_ENVIRONMENT ||= 'Development';
-// prisma.config.ts resolves DATABASE_URL eagerly, even for `prisma generate`, which never
-// connects; the local default from DeenTime/.env.example is enough for that.
-env.DATABASE_URL ||= 'postgresql://postgres:postgres@127.0.0.1:5432/deentime';
 if (!env.ASPNETCORE_URLS && !env.PORT && env.DEENTIME_API_PORT)
   env.PORT = env.DEENTIME_API_PORT;
 
