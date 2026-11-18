@@ -4,40 +4,75 @@ Public address: https://masjidhub.jemaiinnovations.com
 
 ## Architecture
 
+Everything runs on Cloudflare's free plan; no PC or server has to stay on.
+
 ```
 browser ──HTTPS──> Cloudflare Pages project "masjidhub"  (masjidhub.jemaiinnovations.com)
                      ├─ static Angular site: /login, /org/…, /tv/:slug, /w/:slug, /w2/:slug
-                     └─ _worker.js: /api/* /public/* /uploads/* /health/* /jobs
-                                    /clock /iqama-widget.php /iqama-widget2.php
-                                      │ HTTPS
-                                      ▼
-                     Cloudflare Tunnel "masjidhub"  (masjidhub-origin.jemaiinnovations.com)
-                                      │ outbound connection from the origin machine
-                                      ▼
-                     origin machine: cloudflared ──> NestJS API on 127.0.0.1:5080 ──> PostgreSQL
+                     └─ _worker.js = the API (backend-worker, Hono):
+                          /api/* /public/* /uploads/* /health/* /jobs
+                          /clock /iqama-widget.php /iqama-widget2.php
+                            ├─ D1 database "masjidhub"        (binding DB)
+                            └─ KV namespace "masjidhub-uploads" (binding UPLOADS, uploaded images)
 ```
 
-- The browser only ever talks to `masjidhub.jemaiinnovations.com`. The Pages worker
-  forwards the API paths to the tunnel hostname with the method, headers and body
-  unchanged, and adds the visitor address (`X-MasjidHub-Client-IP`) and a shared key
-  (`X-MasjidHub-Proxy-Key`). API redirects pass through, so the legacy embed URLs keep working.
-- The API, its in-process content sync, PostgreSQL and uploaded files stay on a machine
-  you control. Nothing was rewritten for Workers or D1.
-- If the origin cannot be reached, the worker answers **503 "MasjidHub is temporarily
-  offline"** (JSON for API calls, a small page for browser navigations).
+- The API is `backend-worker/`, a port of `backend-node/` to Workers + D1 with the same
+  routes and responses. Its README lists the conventions and the known differences.
+- Bindings and plain settings are in `frontend/deentime-web/wrangler.toml`. The only
+  secret is `Auth__SigningKey` (`npx wrangler pages secret put Auth__SigningKey --project-name=masjidhub`).
+- Email and Turnstile are switched off. Email, when enabled, goes through Resend's HTTP
+  API (`EmailDelivery__ApiKey` as a Pages secret); Workers cannot use SMTP. While it is
+  off, invitations and password-reset emails answer 503, as in backend-node.
 
-The default origin is the Windows PC where the app already runs. A VPS works the same
-way (see [Using a VPS as the origin](#using-a-vps-as-the-origin)).
+### Day-to-day commands
 
-### What lives where
+Run from `backend-worker/` on any PC with `npx wrangler login` done:
 
-| Piece | Location |
-|-------|----------|
-| Proxy worker, route list, header rules, their tests | `frontend/deentime-web/cloudflare/` |
-| Pages project settings (`API_ORIGIN`) | `frontend/deentime-web/wrangler.toml` |
-| Deploy workflow (manual dispatch) | `.github/workflows/deploy-cloudflare.yml` |
-| Origin script, settings template, tunnel template | `deploy/cloudflare/` |
-| Installed API, settings and secrets, logs | `C:\MasjidHub` on the origin PC (outside the repository) |
+| Task | Command |
+|------|---------|
+| Set or reset an account's password | `node scripts/set-password.mjs` (asks for the email and password on the terminal) |
+| Load Qur'an / hadith content into D1 | `node scripts/sync-content.mjs --help` (the Worker cannot run the bulk sync itself) |
+| Copy data from the old PostgreSQL database | `node scripts/migrate-from-postgres.mjs --apply --remote --cwd ../frontend/deentime-web` (empties the D1 tables first) |
+| Apply schema migrations | `npx wrangler d1 migrations apply masjidhub --remote` from `frontend/deentime-web/` |
+
+Passwords: Workers cannot verify the 600,000-iteration hashes backend-node created, so
+every account copied from PostgreSQL needs its password set once with `set-password.mjs`
+(or through "forgot password" once email is enabled). New hashes use 100,000 iterations.
+
+### Deploying
+
+```bash
+cd DeenTime/backend-worker && npm ci && npm test && npm run build
+cd ../frontend/deentime-web && npm ci
+npm run build -- --configuration production
+npm run pages:prepare
+npx wrangler pages deploy --project-name=masjidhub --branch=main
+```
+
+Use `--branch=<anything else>` for a preview at `https://<branch>.masjidhub-740.pages.dev`
+(it uses the same D1 database). The GitHub workflow *Deploy MasjidHub web to Cloudflare
+Pages* does the same on manual dispatch once `CLOUDFLARE_API_TOKEN` (Pages Edit + D1 Edit)
+and `CLOUDFLARE_ACCOUNT_ID` are stored as repository secrets. Roll back in the dashboard:
+Workers & Pages > masjidhub > Deployments > Rollback (the database is not rolled back).
+
+### Limits of the free plan
+
+- 100,000 requests a day and about 10 ms of CPU per request. Sign-in (password hashing)
+  and PDF generation use more CPU than that; Cloudflare tolerated it in testing, but if
+  they start failing with error 1102 the fix is the Workers Paid plan.
+- D1: 100,000 row writes a day (a full hadith import must be split over days with `--books`).
+- No background jobs: content sync runs from a PC with `scripts/sync-content.mjs`.
+
+---
+
+# Fallback: API on an origin machine behind a Cloudflare Tunnel
+
+This was the first setup and still works: `npm run pages:prepare -- --api=tunnel` uploads
+the proxy worker (`frontend/deentime-web/cloudflare/_worker.js`) instead of the API, and
+the NestJS API + PostgreSQL run on a machine you control. The scheduled tasks
+**MasjidHub API** and **MasjidHub Tunnel** on the original PC are stopped but still
+registered (`C:MasjidHubmasjidhub-origin.ps1 uninstall` removes them). The rest of
+this document describes that setup.
 
 ## One-time setup
 

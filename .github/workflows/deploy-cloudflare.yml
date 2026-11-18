@@ -1,8 +1,8 @@
 name: Deploy MasjidHub web to Cloudflare Pages
 
 # Manual only for now: Actions -> "Deploy MasjidHub web to Cloudflare Pages" -> Run workflow.
-# Publishes the Angular site and the proxy worker; the API keeps running on the origin
-# machine behind the Cloudflare Tunnel (DeenTime/docs/cloudflare-deployment.md).
+# Publishes the Angular site together with the Workers + D1 API (DeenTime/backend-worker),
+# which runs as the Pages worker (DeenTime/docs/cloudflare-deployment.md).
 on:
   workflow_dispatch:
     inputs:
@@ -40,8 +40,20 @@ jobs:
           cache: npm
           cache-dependency-path: DeenTime/frontend/deentime-web/package-lock.json
       - run: npm ci
-      - name: Test the proxy worker
+      - name: Test and build the API worker
+        working-directory: DeenTime/backend-worker
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Test the fallback proxy worker
         run: npm run pages:test
+      - name: Apply database migrations to D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 d1 migrations apply masjidhub --remote
       - name: Build the production bundle
         run: npm run build -- --configuration production
       - name: Check the bundle and add the worker, routes and headers
@@ -98,7 +110,7 @@ jobs:
           # History routes must fall back to the app shell.
           curl --fail --silent --show-error --retry 3 --retry-delay 5 "$DEPLOYMENT_URL/login" -o /tmp/masjidhub-login.html
           grep -F '<title>MasjidHub' /tmp/masjidhub-login.html
-          # The worker must answer the API paths: 200 from the origin, or the branded 503 while it is off.
+          # The worker must answer the API paths (the 503 case only applies to the fallback tunnel proxy).
           status=$(curl --silent --output /tmp/masjidhub-health.txt --write-out '%{http_code}' "$DEPLOYMENT_URL/health/live")
           case "$status" in
             200) echo 'The API answers through the proxy.' ;;
