@@ -1,0 +1,93 @@
+<div [formGroup]="form">
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Masjid name</mat-label>
+    <input matInput formControlName="name" autocomplete="organization" />
+    @if (form.controls['name'].touched && form.controls['name'].invalid) { <mat-error>Enter the masjid name</mat-error> }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Street address</mat-label>
+    <input matInput formControlName="addressLine" autocomplete="street-address" />
+  </mat-form-field>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>City</mat-label>
+      <input matInput formControlName="city" autocomplete="address-level2" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>State or region</mat-label>
+      <input matInput formControlName="region" autocomplete="address-level1" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Postal code</mat-label>
+      <input matInput formControlName="postalCode" autocomplete="postal-code" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Country code</mat-label>
+      <input matInput formControlName="country" maxlength="2" placeholder="US" autocomplete="country" />
+    </mat-form-field>
+  </div>
+
+  <h2>Location for prayer times</h2>
+  <p class="muted">Prayer times are calculated from the masjid's location and time zone.</p>
+  <div class="actions">
+    <button mat-stroked-button type="button" (click)="lookupPostalCode()" [disabled]="locating()">Use the postal code</button>
+    <button mat-stroked-button type="button" (click)="useThisDevice()" [disabled]="locating()">Use this device's location</button>
+  </div>
+  @if (locateMessage()) { <p class="muted" role="status">{{ locateMessage() }}</p> }
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>Latitude</mat-label>
+      <input matInput type="number" step="any" formControlName="latitude" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Longitude</mat-label>
+      <input matInput type="number" step="any" formControlName="longitude" />
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Time zone</mat-label>
+    <mat-select formControlName="timezone">
+      @for (zone of zones; track zone) { <mat-option [value]="zone">{{ zone }}</mat-option> }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>Calculation method</mat-label>
+      <mat-select formControlName="calculationMethod">
+        @for (method of methods; track method.value) { <mat-option [value]="method.value">{{ method.label }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Asr</mat-label>
+      <mat-select formControlName="asrMethod">
+        <mat-option value="Standard">Standard (Shafi'i, Maliki, Hanbali)</mat-option>
+        <mat-option value="Hanafi">Hanafi</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <h2>Contact</h2>
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>Website</mat-label>
+      <input matInput type="url" formControlName="websiteUrl" placeholder="https://" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Phone</mat-label>
+      <input matInput type="tel" formControlName="phone" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Public email</mat-label>
+      <input matInput type="email" formControlName="email" />
+    </mat-form-field>
+  </div>
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>About the masjid</mat-label>
+    <textarea matInput rows="3" formControlName="about"></textarea>
+  </mat-form-field>
+</div>

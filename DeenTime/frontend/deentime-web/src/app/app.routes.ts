@@ -2,8 +2,11 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
 import { superUserGuard } from './core/super-user.guard';
+import { cloudRoutes } from './cloud/cloud.routes';
+import { environment } from '../environments/environment';
 
-export const routes: Routes = [
+/** Routes for the original Node API (IIS / VPS hosting). */
+export const legacyRoutes: Routes = [
   { path: 'login', loadComponent: () => import('./features/login/login').then(m => m.LoginComponent) },
   { path: 'verify-email', loadComponent: () => import('./features/verify-email/verify-email').then(m => m.VerifyEmailComponent) },
   { path: 'forgot-password', loadComponent: () => import('./features/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) },
@@ -31,3 +34,6 @@ export const routes: Routes = [
   },
   { path: '**', redirectTo: 'login' }
 ];
+
+/** The Cloudflare build (environment.cloudflare.ts) uses the shared-auth masjid admin routes. */
+export const routes: Routes = environment.backend === 'cloudflare' ? cloudRoutes : legacyRoutes;

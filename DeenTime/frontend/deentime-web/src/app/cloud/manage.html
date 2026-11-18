@@ -1,0 +1,163 @@
+<div class="page">
+  <div class="wrap">
+    <div class="brand">
+      <strong>{{ brand.name }}</strong><span>{{ masjid()?.name ?? 'Your masjid' }}</span>
+    </div>
+    <div class="card">
+      @if (loadError()) {
+        <p class="notice error" role="alert">{{ loadError() }}</p>
+        <a mat-button routerLink="/setup">Set up a masjid</a>
+      } @else if (!masjid()) {
+        <mat-spinner diameter="32" />
+      } @else {
+        @if (welcome) {
+          <p class="notice">{{ masjid()!.name }} is set up. Add iqama times and messages, then share the page or widget below.</p>
+        }
+
+        <mat-tab-group>
+          <mat-tab label="Details">
+            <div class="section">
+              <form [formGroup]="details" (ngSubmit)="saveDetails()" novalidate>
+                <app-masjid-details-fields [form]="details" />
+                <button mat-flat-button color="primary" type="submit" [disabled]="saving()">Save details</button>
+              </form>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Iqama and Jumu'ah">
+            <div class="section">
+              <p class="muted">Set each iqama as a fixed time or as minutes after the adhan.</p>
+              @for (row of iqama; track row.key) {
+                <div class="row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ row.label }}</mat-label>
+                    <mat-select [(ngModel)]="row.mode" [name]="row.key + '-mode'">
+                      <mat-option value="none">No iqama time</mat-option>
+                      <mat-option value="offset">Minutes after adhan</mat-option>
+                      <mat-option value="fixed">Fixed time</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  @if (row.mode === 'fixed') {
+                    <mat-form-field appearance="outline">
+                      <mat-label>Time</mat-label>
+                      <input matInput type="time" [(ngModel)]="row.time" [name]="row.key + '-time'" />
+                    </mat-form-field>
+                  } @else if (row.mode === 'offset') {
+                    <mat-form-field appearance="outline">
+                      <mat-label>Minutes after adhan</mat-label>
+                      <input matInput type="number" min="0" max="120" [(ngModel)]="row.minutes" [name]="row.key + '-minutes'" />
+                    </mat-form-field>
+                  }
+                </div>
+              }
+
+              <h2>Jumu'ah</h2>
+              @for (time of jumuah; track $index) {
+                <div class="actions">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Jumu'ah {{ $index + 1 }}</mat-label>
+                    <input matInput type="time" [(ngModel)]="jumuah[$index]" [name]="'jumuah-' + $index" />
+                  </mat-form-field>
+                  <button mat-button type="button" (click)="removeJumuah($index)">Remove</button>
+                </div>
+              }
+              <div class="actions">
+                @if (jumuah.length < 4) { <button mat-stroked-button type="button" (click)="addJumuah()">Add a Jumu'ah time</button> }
+                <button mat-flat-button color="primary" type="button" (click)="saveIqama()" [disabled]="saving()">Save iqama and Jumu'ah</button>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Messages">
+            <div class="section">
+              <h2>{{ draft.id ? 'Edit message' : 'New message' }}</h2>
+              <p class="muted">Messages show on the masjid page and widget between the dates you pick.</p>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Title</mat-label>
+                <input matInput [(ngModel)]="draft.title" name="message-title" maxlength="160" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Message</mat-label>
+                <textarea matInput rows="3" [(ngModel)]="draft.body" name="message-body" maxlength="4000"></textarea>
+              </mat-form-field>
+              <div class="row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Show from</mat-label>
+                  <input matInput type="date" [(ngModel)]="draft.startsOn" name="message-start" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Show until</mat-label>
+                  <input matInput type="date" [(ngModel)]="draft.endsOn" name="message-end" />
+                </mat-form-field>
+              </div>
+              <mat-checkbox [(ngModel)]="draft.pinned" name="message-pinned">Pin to the top</mat-checkbox>
+              <div class="actions">
+                <button mat-flat-button color="primary" type="button" (click)="saveMessage()" [disabled]="!draft.title.trim()">{{ draft.id ? 'Save message' : 'Add message' }}</button>
+                @if (draft.id) { <button mat-button type="button" (click)="cancelMessage()">Cancel</button> }
+              </div>
+
+              <div class="section">
+                @for (message of messages(); track message.id) {
+                  <div class="notice">
+                    <strong>{{ message.pinned ? 'Pinned · ' : '' }}{{ message.title }}</strong>
+                    @if (message.body) { <div>{{ message.body }}</div> }
+                    @if (message.startsOn || message.endsOn) { <div class="muted">{{ message.startsOn ?? '…' }} to {{ message.endsOn ?? '…' }}</div> }
+                    <div class="actions">
+                      <button mat-button type="button" (click)="editMessage(message)">Edit</button>
+                      <button mat-button type="button" (click)="deleteMessage(message)">Delete</button>
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="muted">No messages yet.</p>
+                }
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Widget and sharing">
+            <div class="section">
+              <div class="row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Theme</mat-label>
+                  <mat-select [(ngModel)]="widget.theme" name="widget-theme">
+                    <mat-option value="light">Light</mat-option>
+                    <mat-option value="dark">Dark</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Accent colour</mat-label>
+                  <input matInput type="color" [(ngModel)]="widget.accent" name="widget-accent" />
+                </mat-form-field>
+              </div>
+              <mat-slide-toggle [(ngModel)]="widget.showIqama" name="widget-iqama">Show iqama times</mat-slide-toggle><br />
+              <mat-slide-toggle [(ngModel)]="widget.showJumuah" name="widget-jumuah">Show Jumu'ah times</mat-slide-toggle><br />
+              <mat-slide-toggle [(ngModel)]="widget.showMessages" name="widget-messages">Show messages</mat-slide-toggle>
+              <div class="actions">
+                <button mat-flat-button color="primary" type="button" (click)="saveWidget()" [disabled]="saving()">Save widget</button>
+              </div>
+
+              <div class="section">
+                <h2>Share</h2>
+                <p class="muted">Public page</p>
+                <code class="snippet">{{ publicUrl() }}</code>
+                <div class="actions">
+                  <a mat-stroked-button [href]="publicUrl()" target="_blank" rel="noopener">Open</a>
+                  <button mat-button type="button" (click)="copy(publicUrl())">Copy link</button>
+                </div>
+                <p class="muted">Widget for your website</p>
+                <code class="snippet">{{ embedCode() }}</code>
+                <div class="actions">
+                  <button mat-button type="button" (click)="copy(embedCode())">Copy embed code</button>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+
+        <div class="actions section">
+          <button mat-button type="button" (click)="signOut()">Sign out</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

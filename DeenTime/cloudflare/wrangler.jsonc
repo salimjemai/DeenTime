@@ -1,0 +1,22 @@
+// Cloudflare Worker that serves the masjid admin site at https://jemaiinnovations.com/masjid.
+// Static files only: accounts and masjid data live in the one shared backend
+// (api.jemaiinnovations.com, the Mushaf+ Worker and its D1). No secrets live here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deentime-web",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  // Serve the site on the apex domain under /masjid once the zone is on Cloudflare.
+  "routes": [{ "pattern": "jemaiinnovations.com/masjid*", "zone_name": "jemaiinnovations.com" }],
+  "assets": {
+    // Filled by `npm run build:web && node scripts/prepare-assets.mjs` (dist-web/masjid/...).
+    "directory": "./dist-web",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "run_worker_first": ["/masjid"]
+  },
+  "vars": {
+    "BASE_PATH": "/masjid"
+  }
+}

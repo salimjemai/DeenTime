@@ -1,5 +1,14 @@
 # IqamaTime
 
+## Cloudflare hosting (in progress)
+
+The masjid admin site is moving to Cloudflare at `https://jemaiinnovations.com/masjid/`:
+a small Worker serves the Angular app, and accounts and masjid data live in the one
+shared backend that Mushaf+ also uses (`api.jemaiinnovations.com`). See `DeenTime/cloudflare/README.md`,
+`DeenTime/docs/masjid-api.md` and `DeenTime/docs/shared-auth-contract.md`. Build the web
+app for it with `npm run build -- --configuration cloudflare --base-href /masjid/`.
+The product name lives in `DeenTime/brand.json`.
+
 ## Deterministic local startup
 
 From the repository root, run:

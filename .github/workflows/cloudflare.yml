@@ -1,0 +1,92 @@
+name: Cloudflare (masjid site)
+
+# Tests and builds on every pull request. Deploys only when someone runs it by hand
+# with deploy = true and the Cloudflare secrets are set (see DeenTime/cloudflare/README.md).
+# This deploys the static site only; the masjid API ships with the shared backend.
+on:
+  pull_request:
+    paths:
+      - 'DeenTime/cloudflare/**'
+      - 'DeenTime/frontend/deentime-web/**'
+      - 'DeenTime/brand.json'
+      - '.github/workflows/cloudflare.yml'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to Cloudflare after the checks pass'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Worker dependencies
+        working-directory: DeenTime/cloudflare
+        run: npm ci
+      - name: Type-check the site Worker and test the masjid module
+        working-directory: DeenTime/cloudflare
+        run: |
+          npm run check
+          npm test
+      - name: Build the web app for /masjid/
+        working-directory: DeenTime/frontend/deentime-web
+        run: |
+          npm ci
+          npm run build -- --configuration cloudflare --base-href /masjid/
+          grep -F '<base href="/masjid/">' dist/deentime-web/browser/index.html
+      - name: Bundle the Worker (no upload)
+        working-directory: DeenTime/cloudflare
+        run: |
+          node scripts/prepare-assets.mjs
+          npx wrangler deploy --dry-run --outdir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: masjid-site
+          path: DeenTime/cloudflare/dist-web
+          retention-days: 7
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: cloudflare-production
+      url: https://jemaiinnovations.com/masjid/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: masjid-site
+          path: DeenTime/cloudflare/dist-web
+      - name: Install
+        working-directory: DeenTime/cloudflare
+        run: npm ci
+      - name: Check credentials
+        working-directory: DeenTime/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Missing CLOUDFLARE_API_TOKEN'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
+      - name: Deploy the static site Worker
+        working-directory: DeenTime/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy

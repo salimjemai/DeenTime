@@ -1,0 +1,48 @@
+// Shared look for the Cloudflare masjid admin pages (account, setup, manage).
+:host { display: block; }
+
+.page {
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(16px, 4vw, 48px) 16px;
+  background: linear-gradient(160deg, #0f3d33 0%, #165a47 45%, #f4efe3 45.1%, #f7f4ec 100%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #173429;
+}
+
+.wrap { width: min(760px, 100%); margin: 0 auto; }
+.wrap.narrow { width: min(460px, 100%); }
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #f7fbf8;
+  strong { font-size: 1.35rem; letter-spacing: .01em; }
+  span { opacity: .8; font-size: .95rem; }
+}
+
+.card {
+  padding: clamp(20px, 4vw, 36px);
+  border-radius: 20px;
+  background: #fffdf8;
+  box-shadow: 0 24px 60px rgba(5, 28, 22, .18);
+}
+
+h1, h2 { margin: 0 0 6px; color: #10372d; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.15rem; }
+.lead { margin: 0 0 20px; color: #4a5f57; }
+
+.full { width: 100%; }
+.row { display: grid; gap: 0 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+.switch { margin-top: 14px; color: #4a5f57; text-align: center; }
+.link-button { border: 0; background: none; color: #0f766e; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.notice { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: #e7f3ee; color: #174a3b; }
+.notice.error { background: #fbeaea; color: #7a1f1f; }
+.muted { color: #5d7068; font-size: .9rem; }
+.section { margin-top: 28px; }
+.section:first-child { margin-top: 0; }
+code.snippet { display: block; padding: 12px; border-radius: 10px; background: #f0ede4; font-size: .8rem; white-space: pre-wrap; word-break: break-all; }

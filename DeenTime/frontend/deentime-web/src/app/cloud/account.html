@@ -1,0 +1,82 @@
+<div class="page">
+  <div class="wrap narrow">
+    <div class="brand"><strong>{{ brand.name }}</strong><span>{{ brand.tagline }}</span></div>
+    <div class="card">
+      @switch (mode()) {
+        @case ('signup') {
+          <h1>Create your account</h1>
+          <p class="lead">Set up your masjid's prayer times, messages and website widgets in a few minutes.</p>
+        }
+        @case ('forgot') {
+          <h1>Reset your password</h1>
+          <p class="lead">Enter your email and we'll send you a link to choose a new password.</p>
+        }
+        @default {
+          <h1>Sign in</h1>
+          <p class="lead">Manage your masjid on {{ brand.name }}.</p>
+        }
+      }
+
+      @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
+      @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        @if (mode() === 'signup') {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Your name</mat-label>
+            <input matInput formControlName="displayName" autocomplete="name" [maxlength]="nameMax" />
+            <mat-hint>Shown to people you share with</mat-hint>
+            @if (form.controls.displayName.touched && form.controls.displayName.invalid) { <mat-error>Enter your name (up to {{ nameMax }} characters)</mat-error> }
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" formControlName="email" autocomplete="email" />
+          @if (form.controls.email.touched && form.controls.email.invalid) { <mat-error>Enter a valid email</mat-error> }
+        </mat-form-field>
+
+        @if (mode() !== 'forgot') {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password" [autocomplete]="mode() === 'signup' ? 'new-password' : 'current-password'" />
+            @if (form.controls.password.hasError('minlength')) { <mat-error>Use at least 8 characters</mat-error> }
+            @else if (form.controls.password.touched && form.controls.password.invalid) { <mat-error>Enter your password</mat-error> }
+          </mat-form-field>
+        }
+
+        @if (mode() === 'signup') {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Confirm password</mat-label>
+            <input matInput type="password" formControlName="confirmPassword" autocomplete="new-password" />
+          </mat-form-field>
+        }
+
+        <button mat-flat-button color="primary" type="submit" class="full" [disabled]="loading()">
+          @if (loading()) { <mat-spinner diameter="20" /> }
+          @else {
+            @switch (mode()) {
+              @case ('signup') { Create account }
+              @case ('forgot') { Send reset link }
+              @default { Sign in }
+            }
+          }
+        </button>
+      </form>
+
+      <p class="switch">
+        @switch (mode()) {
+          @case ('signup') { Already have an account? <button type="button" class="link-button" (click)="setMode('signin')">Sign in</button> }
+          @case ('forgot') { <button type="button" class="link-button" (click)="setMode('signin')">Back to sign in</button> }
+          @default {
+            New here? <button type="button" class="link-button" (click)="setMode('signup')">Create an account</button>
+            @if (passwordReset) {
+              <br />
+              <button type="button" class="link-button" (click)="setMode('forgot')">Forgot your password?</button>
+            }
+          }
+        }
+      </p>
+    </div>
+  </div>
+</div>

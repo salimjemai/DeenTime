@@ -1,0 +1,20 @@
+{
+  "name": "deentime-cloudflare",
+  "private": true,
+  "type": "module",
+  "description": "Static hosting for the masjid admin site at jemaiinnovations.com/masjid, plus the masjid module for the shared backend (masjid-module/).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "tsc --noEmit && tsc --noEmit -p masjid-module",
+    "test": "vitest run",
+    "build:web": "cd ../frontend/deentime-web && npm run build -- --configuration cloudflare --base-href /masjid/",
+    "dry-run": "wrangler deploy --dry-run --outdir dist"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261117.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.164.0",
+    "vitest": "^4.1.2"
+  }
+}
