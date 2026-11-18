@@ -24,7 +24,9 @@
         @if (mode() === 'signup') {
           <mat-form-field appearance="outline" class="full">
             <mat-label>Your name</mat-label>
-            <input matInput formControlName="displayName" autocomplete="name" />
+            <input matInput formControlName="displayName" autocomplete="name" [maxlength]="nameMax" />
+            <mat-hint>Shown to people you share with</mat-hint>
+            @if (form.controls.displayName.touched && form.controls.displayName.invalid) { <mat-error>Enter your name (up to {{ nameMax }} characters)</mat-error> }
           </mat-form-field>
         }
 
@@ -68,8 +70,10 @@
           @case ('forgot') { <button type="button" class="link-button" (click)="setMode('signin')">Back to sign in</button> }
           @default {
             New here? <button type="button" class="link-button" (click)="setMode('signup')">Create an account</button>
-            <br />
-            <button type="button" class="link-button" (click)="setMode('forgot')">Forgot your password?</button>
+            @if (passwordReset) {
+              <br />
+              <button type="button" class="link-button" (click)="setMode('forgot')">Forgot your password?</button>
+            }
           }
         }
       </p>

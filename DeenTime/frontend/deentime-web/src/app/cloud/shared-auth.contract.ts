@@ -12,6 +12,14 @@ export const SHARED_AUTH_PATHS = {
   resetPassword: '/v1/auth/reset'
 } as const;
 
+/** What the shared service supports today. Password reset is not built there yet. */
+export const SHARED_AUTH_FEATURES = {
+  passwordReset: false
+} as const;
+
+/** The shared service requires a display name at sign-up (family members see it). */
+export const DISPLAY_NAME_MAX = 60;
+
 export interface CloudUser {
   id: string;
   email: string;
@@ -20,6 +28,8 @@ export interface CloudUser {
 
 export interface CloudAuthResponse {
   token: string;
+  /** Unix milliseconds; sessions last 60 days. */
+  expiresAt?: number;
   user?: CloudUser;
 }
 

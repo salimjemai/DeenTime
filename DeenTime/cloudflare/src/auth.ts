@@ -3,9 +3,10 @@
  * the shared Jemai Innovations auth service (also used by Mushaf+). A request carries
  * that service's bearer token, and we ask the service who it belongs to.
  *
- * Contract assumed (kept in docs/shared-auth-contract.md): GET {AUTH_API_BASE}{AUTH_ME_PATH}
- * with the same Authorization header answers 200 {"user": {"id", "email", "displayName"}}
- * or 401. Change AUTH_ME_PATH in wrangler.jsonc if the shared service uses another path.
+ * Contract (confirmed with the Mushaf+ backend, see docs/shared-auth-contract.md):
+ * GET {AUTH_API_BASE}{AUTH_ME_PATH} with the same Authorization header answers
+ * 200 {"user": {"id", "email", "displayName", "createdAt"}} or 401 (unauthorized /
+ * session_expired). We never read or write the shared users or sessions tables.
  */
 
 export interface AuthUser {

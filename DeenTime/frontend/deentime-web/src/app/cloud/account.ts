@@ -9,7 +9,7 @@ import { switchMap } from 'rxjs';
 import { BRAND } from '../brand';
 import { CloudAuthService } from './cloud-auth.service';
 import { MasjidApiService } from './masjid-api.service';
-import { errorMessage } from './shared-auth.contract';
+import { DISPLAY_NAME_MAX, SHARED_AUTH_FEATURES, errorMessage } from './shared-auth.contract';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -29,13 +29,15 @@ export class CloudAccountComponent {
   private readonly route = inject(ActivatedRoute);
 
   readonly brand = BRAND;
+  readonly passwordReset = SHARED_AUTH_FEATURES.passwordReset;
+  readonly nameMax = DISPLAY_NAME_MAX;
   readonly mode = signal<Mode>(this.route.snapshot.queryParamMap.get('mode') === 'signup' ? 'signup' : 'signin');
   readonly loading = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
 
   readonly form = this.fb.nonNullable.group({
-    displayName: ['', [Validators.maxLength(120)]],
+    displayName: ['', [Validators.maxLength(DISPLAY_NAME_MAX)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
     password: ['', [Validators.required, Validators.maxLength(128)]],
     confirmPassword: ['']
@@ -54,6 +56,9 @@ export class CloudAccountComponent {
       ? [Validators.required, Validators.minLength(8), Validators.maxLength(128)]
       : [Validators.required, Validators.maxLength(128)]);
     password.updateValueAndValidity();
+    const name = this.form.controls.displayName;
+    name.setValidators(mode === 'signup' ? [Validators.required, Validators.maxLength(DISPLAY_NAME_MAX)] : []);
+    name.updateValueAndValidity();
   }
 
   submit(): void {

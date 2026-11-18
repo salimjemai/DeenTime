@@ -1,6 +1,9 @@
 -- Masjid admin data for the site at jemaiinnovations.com/masjid.
 -- Accounts (sign-up / sign-in) live in the shared Jemai Innovations auth service;
 -- these tables only store the user's id from that service (owner_user_id / user_id).
+-- Numbered 0002 so it can sit beside the shared service's 0001_init.sql if both ever
+-- share one D1. In a separate D1 there is no foreign key to users(id), so deleting an
+-- account there leaves its masjids here until a cleanup is added.
 
 CREATE TABLE IF NOT EXISTS masjids (
   id                 TEXT PRIMARY KEY,

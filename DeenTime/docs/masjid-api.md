@@ -3,7 +3,7 @@
 Served by `DeenTime/cloudflare` at `https://jemaiinnovations.com/masjid/api/v1`.
 The handler is `handleMasjidApi()` in `cloudflare/src/masjid-api.ts`, written so the
 shared Jemai Innovations Worker can mount the same routes if that is preferred. The D1
-schema is `cloudflare/migrations/0001_masjids.sql` (tables `masjids`, `masjid_admins`,
+schema is `cloudflare/migrations/0002_masjids.sql` (tables `masjids`, `masjid_admins`,
 `masjid_messages`); user ids are the shared auth service's ids.
 
 Signed in means a valid shared-auth bearer token (see `shared-auth-contract.md`).

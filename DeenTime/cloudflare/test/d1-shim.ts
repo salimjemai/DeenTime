@@ -6,7 +6,7 @@ import type { Db, DbStatement } from '../src/masjid-api.js';
 export function createTestDb(): Db {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON;');
-  db.exec(readFileSync(new URL('../migrations/0001_masjids.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0002_masjids.sql', import.meta.url), 'utf8'));
   const statement = (sql: string, values: unknown[] = []): DbStatement => ({
     bind: (...next: unknown[]) => statement(sql, next),
     first: async <T>() => ((db.prepare(sql).get(...(values as never[])) as T) ?? null),
