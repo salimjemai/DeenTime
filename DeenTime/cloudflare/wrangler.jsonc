@@ -1,0 +1,36 @@
+// Cloudflare Worker for https://jemaiinnovations.com/masjid (static Angular app + masjid API on D1).
+// No secrets live here. Accounts come from the shared Jemai Innovations auth service.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deentime",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  // Serve the site on the apex domain under /masjid once the zone is on Cloudflare.
+  "routes": [{ "pattern": "jemaiinnovations.com/masjid*", "zone_name": "jemaiinnovations.com" }],
+  "assets": {
+    // Filled by `npm run build:web && node scripts/prepare-assets.mjs` (dist-web/masjid/...).
+    "directory": "./dist-web",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "run_worker_first": ["/masjid/api/*", "/masjid"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "deentime",
+      // Replace with the id printed by `npx wrangler d1 create deentime`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "BASE_PATH": "/masjid",
+    // Shared sign-up / sign-in service (owned by the Mushaf+ backend work).
+    "AUTH_API_BASE": "https://api.jemaiinnovations.com",
+    "AUTH_ME_PATH": "/v1/auth/me",
+    "ALLOWED_ORIGINS": "https://jemaiinnovations.com,https://mushafplus.jemaiinnovations.com"
+  }
+  // When the shared auth Worker exists, a service binding is faster than a public fetch:
+  // "services": [{ "binding": "AUTH", "service": "<shared-auth-worker-name>" }]
+}

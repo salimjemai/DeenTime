@@ -1,0 +1,22 @@
+{
+  "name": "deentime-cloudflare",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker for the masjid admin site at jemaiinnovations.com/masjid: static Angular app + masjid API on D1.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "build:web": "cd ../frontend/deentime-web && npm run build -- --configuration cloudflare --base-href /masjid/",
+    "dry-run": "wrangler deploy --dry-run --outdir dist",
+    "db:migrate:local": "wrangler d1 migrations apply deentime --local",
+    "db:migrate:remote": "wrangler d1 migrations apply deentime --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261117.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.164.0",
+    "vitest": "^4.1.2"
+  }
+}
