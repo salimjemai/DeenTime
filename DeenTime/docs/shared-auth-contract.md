@@ -2,14 +2,12 @@
 
 Deen Time does not keep passwords. Accounts live in the shared Jemai Innovations
 auth service, which Mushaf+ also uses (being built in the MushafPlus repository as
-a Cloudflare Worker + D1). This file is what the Deen Time web app and Worker assume.
-If the shared service settles on different paths, change two places:
+a Cloudflare Worker + D1). This file is what the Deen Time web app relies on. If the
+shared service changes its paths, change `SHARED_AUTH_PATHS` in
+`frontend/deentime-web/src/app/cloud/shared-auth.contract.ts` and `authApiUrl` in
+`src/environments/environment.cloudflare.ts`.
 
-- web app: `frontend/deentime-web/src/app/cloud/shared-auth.contract.ts` (`SHARED_AUTH_PATHS`)
-  and `authApiUrl` in `src/environments/environment.cloudflare.ts`
-- Worker: `AUTH_API_BASE` and `AUTH_ME_PATH` in `cloudflare/wrangler.jsonc`
-
-Base URL assumed: `https://api.jemaiinnovations.com`. JSON in and out. Sessions are a
+Base URL: `https://api.jemaiinnovations.com`. JSON in and out. Sessions are a
 bearer token sent as `Authorization: Bearer <token>`.
 
 Confirmed with the Mushaf+ backend (Worker `mushafplus-api`, D1 `mushafplus`, branch
@@ -36,5 +34,5 @@ CORS: the shared service must allow `https://jemaiinnovations.com` (the Deen Tim
 is served at `/masjid/` on that origin) with the `Authorization` and `Content-Type`
 headers.
 
-The Deen Time Worker checks a token by calling `GET /v1/auth/me` with it (cached for
-60 seconds). A service binding named `AUTH` to the shared Worker is used when present.
+Inside the shared backend the masjid module checks the caller with that backend's own
+`requireUser()`, so there is no extra call to `/v1/auth/me` on each request.

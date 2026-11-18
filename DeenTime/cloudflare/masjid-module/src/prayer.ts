@@ -1,9 +1,9 @@
 /**
- * Daily prayer times for a masjid, computed in the Worker with the same calculator the
- * Node API uses (backend-node/src/domain), so both hosts agree on every minute.
+ * Daily prayer times for a masjid. prayer-times.ts is a copy of the Node API's calculator
+ * (backend-node/src/domain/prayer-times.ts), so both agree on every minute.
  */
-import { computePrayerTimes, toPrayerTimesDto, type PrayerTimesDto } from '../../backend-node/src/domain/prayer-times.js';
-import { baseUtcOffsetMinutes, isValidTimeZone, todayInZone, zoneOffsetMinutes } from '../../backend-node/src/domain/timezone.js';
+import { computePrayerTimes, toPrayerTimesDto, type PrayerTimesDto } from './prayer-times.js';
+import { baseUtcOffsetMinutes, isValidTimeZone, todayInZone, zoneOffsetMinutes } from './timezone.js';
 
 export const CALCULATION_METHODS = ['ISNA', 'MWL', 'Egyptian', 'Karachi', 'UmmAlQura', 'Gulf', 'Kuwait', 'Qatar', 'Tehran', 'Jafari'] as const;
 export const ASR_METHODS = ['Standard', 'Hanafi'] as const;

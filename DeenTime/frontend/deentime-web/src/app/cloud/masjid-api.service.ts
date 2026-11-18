@@ -87,7 +87,7 @@ export interface PublicMasjid {
 
 export type MasjidInput = Partial<Omit<Masjid, 'id' | 'slug'>>;
 
-/** The masjid admin API served by the Cloudflare Worker at /masjid/api/v1. */
+/** The masjid admin API in the shared backend at api.jemaiinnovations.com/v1/masjid. */
 @Injectable({ providedIn: 'root' })
 export class MasjidApiService {
   private readonly http = inject(HttpClient);
@@ -103,7 +103,7 @@ export class MasjidApiService {
     return this.http.post<{ masjid: Masjid }>(`${this.base}/masjids`, input).pipe(map(r => r.masjid));
   }
   update(id: string, input: MasjidInput) {
-    return this.http.put<{ masjid: Masjid }>(`${this.base}/masjids/${id}`, input).pipe(map(r => r.masjid));
+    return this.http.patch<{ masjid: Masjid }>(`${this.base}/masjids/${id}`, input).pipe(map(r => r.masjid));
   }
   messages(id: string) {
     return this.http.get<{ messages: MasjidMessage[] }>(`${this.base}/masjids/${id}/messages`).pipe(map(r => r.messages));
@@ -112,7 +112,7 @@ export class MasjidApiService {
     return this.http.post<{ message: MasjidMessage }>(`${this.base}/masjids/${id}/messages`, message).pipe(map(r => r.message));
   }
   updateMessage(id: string, message: MasjidMessage) {
-    return this.http.put<{ message: MasjidMessage }>(`${this.base}/masjids/${id}/messages/${message.id}`, message).pipe(map(r => r.message));
+    return this.http.patch<{ message: MasjidMessage }>(`${this.base}/masjids/${id}/messages/${message.id}`, message).pipe(map(r => r.message));
   }
   deleteMessage(id: string, messageId: string) {
     return this.http.delete<void>(`${this.base}/masjids/${id}/messages/${messageId}`);

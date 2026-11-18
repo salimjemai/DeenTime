@@ -1,12 +1,23 @@
 /**
- * Masjid admin API on D1. Mountable on its own: index.ts serves it under /masjid/api/v1,
- * and the shared Jemai Innovations Worker can import `handleMasjidApi` to serve the same
- * routes. Every write needs a signed-in user from the shared auth service.
+ * Masjid admin API, written to drop into the shared Jemai Innovations backend (the
+ * Mushaf+ Worker and its D1). That Worker mounts it under /v1/masjid and passes its own
+ * session check as `verify`; see ../README.md. Every write needs a signed-in user.
  */
-import type { AuthUser, AuthVerifier } from './auth.js';
-import { AuthUnavailableError } from './auth.js';
 import { ASR_METHODS, CALCULATION_METHODS, SALAH, iqamaTimes, isValidTimeZone, prayerTimesFor, type IqamaRule, type IqamaRules } from './prayer.js';
-import brand from '../../brand.json';
+
+/** The signed-in caller, as the shared backend's session check returns it. */
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+/**
+ * Returns the caller, or null when the request carries no valid session. It may also
+ * throw an error with a numeric `status` and a string `code` (such as the shared
+ * backend's ApiError for session_expired); that becomes the response.
+ */
+export type AuthVerifier = (request: Request) => Promise<AuthUser | null>;
 
 /** The slice of the D1 API this module uses (tests provide a node:sqlite shim). */
 export interface Db {
@@ -25,7 +36,6 @@ export interface MasjidApiContext {
   verify: AuthVerifier;
   now?: () => Date;
   fetchImpl?: typeof fetch;
-  authApiBase: string;
 }
 
 type Json = Record<string, unknown>;
@@ -100,15 +110,16 @@ function errorResponse(error: HttpError): Response {
   return json({ error: { code: error.code, message: error.message, ...(error.fields ? { fields: error.fields } : {}) } }, error.status);
 }
 
-/** Answers /api/v1/* (path already stripped of any /masjid prefix), or null for other paths. */
-export async function handleMasjidApi(request: Request, path: string, ctx: MasjidApiContext): Promise<Response | null> {
-  if (!path.startsWith('/api/v1/')) return null;
-  const route = path.slice('/api/v1'.length);
+/**
+ * Answers one masjid API request. `route` is the path after the mount point, so with the
+ * module mounted at /v1/masjid a request for /v1/masjid/me/masjids passes "/me/masjids".
+ */
+export async function handleMasjidApi(request: Request, route: string, ctx: MasjidApiContext): Promise<Response> {
   const method = request.method.toUpperCase();
   const now = ctx.now ?? (() => new Date());
   try {
     if (method === 'GET' && route === '/config') {
-      return json({ brand, authApiBase: ctx.authApiBase, calculationMethods: CALCULATION_METHODS, asrMethods: ASR_METHODS });
+      return json({ calculationMethods: CALCULATION_METHODS, asrMethods: ASR_METHODS });
     }
 
     let match = /^\/public\/masjids\/([a-z0-9-]{1,80})$/.exec(route);
@@ -200,7 +211,7 @@ export async function handleMasjidApi(request: Request, path: string, ctx: Masji
       } else {
         const existing = await ctx.db.prepare('SELECT * FROM masjid_messages WHERE id = ? AND masjid_id = ?').bind(messageId, masjidId).first<MessageRow>();
         if (!existing) throw new HttpError(404, 'not_found', 'That message was not found.');
-        if (method === 'PUT') {
+        if (method === 'PUT' || method === 'PATCH') {
           const input = validateMessage(await readJson(request));
           await ctx.db
             .prepare('UPDATE masjid_messages SET title = ?, body = ?, starts_on = ?, ends_on = ?, pinned = ?, updated_at = ? WHERE id = ?')
@@ -219,9 +230,15 @@ export async function handleMasjidApi(request: Request, path: string, ctx: Masji
     throw new HttpError(404, 'not_found', 'No such API route.');
   } catch (error) {
     if (error instanceof HttpError) return errorResponse(error);
-    if (error instanceof AuthUnavailableError) return errorResponse(new HttpError(503, 'auth_unavailable', 'Sign-in is temporarily unavailable. Try again in a moment.'));
+    if (isStatusError(error)) return errorResponse(new HttpError(error.status, error.code, error.message));
     throw error;
   }
+}
+
+function isStatusError(error: unknown): error is { status: number; code: string; message: string } {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as Record<string, unknown>;
+  return typeof e['status'] === 'number' && e['status'] >= 400 && e['status'] < 600 && typeof e['code'] === 'string';
 }
 
 async function requireUser(request: Request, verify: AuthVerifier): Promise<AuthUser> {

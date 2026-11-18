@@ -57,7 +57,7 @@ export class CloudAuthService {
 
   /** Requests that should carry the bearer token: the shared auth service and our masjid API. */
   isOwnApi(url: string): boolean {
-    return url.startsWith(this.base) || url.startsWith(environment.masjidApiUrl) || url.includes('/masjid/api/');
+    return url.startsWith(`${this.base}/`) || url.startsWith(environment.masjidApiUrl);
   }
 
   clear(): void {

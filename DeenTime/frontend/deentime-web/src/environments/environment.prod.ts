@@ -5,8 +5,8 @@ export const environment = {
   backend: 'legacy' as 'legacy' | 'cloudflare',
   /** Shared Jemai Innovations sign-up/sign-in service (cloudflare backend only). */
   authApiUrl: 'https://api.jemaiinnovations.com',
-  /** Masjid API base; relative to the page's <base href> so /masjid/api/v1 on Cloudflare. */
-  masjidApiUrl: 'api/v1',
+  /** Masjid API base: the masjid module in the shared backend. */
+  masjidApiUrl: 'https://api.jemaiinnovations.com/v1/masjid',
   production: true,
   apiUrl: '',
   devSuperUser: null as { email: string; password: string } | null,
