@@ -24,7 +24,7 @@ async function signIn(page: Page) {
   await page.waitForURL(/\/org\/[0-9a-f-]+\/timings/);
 }
 
-test.describe('IqamaTime browser regression matrix', () => {
+test.describe('MasjidHub browser regression matrix', () => {
   test('authenticated navigation uses the bundled icon font on every tab', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
@@ -215,7 +215,7 @@ test.describe('IqamaTime browser regression matrix', () => {
     await expect(page.getByText('DAILY + FRIDAY PRAYERS')).toBeVisible();
     await expect(page.locator('.daily-schedule .prayer-row').first()).toBeVisible();
     await expect(page.locator('.jumuah-section')).toBeVisible();
-    await expect(page.getByText('Powered by IqamaTime')).toBeVisible();
+    await expect(page.getByText('Powered by MasjidHub')).toBeVisible();
 
     await page.goto(`/w/${org.slug}/daily`);
     await expect(page.getByText('DAILY PRAYER TIMES')).toBeVisible();
@@ -234,9 +234,9 @@ test.describe('IqamaTime browser regression matrix', () => {
 
     const externalUrl = `http://127.0.0.1:4300/?src=${encodeURIComponent(`${webOrigin}/w/${org.slug}`)}`;
     await page.goto(externalUrl);
-    const externalFrame = page.frameLocator('iframe[title="IqamaTime external-origin test"]');
+    const externalFrame = page.frameLocator('iframe[title="MasjidHub external-origin test"]');
     await expect(externalFrame.getByText('DAILY + FRIDAY PRAYERS')).toBeVisible();
-    await expect(externalFrame.getByText('Powered by IqamaTime')).toBeVisible();
+    await expect(externalFrame.getByText('Powered by MasjidHub')).toBeVisible();
   });
 
   test('Publish has responsive previews and the Content API has a live Qibla compass', async ({ page }) => {

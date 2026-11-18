@@ -57,7 +57,7 @@
           <i></i>{{ stateLabel(quranState()) }}
         </span>
       </header>
-      <p class="provider-description">All {{ summary()?.quran?.endpointCount ?? 35 }} documented routes are mirrored under IqamaTime with persistent cache and stale-data fallback.</p>
+      <p class="provider-description">All {{ summary()?.quran?.endpointCount ?? 35 }} documented routes are mirrored under MasjidHub with persistent cache and stale-data fallback.</p>
       <div class="provider-facts">
         <span><b>{{ formatNumber(summary()?.quran?.textEditionCount) }}</b> text</span>
         <span><b>{{ formatNumber(summary()?.quran?.audioEditionCount) }}</b> audio</span>
@@ -179,7 +179,7 @@
         }
         <span class="more">+{{ additionalLanguages() }} more</span>
       </div>
-      <div class="corpus-note"><mat-icon>info</mat-icon><p>Audio files remain on their provider CDNs; IqamaTime preserves every reciter manifest and URL so masjid apps can stream without duplicating hundreds of gigabytes.</p></div>
+      <div class="corpus-note"><mat-icon>info</mat-icon><p>Audio files remain on their provider CDNs; MasjidHub preserves every reciter manifest and URL so masjid apps can stream without duplicating hundreds of gigabytes.</p></div>
     </article>
   </section>
 
@@ -209,7 +209,7 @@
         @if (isSuperUser) {
           <p>Use “Import every book” above, then search all available Arabic, English, and Urdu records locally.</p>
         } @else {
-          <p>The IqamaTime administrator imports the Hadith collection once for every masjid. Until then, search and flash cards stay empty.</p>
+          <p>The MasjidHub administrator imports the Hadith collection once for every masjid. Until then, search and flash cards stay empty.</p>
         }
       </div>
     } @else {
@@ -280,7 +280,7 @@
     @if (issuedClient(); as issued) {
       <div class="issued-key" role="status">
         <span class="issued-icon"><mat-icon>vpn_key</mat-icon></span>
-        <div><strong>{{ issued.name }}</strong><small>Copy this key now. For security, IqamaTime will not show the complete value again.</small><code>{{ issued.key }}</code></div>
+        <div><strong>{{ issued.name }}</strong><small>Copy this key now. For security, MasjidHub will not show the complete value again.</small><code>{{ issued.key }}</code></div>
         <button mat-stroked-button (click)="copyIssuedKey()"><mat-icon>content_copy</mat-icon> Copy key</button>
         <button mat-icon-button aria-label="Hide issued key" (click)="dismissIssuedKey()"><mat-icon>close</mat-icon></button>
       </div>

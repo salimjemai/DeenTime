@@ -107,7 +107,7 @@ const design: DesignRow = {
   organizationId: ORG_ID,
   headerImageUrl: null,
   iqamaHeadings: ['FAJR', 'IQM*', 'SUNRISE', 'DUHUR', 'IQM*', 'ASR', 'IQM*', 'SUNSET', 'ISHA', 'IQM*'],
-  footerHtml: '© 2026 Dev Test Masjid · IqamaTime',
+  footerHtml: '© 2026 Dev Test Masjid · MasjidHub',
   theme: 'default',
   tvFontScale: 100,
   widgetFontScale: 100,
@@ -141,7 +141,7 @@ const referenceDisplay = {
     headerImageUrl: null,
     backgroundImageUrl: null,
     iqamaHeadings: ['FAJR', 'IQM*', 'SUNRISE', 'DUHUR', 'IQM*', 'ASR', 'IQM*', 'SUNSET', 'ISHA', 'IQM*'],
-    footerHtml: '© 2026 Dev Test Masjid · IqamaTime',
+    footerHtml: '© 2026 Dev Test Masjid · MasjidHub',
     theme: 'default',
     tvFontScale: 120,
     widgetFontScale: 100,
@@ -398,32 +398,32 @@ describe('PublicController', () => {
         displays: {
           tv: {
             url: `${base}/tv/${slug}`,
-            iframe: `<iframe src="${base}/tv/${slug}" title="IqamaTime &#183; North Lamar Austin Muslim Community Center prayer times" width="100%" height="720" loading="lazy" ${style}></iframe>`,
+            iframe: `<iframe src="${base}/tv/${slug}" title="MasjidHub &#183; North Lamar Austin Muslim Community Center prayer times" width="100%" height="720" loading="lazy" ${style}></iframe>`,
           },
           widget: {
             url: `${base}/w/${slug}`,
-            iframe: `<iframe src="${base}/w/${slug}" title="IqamaTime &#183; North Lamar Austin Muslim Community Center prayer times" width="390" height="920" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
+            iframe: `<iframe src="${base}/w/${slug}" title="MasjidHub &#183; North Lamar Austin Muslim Community Center prayer times" width="390" height="920" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
           },
           combined: {
             url: `${base}/w/${slug}`,
-            iframe: `<iframe src="${base}/w/${slug}" title="IqamaTime &#183; North Lamar Austin Muslim Community Center prayer times" width="390" height="920" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
+            iframe: `<iframe src="${base}/w/${slug}" title="MasjidHub &#183; North Lamar Austin Muslim Community Center prayer times" width="390" height="920" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
           },
           daily: {
             url: `${base}/w/${slug}/daily`,
-            iframe: `<iframe src="${base}/w/${slug}/daily" title="IqamaTime &#183; North Lamar Austin Muslim Community Center daily prayer times" width="390" height="720" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
+            iframe: `<iframe src="${base}/w/${slug}/daily" title="MasjidHub &#183; North Lamar Austin Muslim Community Center daily prayer times" width="390" height="720" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
           },
           jumuah: {
             url: `${base}/w/${slug}/jumuah`,
-            iframe: `<iframe src="${base}/w/${slug}/jumuah" title="IqamaTime &#183; North Lamar Austin Muslim Community Center Friday prayer times" width="390" height="560" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
+            iframe: `<iframe src="${base}/w/${slug}/jumuah" title="MasjidHub &#183; North Lamar Austin Muslim Community Center Friday prayer times" width="390" height="560" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
           },
           compact: {
             url: `${base}/w2/${slug}`,
-            iframe: `<iframe src="${base}/w2/${slug}" title="IqamaTime &#183; North Lamar Austin Muslim Community Center prayer times" width="330" height="820" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
+            iframe: `<iframe src="${base}/w2/${slug}" title="MasjidHub &#183; North Lamar Austin Muslim Community Center prayer times" width="330" height="820" loading="lazy" data-iqamatime-auto-height ${style}></iframe>${script}`,
           },
         },
         supportedParameters: { locale: ['en-US', 'ar', 'ur'], theme: ['default', 'dark', 'classic'], fontScale: { min: 75, max: 160, step: 5 }, layout: ['tv', 'widget', 'compact'] },
         defaults: { theme: 'default', fontScale: 100, locale: 'en-US' },
-        provider: 'IqamaTime',
+        provider: 'MasjidHub',
       });
     });
 
@@ -431,7 +431,7 @@ describe('PublicController', () => {
       const { http } = await start(emptyState({ organization: { ...organization, name: `Masjid <Al-Noor> & "Friends" 'Café'` } }));
       const response = await http().get('/public/organizations/dev-test-masjid/displays');
       expect(response.status).toBe(200);
-      expect(response.body.displays.jumuah.iframe).toContain('title="IqamaTime &#183; Masjid &lt;Al-Noor&gt; &amp; &quot;Friends&quot; &#39;Caf&#233;&#39; Friday prayer times"');
+      expect(response.body.displays.jumuah.iframe).toContain('title="MasjidHub &#183; Masjid &lt;Al-Noor&gt; &amp; &quot;Friends&quot; &#39;Caf&#233;&#39; Friday prayer times"');
       expect(response.body.organization.name).toBe(`Masjid <Al-Noor> & "Friends" 'Café'`);
     });
 

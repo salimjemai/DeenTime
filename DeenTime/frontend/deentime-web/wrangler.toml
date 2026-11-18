@@ -1,0 +1,11 @@
+# Cloudflare Pages project for the MasjidHub site (see ../../docs/cloudflare-deployment.md).
+# Deployed with `wrangler pages deploy` from this folder; this file is the source of
+# truth for the project's plain variables. Secrets are never stored here.
+name = "masjidhub"
+pages_build_output_dir = "dist/deentime-web/browser"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Cloudflare Tunnel hostname of the machine that runs the API. The Pages worker
+# (cloudflare/_worker.js) forwards /api, /public, /uploads, /health and /jobs to it.
+API_ORIGIN = "https://masjidhub-origin.jemaiinnovations.com"

@@ -9,6 +9,8 @@
     "test": "ng test",
     "e2e": "playwright test",
     "copy:check": "node ../../scripts/check-public-copy.mjs",
+    "pages:test": "node --test cloudflare/worker.test.mjs",
+    "pages:prepare": "node cloudflare/prepare-pages.mjs",
     "serve:ssr:deentime-web": "node dist/deentime-web/server/server.mjs",
     "lint": "ng lint"
   },

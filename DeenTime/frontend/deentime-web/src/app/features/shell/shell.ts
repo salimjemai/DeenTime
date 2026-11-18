@@ -48,7 +48,7 @@ export class ShellComponent implements OnInit {
   isSuperUser = computed(() => this.auth.hasSuperUserRole());
   registeredMasjids = signal<MasjidAdminRow[]>([]);
   hasOrganizationContext = computed(() => !this.isSuperUser() || !!this.selectedOrgId());
-  orgName = signal(this.auth.hasSuperUserRole() ? 'IqamaTime Administration' : 'Your organization');
+  orgName = signal(this.auth.hasSuperUserRole() ? 'MasjidHub Administration' : 'Your organization');
   contentKicker = computed(() => this.hasOrganizationContext()
     ? `MOSQUE OPERATIONS · ${this.todayLabel}`
     : `IQAMATIME ADMINISTRATION · ${this.todayLabel}`);
@@ -217,7 +217,7 @@ export class ShellComponent implements OnInit {
       const demoOrganizationId = this.auth.getOrgId();
       if (!routeOrganizationId || routeOrganizationId === demoOrganizationId) {
         this.selectedOrgId.set(null);
-        this.orgName.set('IqamaTime Administration');
+        this.orgName.set('MasjidHub Administration');
         if (routeOrganizationId === demoOrganizationId) this.router.navigate(['/admin']);
         return;
       }

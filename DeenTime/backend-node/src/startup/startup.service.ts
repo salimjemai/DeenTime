@@ -9,7 +9,7 @@ export const DEFAULT_IQAMA_HEADINGS = ['FAJR', 'IQM*', 'SUNRISE', 'DUHUR', 'IQM*
 
 /**
  * Port of SeedSuperUserAsync: migrate, backfill organization identity, then make
- * the SuperUser configuration section authoritative for the IqamaTime
+ * the SuperUser configuration section authoritative for the MasjidHub
  * administrator account (create, rename, grant, or rotate the password).
  */
 @Injectable()
@@ -151,7 +151,7 @@ export class StartupService {
         id: randomUUID(),
         organizationId: organization.id,
         iqamaHeadings: DEFAULT_IQAMA_HEADINGS,
-        footerHtml: `© ${new Date().getUTCFullYear()} ${orgName} · IqamaTime`,
+        footerHtml: `© ${new Date().getUTCFullYear()} ${orgName} · MasjidHub`,
         theme: 'default',
         updatedAtUtc: new Date(),
       },

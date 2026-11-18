@@ -17,7 +17,7 @@ describe('htmlDecode', () => {
 describe('stripHtml', () => {
   it('replaces tags with spaces, decodes entities and trims', () => {
     expect(stripHtml('<p>Assalamu &amp; <b>welcome</b> &copy; 2026</p>')).toBe('Assalamu &  welcome  © 2026');
-    expect(stripHtml('  © 2026 Demo Mosque · IqamaTime  ')).toBe('© 2026 Demo Mosque · IqamaTime');
+    expect(stripHtml('  © 2026 Demo Mosque · MasjidHub  ')).toBe('© 2026 Demo Mosque · MasjidHub');
     expect(stripHtml('<br/>')).toBe('');
   });
 

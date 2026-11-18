@@ -165,7 +165,7 @@ function buildQiblaMetadata(): Record<string, unknown> {
         method: 'GET',
         path: '/public/content/qibla/{latitude}/{longitude}',
         mediaType: 'application/json',
-        description: 'Qibla bearing plus IqamaTime metadata and a related compass URL.',
+        description: 'Qibla bearing plus MasjidHub metadata and a related compass URL.',
       },
       {
         method: 'GET',
@@ -211,7 +211,7 @@ export class PublicContentController {
         header: 'X-IqamaTime-Client-Key',
         legacyHeader: 'X-DeenTime-Client-Key',
         scope: 'content:read',
-        note: 'Administrators may use their IqamaTime session token; external masjid apps must send a client key.',
+        note: 'Administrators may use their MasjidHub session token; external masjid apps must send a client key.',
       },
       browserAccess: {
         crossOrigin: true,
@@ -365,7 +365,7 @@ export class PublicContentController {
 
     const identifier = edition.trim();
     const audioEdition = await this.prisma.quranEdition.findFirst({ where: { identifier, format: 'audio' }, select: { identifier: true } });
-    if (audioEdition === null) throw badRequest({ error: "Choose a valid audio edition from the IqamaTime Qur'an catalogue." });
+    if (audioEdition === null) throw badRequest({ error: "Choose a valid audio edition from the MasjidHub Qur'an catalogue." });
 
     const cached = await this.prisma.islamicContentCacheEntry.findUnique({
       where: { provider_cacheKey: { provider: QuranProviderClient.providerName, cacheKey: `/quran/${audioEdition.identifier}` } },
@@ -514,7 +514,7 @@ export class PublicContentController {
     let key = headerValue(request, 'x-iqamatime-client-key');
     if (!key?.trim()) key = headerValue(request, 'x-deentime-client-key');
     if (!key?.trim()) {
-      throw unauthorized({ error: 'An IqamaTime API client key is required.', header: 'X-IqamaTime-Client-Key', scope: 'content:read' });
+      throw unauthorized({ error: 'A MasjidHub API client key is required.', header: 'X-IqamaTime-Client-Key', scope: 'content:read' });
     }
 
     const validation = await this.credentials.validate(key, 'content:read', request.path);

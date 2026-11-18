@@ -116,7 +116,7 @@ export class ContentComponent implements OnInit {
   private snack = inject(MatSnackBar);
   private destroyRef = inject(DestroyRef);
 
-  /** The content library (sync controls, totals) is managed by the IqamaTime super user only. */
+  /** The content library (sync controls, totals) is managed by the MasjidHub super user only. */
   readonly isSuperUser = this.auth.hasSuperUserRole();
   private completionMarkers = new Map<string, string>();
   private reciterRequest = 0;

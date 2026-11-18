@@ -8,7 +8,7 @@ describe('webUtilityHtmlEncode', () => {
   });
 
   it('writes Latin-1 supplement and astral characters as decimal entities only', () => {
-    expect(webUtilityHtmlEncode('IqamaTime · Café €')).toBe('IqamaTime &#183; Caf&#233; €');
+    expect(webUtilityHtmlEncode('MasjidHub · Café €')).toBe('MasjidHub &#183; Caf&#233; €');
     expect(webUtilityHtmlEncode('☪ 😀')).toBe('☪ &#128512;');
     expect(webUtilityHtmlEncode('a\uD800b')).toBe('a�b');
   });
@@ -43,7 +43,7 @@ describe('buildEmbedCode', () => {
 
   it('builds the widget URLs, iframes and TV link exactly like PublishController.EmbedCode', () => {
     const code = buildEmbedCode(origin, { slug: 'east-mosque', name: 'Mosque <East> & Community' });
-    const title = 'IqamaTime &#183; Mosque &lt;East&gt; &amp; Community';
+    const title = 'MasjidHub &#183; Mosque &lt;East&gt; &amp; Community';
     expect(code).toEqual({
       widgetUrl: 'https://iqamatime.example/w/east-mosque',
       combinedWidgetUrl: 'https://iqamatime.example/w/east-mosque',
@@ -56,7 +56,7 @@ describe('buildEmbedCode', () => {
       dailyIframe: `<iframe src="https://iqamatime.example/w/east-mosque/daily" title="${title} daily prayer times" width="420" height="720" ${iframeTail}${embedScript}`,
       jumuahIframe: `<iframe src="https://iqamatime.example/w/east-mosque/jumuah" title="${title} Friday prayer times" width="420" height="560" ${iframeTail}${embedScript}`,
       compactIframe: `<iframe src="https://iqamatime.example/w2/east-mosque" title="${title} compact prayer times" width="360" height="800" ${iframeTail}${embedScript}`,
-      script: '<a href="https://iqamatime.example/tv/east-mosque">Open Mosque &lt;East&gt; &amp; Community IqamaTime TV display</a>',
+      script: '<a href="https://iqamatime.example/tv/east-mosque">Open Mosque &lt;East&gt; &amp; Community MasjidHub TV display</a>',
     });
     expect(Object.keys(code)).toEqual(['widgetUrl', 'combinedWidgetUrl', 'dailyWidgetUrl', 'jumuahWidgetUrl', 'compactWidgetUrl', 'tvUrl', 'iframe', 'combinedIframe', 'dailyIframe', 'jumuahIframe', 'compactIframe', 'script']);
   });

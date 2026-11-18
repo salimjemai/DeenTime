@@ -4,7 +4,7 @@
     <div class="profile-hero-copy">
       <span class="eyebrow">ORGANIZATION SETTINGS</span>
       <h2>Organization profile</h2>
-      <p>Keep your public identity and prayer calculation location accurate across every IqamaTime output.</p>
+      <p>Keep your public identity and prayer calculation location accurate across every MasjidHub output.</p>
     </div>
     <div class="profile-summary" aria-label="Current profile summary">
       @if (orgForm.controls.city.value || orgForm.controls.state.value) {
@@ -52,7 +52,7 @@
       </mat-card-content>
 
       <div class="card-actions">
-        <span><mat-icon>public</mat-icon>Used on public-facing IqamaTime pages</span>
+        <span><mat-icon>public</mat-icon>Used on public-facing MasjidHub pages</span>
         <button mat-flat-button color="primary" type="button" (click)="saveOrg()" [disabled]="saving()">
           <mat-icon>save</mat-icon> Save mosque information
         </button>

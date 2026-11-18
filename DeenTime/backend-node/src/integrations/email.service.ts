@@ -96,7 +96,7 @@ export class RegistrationEmailSender {
       username: config.get('EmailDelivery:Username') ?? '',
       password: config.get('EmailDelivery:Password') ?? '',
       fromAddress: config.get('EmailDelivery:FromAddress') ?? '',
-      fromName: config.get('EmailDelivery:FromName') ?? 'IqamaTime',
+      fromName: config.get('EmailDelivery:FromName') ?? 'MasjidHub',
       replyTo: config.get('EmailDelivery:ReplyTo') ?? '',
     };
     if (this.settings.enabled && !this.hasCredentials()) {
@@ -120,7 +120,7 @@ export class RegistrationEmailSender {
     }
     await this.send(
       email,
-      'Verify your IqamaTime administrator account',
+      'Verify your MasjidHub administrator account',
       `<p>Assalamu alaikum,</p><p>Confirm your administrator account for <strong>${htmlEncode(organizationName)}</strong>.</p><p><a href="${htmlEncode(verificationUrl)}">Verify email and activate the masjid</a></p><p>This link expires in 30 minutes. After verifying, sign in with the password you chose to open your masjid dashboard.</p>${this.supportLine}`,
     );
   }
@@ -132,8 +132,8 @@ export class RegistrationEmailSender {
     }
     await this.send(
       email,
-      'You are invited to register your masjid with IqamaTime',
-      `<p>Assalamu alaikum,</p><p>IqamaTime has invited you to register <strong>${htmlEncode(organizationName)}</strong>.</p><p><a href="${htmlEncode(invitationUrl)}">Start secure masjid registration</a></p><p>You will create a password, complete the masjid details, and verify this email address; then sign in to open your masjid dashboard. This invitation expires in 7 days.</p>${this.supportLine}`,
+      'You are invited to register your masjid with MasjidHub',
+      `<p>Assalamu alaikum,</p><p>MasjidHub has invited you to register <strong>${htmlEncode(organizationName)}</strong>.</p><p><a href="${htmlEncode(invitationUrl)}">Start secure masjid registration</a></p><p>You will create a password, complete the masjid details, and verify this email address; then sign in to open your masjid dashboard. This invitation expires in 7 days.</p>${this.supportLine}`,
     );
   }
 
@@ -144,15 +144,15 @@ export class RegistrationEmailSender {
     }
     await this.send(
       email,
-      'Reset your IqamaTime password',
-      `<p>Assalamu alaikum,</p><p>A password reset was requested for your IqamaTime administrator account.</p><p><a href="${htmlEncode(resetUrl)}">Choose a new password</a></p><p>This link expires in 30 minutes. If you did not request it, you can ignore this email; your password will not change.</p>`,
+      'Reset your MasjidHub password',
+      `<p>Assalamu alaikum,</p><p>A password reset was requested for your MasjidHub administrator account.</p><p><a href="${htmlEncode(resetUrl)}">Choose a new password</a></p><p>This link expires in 30 minutes. If you did not request it, you can ignore this email; your password will not change.</p>`,
     );
   }
 
   private get supportLine(): string {
     if (this.supportEmail === '') return '';
     const encoded = htmlEncode(this.supportEmail);
-    return `<p>Questions? Contact the IqamaTime administrator at <a href="mailto:${encoded}">${encoded}</a>.</p>`;
+    return `<p>Questions? Contact the MasjidHub administrator at <a href="mailto:${encoded}">${encoded}</a>.</p>`;
   }
 
   private handleDisabled(logMessage: string): void {

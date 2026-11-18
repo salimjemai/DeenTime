@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Post, Req, Res } from '@nestjs/
 import type { Request, Response } from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { Authorize, CurrentUser } from '../../common/auth/authorize.decorator.js';
+import { ClientAddressResolver } from '../../common/client-address.js';
 import { JwtService, type SessionUser } from '../../common/auth/jwt.service.js';
 import { badRequest, conflict, problem, tooManyRequests, unauthorized, validationProblem } from '../../common/errors.js';
 import { isGuid } from '../../common/json.js';
@@ -55,6 +56,7 @@ export class AuthController {
     private readonly addresses: GoogleAddressService,
     private readonly emailSender: RegistrationEmailSender,
     private readonly throttle: LoginThrottle,
+    private readonly clientAddress: ClientAddressResolver,
   ) {}
 
   @Get('config')
@@ -97,12 +99,12 @@ export class AuthController {
   @RateLimit('auth-register')
   @HttpCode(202)
   async register(@Body(validated(registerSchema)) req: RegisterRequest, @Req() request: Request): Promise<Record<string, unknown>> {
-    // Registration is by invitation only: the IqamaTime administrator invites a masjid
+    // Registration is by invitation only: the MasjidHub administrator invites a masjid
     // and the invited email completes the form from the link in that invitation.
     if (!req.invitationToken?.trim()) {
-      throw badRequest({ code: 'invitation_required', message: 'Masjid registration is by invitation only. Contact the IqamaTime administrator to request an invitation.' });
+      throw badRequest({ code: 'invitation_required', message: 'Masjid registration is by invitation only. Contact the MasjidHub administrator to request an invitation.' });
     }
-    if (!(await this.captcha.verify(req.captchaToken, 'register', request.socket.remoteAddress))) throw badRequest(CAPTCHA_FAILED);
+    if (!(await this.captcha.verify(req.captchaToken, 'register', this.clientAddress.resolve(request)))) throw badRequest(CAPTCHA_FAILED);
 
     let addressLine = req.addressLine.trim();
     let city = req.city.trim();
@@ -130,7 +132,7 @@ export class AuthController {
     const now = new Date();
     const invitation = await this.prisma.masjidInvitation.findFirst({ where: { invitationTokenHash: hashToken(req.invitationToken) } });
     if (!invitation || invitation.expiresAtUtc.getTime() <= now.getTime() || invitation.revokedAtUtc !== null || invitation.acceptedAtUtc !== null) {
-      throw badRequest({ code: 'invitation_invalid', message: 'This invitation is invalid or has expired. Contact the IqamaTime administrator for a new one.' });
+      throw badRequest({ code: 'invitation_invalid', message: 'This invitation is invalid or has expired. Contact the MasjidHub administrator for a new one.' });
     }
     if (invitation.normalizedEmail !== identity.email) {
       throw badRequest({ code: 'invitation_email_mismatch', message: 'Register with the email address that received this invitation.' });
@@ -312,7 +314,7 @@ export class AuthController {
             id: randomUUID(),
             organizationId,
             iqamaHeadings: DEFAULT_IQAMA_HEADINGS,
-            footerHtml: `© ${new Date().getUTCFullYear()} ${pending.organizationName} · IqamaTime`,
+            footerHtml: `© ${new Date().getUTCFullYear()} ${pending.organizationName} · MasjidHub`,
             theme: 'default',
             updatedAtUtc: new Date(),
           },
@@ -339,7 +341,7 @@ export class AuthController {
   @RateLimit('auth-login')
   @HttpCode(200)
   async login(@Body(validated(loginSchema)) req: LoginRequest, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<{ token: string }> {
-    if (!(await this.captcha.verify(req.captchaToken, 'login', request.socket.remoteAddress))) throw badRequest(CAPTCHA_FAILED);
+    if (!(await this.captcha.verify(req.captchaToken, 'login', this.clientAddress.resolve(request)))) throw badRequest(CAPTCHA_FAILED);
 
     const email = req.email.trim().toLowerCase();
     const attempt = this.throttle.canAttempt(email);

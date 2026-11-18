@@ -40,7 +40,7 @@ export class VerifyEmailComponent implements OnInit {
     }
 
     // Verification activates the account only; any session left in this browser
-    // (for example the IqamaTime administrator testing an invitation) is cleared so
+    // (for example the MasjidHub administrator testing an invitation) is cleared so
     // the next sign-in is the new masjid administrator's own.
     this.auth.verifyEmail(token).subscribe({
       next: response => {
@@ -54,7 +54,7 @@ export class VerifyEmailComponent implements OnInit {
         // A verification link is single-use, so a reload or a second click lands here
         // even though the account was created. Keep the sign-in path visible.
         this.hasSession.set(this.auth.hasValidToken());
-        this.error.set(response.error?.message ?? 'This verification link is invalid or has expired. Ask the IqamaTime administrator to resend your invitation.');
+        this.error.set(response.error?.message ?? 'This verification link is invalid or has expired. Ask the MasjidHub administrator to resend your invitation.');
       }
     });
   }

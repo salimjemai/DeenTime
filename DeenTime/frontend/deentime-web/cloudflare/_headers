@@ -1,0 +1,21 @@
+# Response headers for the static site on Cloudflare Pages. They mirror what the API's
+# securityHeaders() middleware sends when it serves the site itself: the dashboard may
+# not be framed, the public TV and widget pages may be embedded anywhere.
+# (Responses proxied to the API by _worker.js carry the API's own headers instead.)
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+
+/tv/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
+
+/w/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
+
+/w2/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *

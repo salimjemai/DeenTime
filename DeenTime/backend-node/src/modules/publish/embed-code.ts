@@ -116,10 +116,10 @@ export function buildEmbedCode(origin: string, organization: { slug: string; nam
   const compactWidgetUrl = publicUrl(origin, `/w2/${slug}`);
   const tvUrl = publicUrl(origin, `/tv/${slug}`);
   const encodedName = webUtilityHtmlEncode(organization.name);
-  const combinedIframe = widgetIframe(origin, combinedWidgetUrl, webUtilityHtmlEncode(`IqamaTime · ${organization.name} prayer times`), '420', '900');
-  const dailyIframe = widgetIframe(origin, dailyWidgetUrl, webUtilityHtmlEncode(`IqamaTime · ${organization.name} daily prayer times`), '420', '720');
-  const jumuahIframe = widgetIframe(origin, jumuahWidgetUrl, webUtilityHtmlEncode(`IqamaTime · ${organization.name} Friday prayer times`), '420', '560');
-  const compactIframe = widgetIframe(origin, compactWidgetUrl, webUtilityHtmlEncode(`IqamaTime · ${organization.name} compact prayer times`), '360', '800');
+  const combinedIframe = widgetIframe(origin, combinedWidgetUrl, webUtilityHtmlEncode(`MasjidHub · ${organization.name} prayer times`), '420', '900');
+  const dailyIframe = widgetIframe(origin, dailyWidgetUrl, webUtilityHtmlEncode(`MasjidHub · ${organization.name} daily prayer times`), '420', '720');
+  const jumuahIframe = widgetIframe(origin, jumuahWidgetUrl, webUtilityHtmlEncode(`MasjidHub · ${organization.name} Friday prayer times`), '420', '560');
+  const compactIframe = widgetIframe(origin, compactWidgetUrl, webUtilityHtmlEncode(`MasjidHub · ${organization.name} compact prayer times`), '360', '800');
   return {
     widgetUrl: combinedWidgetUrl,
     combinedWidgetUrl,
@@ -132,7 +132,7 @@ export function buildEmbedCode(origin: string, organization: { slug: string; nam
     dailyIframe,
     jumuahIframe,
     compactIframe,
-    script: `<a href="${webUtilityHtmlEncode(tvUrl)}">Open ${encodedName} IqamaTime TV display</a>`,
+    script: `<a href="${webUtilityHtmlEncode(tvUrl)}">Open ${encodedName} MasjidHub TV display</a>`,
   };
 }
 
