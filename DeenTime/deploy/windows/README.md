@@ -1,4 +1,9 @@
-# Self-hosting IqamaTime on a Windows PC
+# Self-hosting MasjidHub on a Windows PC
+
+> For the public site (Cloudflare Pages + Cloudflare Tunnel, no elevated install, no
+> NSSM) use [../../docs/cloudflare-deployment.md](../../docs/cloudflare-deployment.md) and
+> `deploy/cloudflare/masjidhub-origin.ps1`. The service installer below serves the
+> whole site from one PC and is kept for that setup.
 
 One Windows service ("DeenTime", hosted by NSSM) runs the Node.js API, which
 also serves the Angular site, on port 8080. PostgreSQL runs alongside it. A

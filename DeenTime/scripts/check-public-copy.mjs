@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicSurfaceFiles = [
   'frontend/deentime-web/src/app/features/tv/tv.html',
   'frontend/deentime-web/src/app/features/widget/widget.html',
@@ -30,6 +31,8 @@ for (const { relative, text } of sources) {
   if (/>\s*Starts?\s*</i.test(text) || /Adhan\s*\/\s*Start/i.test(text))
     failures.push(`${relative}: legacy Start/Starts prayer label`);
   if (/DeenTime/i.test(text)) failures.push(`${relative}: user-visible DeenTime brand`);
+  // The product is MasjidHub; only the API header names keep the old word for existing integrations.
+  if (/IqamaTime/.test(text.replace(/X-IqamaTime-[A-Za-z-]+/g, ''))) failures.push(`${relative}: user-visible IqamaTime brand (use MasjidHub)`);
 }
 
 const widget = sources.find(source => source.relative.endsWith('/widget.html'))?.text ?? '';

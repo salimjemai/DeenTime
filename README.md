@@ -1,4 +1,8 @@
-# IqamaTime
+# MasjidHub
+
+## Hosting
+
+MasjidHub is published at https://masjidhub.jemaiinnovations.com: the Angular site on Cloudflare Pages, and this API with its PostgreSQL database on a machine we control, reached through a Cloudflare Tunnel. Setup, deploying and rolling back are in [DeenTime/docs/cloudflare-deployment.md](DeenTime/docs/cloudflare-deployment.md).
 
 ## Deterministic local startup
 
@@ -23,7 +27,7 @@ A Node.js (NestJS + Prisma) + Angular 20 platform for mosque organizations to co
 
 ## Legacy IqamaTime migration coverage
 
-| Legacy area | IqamaTime coverage | Modern improvement |
+| Legacy area | MasjidHub coverage | Modern improvement |
 |-------------|-------------------|--------------------|
 | Profile | Organization identity, address, contact details and calculation criteria | One organization-scoped admin workspace with live validation |
 | Iqama | Effective-date schedules for Fajr, Dhuhr, Asr, Maghrib, Isha and up to four Jumu'ah services | Fast five-prayer editor, fixed or prayer-relative times, recurring rules and history |
@@ -33,7 +37,7 @@ A Node.js (NestJS + Prisma) + Angular 20 platform for mosque organizations to co
 | Publish | TV link, two website widgets and downloadable monthly timetable | Responsive TV, modern widgets, embed code, monthly/Ramadan PDFs and output controls |
 | Legacy URLs | `/clock`, `iqama-widget.php`, `iqama-widget2.php` | Compatibility redirects preserve existing masjid integrations |
 
-IqamaTime also adds the Quran/Hadith content library and rate-limited public JSON APIs without removing the migrated scheduling workflows.
+MasjidHub also adds the Quran/Hadith content library and rate-limited public JSON APIs without removing the migrated scheduling workflows.
 
 ---
 
@@ -117,6 +121,9 @@ All secrets are injected via environment variables (12-factor). Key settings:
 | `Storage__Container` | Blob container name (default: `deentime`) |
 | `Storage__CdnBase` | Optional CDN base URL for blob public URLs |
 | `Cors__AllowedOrigins__0` | Allowed CORS origin(s) |
+| `Frontend__PublicBaseUrl` | Public origin of the site; used in emails, embed codes, iframe URLs and API redirects |
+| `Proxy__ClientIpHeader` | Header a reverse proxy on the same machine puts the visitor address in (`X-MasjidHub-Client-IP` behind the Cloudflare Pages proxy, `X-Real-IP` behind nginx). Unset: the TCP peer is used. |
+| `Proxy__SharedKey` | When set, the header above is only believed from requests that carry this key in `X-MasjidHub-Proxy-Key` |
 | `Hangfire__ConnectionString` | Original .NET API only; the Node.js API runs its sync worker in-process and reports it at `/jobs`. |
 
 For production, set `Auth__SigningKey` (or `Auth__Authority`) and `ConnectionStrings__Default` via secrets manager / environment — never commit these.
@@ -237,7 +244,8 @@ Times are returned in the organization's configured IANA timezone.
 - [ ] Set strong `Auth__SigningKey` (≥ 32 chars) **or** configure `Auth__Authority` for an external OIDC provider
 - [ ] Set `ConnectionStrings__Default` to your production PostgreSQL URL
 - [ ] Set `Storage__ConnectionString` to Azure Blob Storage (omit to fall back to local disk — not suitable for multi-instance)
-- [ ] Set `Cors__AllowedOrigins__0` to your production frontend domain
+- [ ] Set `Cors__AllowedOrigins__0` and `Frontend__PublicBaseUrl` to your production frontend domain
+- [ ] Behind a reverse proxy or tunnel, set `Proxy__ClientIpHeader` (and `Proxy__SharedKey`) so rate limits apply per visitor
 - [ ] Set `EmailDelivery__*` so verification, invitation and password-reset emails are delivered
 - [ ] Let the API apply migrations at startup (it exits non-zero if they fail) and check `/health/ready`
 - [ ] `/jobs` is a super-user-only JSON status endpoint in the Node.js API (no Hangfire dashboard)
