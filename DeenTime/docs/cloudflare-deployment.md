@@ -73,7 +73,7 @@ The API is started with `ASPNETCORE_ENVIRONMENT=Production` and bound to
 ### 2. Tunnel
 
 ```powershell
-cloudflared tunnel login          # opens a browser: sign in and pick jemaiinnovations.com
+cloudflared tunnel login          # opens a browser: sign in and pick jemaiinnovations.com (the link expires after about 8 minutes)
 powershell -ExecutionPolicy Bypass -File C:\MasjidHub\masjidhub-origin.ps1 tunnel-setup
 powershell -ExecutionPolicy Bypass -File C:\MasjidHub\masjidhub-origin.ps1 install
 ```
@@ -92,7 +92,11 @@ in. Set Windows power options so the PC does not sleep.
 ### 3. Pages project
 
 The site is a Direct Upload Pages project named `masjidhub`, production branch `main`,
-deployed with Wrangler (the workflow creates the project if it does not exist).
+deployed with Wrangler. Its own address is `https://masjidhub-740.pages.dev`. The project
+already exists; to create it again from scratch run
+`npx wrangler pages project create masjidhub --production-branch=main --force` (without
+`--force`, Wrangler 4.164 and later try to create a Workers project instead and fail).
+The workflow does the same if the project is missing.
 
 1. Create a Cloudflare API token with **Account > Cloudflare Pages > Edit** only (the
    same kind of token Mushaf+ uses; no DNS access) and store it with the account ID:

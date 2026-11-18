@@ -62,7 +62,10 @@ jobs:
           if npx --yes wrangler@4 pages project list | grep -qw "$PAGES_PROJECT"; then
             echo "Pages project $PAGES_PROJECT exists."
           else
-            npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main
+            # Wrangler 4.164 hands a plain "project create" to Workers, which fails for a
+            # Pages upload; --force creates the Pages project itself.
+            npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main --force ||
+              npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main
           fi
       - name: Keep the origin proxy key in step with the repository secret
         env:
