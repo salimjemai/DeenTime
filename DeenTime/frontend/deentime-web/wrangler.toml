@@ -5,7 +5,26 @@ name = "masjidhub"
 pages_build_output_dir = "dist/deentime-web/browser"
 compatibility_date = "2026-11-01"
 
+# The API runs in the Pages worker itself (../../backend-worker, bundled to _worker.js).
+[[d1_databases]]
+binding = "DB"
+database_name = "masjidhub"
+database_id = "46e38992-e4ba-430e-be8b-156e5adff041"
+migrations_dir = "../../backend-worker/migrations"
+
+# Uploaded header images and logos, served at /uploads/*.
+[[kv_namespaces]]
+binding = "UPLOADS"
+id = "49e304a3068f4eda963bcdd148cde6b8"
+
+# Same names as the backend-node settings. Secrets (Auth__SigningKey) are set with
+# `wrangler pages secret put`, never here.
 [vars]
-# Cloudflare Tunnel hostname of the machine that runs the API. The Pages worker
-# (cloudflare/_worker.js) forwards /api, /public, /uploads, /health and /jobs to it.
+ASPNETCORE_ENVIRONMENT = "Production"
+Frontend__PublicBaseUrl = "https://masjidhub.jemaiinnovations.com"
+Cors__AllowedOrigins__0 = "https://masjidhub.jemaiinnovations.com"
+Captcha__Enabled = "false"
+EmailDelivery__Enabled = "false"
+# Only read by the fallback proxy worker (`npm run pages:prepare -- --api=tunnel`):
+# the Cloudflare Tunnel hostname of a machine that runs backend-node.
 API_ORIGIN = "https://masjidhub-origin.jemaiinnovations.com"

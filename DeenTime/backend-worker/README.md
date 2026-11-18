@@ -226,6 +226,9 @@ salt; a bare base64 hash is the legacy 100,000-iteration format.
   600,000 on the next login there, so do not run both APIs against the same accounts.
 - Hashes above 100,000 iterations (everything backend-node wrote at 600,000) return
   `'unsupported'` without being computed. Those users must reset their password.
+  Login answers them with the same 401 as a wrong password and logs a warning with the user id.
+  Besides the reset email, `node scripts/set-password.mjs [--database masjidhub] [--local]` sets one
+  account's password directly in D1 (email and password are prompted for, never passed as arguments).
 - Measured in local workerd 1.20261117: one 100,000-iteration hash takes 62–64 ms. Local
   workerd does not cap the iteration count (600,000 computed in 378 ms); the ceiling is
   enforced in `password-hasher.ts` (`MAX_SUPPORTED_ITERATIONS`). A platform
@@ -256,3 +259,48 @@ salt; a bare base64 hash is the legacy 100,000-iteration format.
 - `core/json.ts`: `timeOnlyFromDb` / `timeOnlyToDb` work on `HH:mm:ss` text; added
   `dateOnlyFromDb` / `dateOnlyToDb`; `formatDateTime` also accepts the stored string.
 - `hijri-calendar.ts`, `hijri.ts`, `prayer-times.ts`, `timezone.ts`: unchanged.
+
+## Islamic content (Qur'an, Hadith, Qibla)
+
+backend-node downloaded the content in a background worker inside the API process. A
+Worker on the free plan cannot (10 ms CPU, 50 subrequests, no background process), so:
+
+- Request handlers only read content from D1. The exceptions are the single provider
+  request backend-node also made per request: Qibla direction/compass, the Qur'an proxy
+  (`/public/content/quran/*`, read-through cache in `IslamicContentCacheEntries`) and the
+  showcase fallbacks.
+- The bulk download is `scripts/sync-content.mjs`, run from a PC. It uses the same
+  provider clients and mapping (`src/modules/islamic-content/offline-sync.ts`, bundled with
+  esbuild), writes `.sql` files and applies them with `wrangler d1 execute --file`.
+  Progress goes to `IslamicContentSyncStates`, so the dashboard shows it as before.
+
+```
+node scripts/sync-content.mjs --local                      # local D1 of `npm run dev`
+node scripts/sync-content.mjs                              # remote D1 "masjidhub": Qur'an (scope all) + Hadith if a key is set
+node scripts/sync-content.mjs --provider quran --scope catalog
+node scripts/sync-content.mjs --provider hadith --books sahih-bukhari,sahih-muslim
+node scripts/sync-content.mjs --help
+```
+
+The Hadith API key is read from `IslamicContent__HadithApiKey` (environment or `.dev.vars`)
+on the PC; the Worker does not need it.
+
+Differences from backend-node:
+
+- `POST /api/v1/islamic-content/sync/quran|hadith` validate as before, then answer **409**
+  `{ error, provider, scope, status: "offline", command }` instead of 202 `status: "queued"`:
+  nothing is queued, `command` is the script invocation to run. `sync/hadith` no longer
+  answers 503 when the Worker has no Hadith key.
+- `/jobs` `queued` lists the providers whose sync state is `queued` or `running` (there is
+  no in-process queue).
+- A D1 row holds 2 MB and a statement 100 KB, so a complete edition (`/quran/{edition}`) is
+  never stored. The script splits each selected edition into one `/ayah/{number}/{edition}`
+  cache row per ayah (default: the three showcase editions; `--editions`), and the showcase
+  routes read those rows. The proxy passes payloads above 1.8 MB through uncached and only
+  parses payloads up to 256,000 characters to validate them.
+- Cached payloads are stored and returned as the provider's text (PostgreSQL `jsonb`
+  re-serialized them), and the proxy's `Content-Type: application/json` gains
+  `; charset=utf-8` in the response pipeline.
+- A failed Hadith import is not resumed automatically; rerun with `--books`.
+- Hadith search uses SQLite `LIKE` (case-insensitive for ASCII letters only).
+- `summary.quran.cachedPayloads` / `cachedBytes` count the per-ayah rows too.

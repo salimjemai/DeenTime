@@ -64,5 +64,15 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-for (const file of ['_worker.js', '_routes.json', '_headers']) copyFileSync(join(here, file), join(output, file));
-console.log(`Cloudflare Pages upload ready: ${output}`);
+// The worker is the Workers + D1 API built in ../../backend-worker (npm run build there
+// first). `--api=tunnel` uploads the older proxy worker instead, which forwards the API
+// paths to an origin machine through the Cloudflare Tunnel.
+const useTunnel = process.argv.includes('--api=tunnel');
+const worker = useTunnel ? join(here, '_worker.js') : resolve(here, '..', '..', '..', 'backend-worker', 'dist', '_worker.js');
+if (!existsSync(worker)) {
+  console.error(`No API worker at ${worker}. Run: npm ci && npm run build in backend-worker`);
+  process.exit(1);
+}
+copyFileSync(worker, join(output, '_worker.js'));
+for (const file of ['_routes.json', '_headers']) copyFileSync(join(here, file), join(output, file));
+console.log(`Cloudflare Pages upload ready (${useTunnel ? 'tunnel proxy' : 'Workers + D1 API'}): ${output}`);

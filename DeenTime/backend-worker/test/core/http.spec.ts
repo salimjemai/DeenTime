@@ -165,7 +165,8 @@ describe('http pipeline', () => {
       expect(await response.json()).toEqual({ status: 'live' });
     }
     expect((await app.request('GET', '/API/Version')).status).toBe(200);
-    expect((await app.request('GET', '/JOBS')).status).toBe(404);
+    // /jobs is a super-user route (modules/islamic-content.ts): anonymous is 401, not the asset fall-through.
+    expect((await app.request('GET', '/JOBS')).status).toBe(401);
     expect(await (await app.request('GET', '/JOBS')).text()).toBe('');
   });
 

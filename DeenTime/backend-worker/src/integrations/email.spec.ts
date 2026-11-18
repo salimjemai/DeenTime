@@ -1,4 +1,3 @@
-import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { AppConfig } from '../core/config.js';
 import { EmailDeliveryError, EmailNotConfiguredError } from './errors.js';
@@ -37,9 +36,7 @@ function fakeTransport(fail?: Error): { sent: EmailMessage[]; sendMail(options: 
 
 const enabledSettings = {
   'EmailDelivery:Enabled': 'true',
-  'EmailDelivery:Host': 'mail.iqamatime.test',
-  'EmailDelivery:Username': 'noreply@iqamatime.test',
-  'EmailDelivery:Password': 'secret',
+  'EmailDelivery:ApiKey': 're_test_key',
   'EmailDelivery:FromAddress': 'noreply@iqamatime.test',
   'Support:Email': ' support@iqamatime.test ',
 };

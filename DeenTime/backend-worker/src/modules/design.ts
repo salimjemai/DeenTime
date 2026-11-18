@@ -13,6 +13,13 @@ export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 /** Room for the multipart boundaries, part headers and small text fields around an 8 MB file. */
 const MULTIPART_OVERHEAD_BYTES = 1024 * 1024;
 
+/**
+ * Every stored key embeds a random UUID and is never rewritten, so a file can be cached
+ * for good. (Express static sent "public, max-age=0"; revalidating would cost a Worker
+ * request and a KV read each time.)
+ */
+export const UPLOADS_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
 function findDesign(c: Ctx, organizationId: string): Promise<DesignRow | null> {
   return db(c).first<DesignRow>(`SELECT ${DESIGN_COLUMNS} FROM "DesignSettings" WHERE "OrganizationId" = ?`, normalizeId(organizationId));
 }
@@ -176,8 +183,9 @@ export function register(app: App): void {
     return c.json({ publicUrl, appliedTo: ['tv', 'widget', 'compactWidget', 'schedulePreview'] });
   });
 
-  // Express static (index: false, default options): Cache-Control "public, max-age=0",
-  // weak ETag, Last-Modified and conditional requests. Hono answers HEAD from the GET route.
+  // Served with the stored content type (set from the magic bytes at upload, never from the
+  // client), a weak ETag, Last-Modified and conditional requests like Express static; the
+  // pipeline adds X-Content-Type-Options: nosniff. Hono answers HEAD from the GET route.
   app.get('/uploads/*', async (c) => {
     const key = uploadKey(c);
     const object = key === null ? null : await storage(c).get(key);
@@ -185,7 +193,7 @@ export function register(app: App): void {
     const lastModified = new Date(object.uploadedAtUtc);
     const etag = etagFor(object);
     const headers: Record<string, string> = {
-      'Cache-Control': 'public, max-age=0',
+      'Cache-Control': UPLOADS_CACHE_CONTROL,
       'Last-Modified': lastModified.toUTCString(),
       ETag: etag,
     };

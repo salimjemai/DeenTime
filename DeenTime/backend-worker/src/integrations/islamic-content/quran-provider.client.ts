@@ -1,6 +1,4 @@
-import { randomUUID } from 'node:crypto';
-import { Prisma, type IslamicContentCacheEntry } from '../../generated/prisma/client.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { newId, type Db } from '../../core/db.js';
 import { ArgumentError, IslamicContentProviderError } from './errors.js';
 import { IslamicContentOptions } from './islamic-content-options.js';
 import {
@@ -176,11 +174,31 @@ export function canonicalizeQuranRequest(path: string, query?: QueryPairs | null
   };
 }
 
-type CachedEntry = Pick<IslamicContentCacheEntry, 'payloadJson' | 'contentType' | 'retrievedAtUtc' | 'expiresAtUtc'>;
+interface CachedEntry {
+  payloadJson: string;
+  contentType: string;
+  retrievedAtUtc: Date;
+  expiresAtUtc: Date;
+}
+
+interface CacheRow {
+  PayloadJson: string;
+  ContentType: string;
+  RetrievedAtUtc: string;
+  ExpiresAtUtc: string;
+}
+
+/**
+ * A D1 row is limited to 2,000,000 bytes, so larger provider payloads (the complete
+ * editions, /quran/{edition}) are passed through without being cached.
+ */
+export const MAX_CACHEABLE_PAYLOAD_BYTES = 1_800_000;
+/** Payloads above this size are not parsed (10 ms CPU budget); only their outer shape is checked. */
+export const MAX_VALIDATED_PAYLOAD_CHARS = 256_000;
 
 function fromCache(entry: CachedEntry, isStale: boolean): QuranProviderPayload {
   return {
-    json: JSON.stringify(entry.payloadJson),
+    json: entry.payloadJson,
     contentType: entry.contentType,
     statusCode: 200,
     fromCache: true,
@@ -189,25 +207,30 @@ function fromCache(entry: CachedEntry, isStale: boolean): QuranProviderPayload {
   };
 }
 
-function parseJson(json: string): unknown {
+/** backend-node parsed every payload into jsonb; here the provider's text is stored and returned as is. */
+function ensureJson(json: string): void {
+  if (json.length > MAX_VALIDATED_PAYLOAD_CHARS) {
+    const text = json.trim();
+    const open = text[0];
+    const close = text[text.length - 1];
+    if ((open === '{' && close === '}') || (open === '[' && close === ']')) return;
+    throw new IslamicContentProviderError("The Qur'an provider returned an invalid response.");
+  }
   try {
-    return JSON.parse(json) as unknown;
+    JSON.parse(json);
   } catch (error) {
     throw new IslamicContentProviderError("The Qur'an provider returned an invalid response.", { cause: error });
   }
 }
 
-function toInputJson(payload: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
-  return payload === null ? Prisma.JsonNull : (payload as Prisma.InputJsonValue);
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+export function utf8ByteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
 }
 
 /**
  * Typed client for https://api.alquran.cloud/v1/ (3 minute timeout, UA DeenTime/1.0)
- * with the database-backed payload cache from QuranProviderClient.cs.
+ * with the database-backed payload cache from QuranProviderClient.cs (a D1 table here).
+ * One request costs at most one cache read, one provider fetch and one cache write.
  */
 export class QuranProviderClient {
   static readonly providerName = 'alquran-cloud';
@@ -220,7 +243,7 @@ export class QuranProviderClient {
   private readonly now: () => Date;
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly db: Db,
     private readonly options: IslamicContentOptions,
     clientOptions?: ProviderClientOptions,
   ) {
@@ -266,9 +289,9 @@ export class QuranProviderClient {
 
     const contentType = response.headers.get('content-type') ?? 'application/json; charset=utf-8';
     if (response.ok) {
-      const payload = parseJson(json);
+      ensureJson(json);
       const retrievedAt = this.now();
-      if (!request.isRandom) await this.upsertCache(request.cacheKey, json, payload, contentType, retrievedAt);
+      if (!request.isRandom) await this.upsertCache(request.cacheKey, json, contentType, retrievedAt);
       return { json, contentType, statusCode: response.status, fromCache: false, isStale: false, retrievedAtUtc: retrievedAt };
     }
 
@@ -284,33 +307,34 @@ export class QuranProviderClient {
   }
 
   private async findCached(cacheKey: string): Promise<CachedEntry | null> {
-    return this.prisma.islamicContentCacheEntry.findUnique({
-      where: { provider_cacheKey: { provider: QuranProviderClient.providerName, cacheKey } },
-      select: { payloadJson: true, contentType: true, retrievedAtUtc: true, expiresAtUtc: true },
-    });
+    const row = await this.db.first<CacheRow>(
+      'SELECT "PayloadJson", "ContentType", "RetrievedAtUtc", "ExpiresAtUtc" FROM "IslamicContentCacheEntries" WHERE "Provider" = ? AND "CacheKey" = ?',
+      QuranProviderClient.providerName,
+      cacheKey,
+    );
+    if (row === null) return null;
+    return { payloadJson: row.PayloadJson, contentType: row.ContentType, retrievedAtUtc: new Date(row.RetrievedAtUtc), expiresAtUtc: new Date(row.ExpiresAtUtc) };
   }
 
-  private async upsertCache(cacheKey: string, json: string, payload: unknown, contentType: string, retrievedAt: Date): Promise<void> {
-    const provider = QuranProviderClient.providerName;
+  /** One upsert on the (Provider, CacheKey) unique index: a concurrent insert of the same key is overwritten. */
+  private async upsertCache(cacheKey: string, json: string, contentType: string, retrievedAt: Date): Promise<void> {
+    const payloadBytes = utf8ByteLength(json);
+    if (payloadBytes > MAX_CACHEABLE_PAYLOAD_BYTES) return;
     const cacheDays = Math.min(365, Math.max(1, this.options.quranCacheDays));
-    const data = {
-      payloadJson: toInputJson(payload),
-      payloadBytes: BigInt(Buffer.byteLength(json, 'utf8')),
-      contentType: contentType.slice(0, 80),
-      retrievedAtUtc: retrievedAt,
-      expiresAtUtc: new Date(retrievedAt.getTime() + cacheDays * 86_400_000),
-    };
-    try {
-      await this.prisma.islamicContentCacheEntry.upsert({
-        where: { provider_cacheKey: { provider, cacheKey } },
-        create: { id: randomUUID(), provider, cacheKey, ...data },
-        update: data,
-      });
-    } catch (error) {
-      // A concurrent request inserted the same key first: overwrite its row like the .NET retry.
-      if (!isUniqueViolation(error)) throw error;
-      const updated = await this.prisma.islamicContentCacheEntry.updateMany({ where: { provider, cacheKey }, data });
-      if (updated.count === 0) throw error;
-    }
+    await this.db.run(
+      `INSERT INTO "IslamicContentCacheEntries" ("Id", "Provider", "CacheKey", "PayloadJson", "ContentType", "RetrievedAtUtc", "ExpiresAtUtc", "PayloadBytes")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT ("Provider", "CacheKey") DO UPDATE SET
+         "PayloadJson" = excluded."PayloadJson", "ContentType" = excluded."ContentType", "RetrievedAtUtc" = excluded."RetrievedAtUtc",
+         "ExpiresAtUtc" = excluded."ExpiresAtUtc", "PayloadBytes" = excluded."PayloadBytes"`,
+      newId(),
+      QuranProviderClient.providerName,
+      cacheKey,
+      json,
+      contentType.slice(0, 80),
+      retrievedAt,
+      new Date(retrievedAt.getTime() + cacheDays * 86_400_000),
+      payloadBytes,
+    );
   }
 }

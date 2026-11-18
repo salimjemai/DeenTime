@@ -1,50 +1,75 @@
-import { describe, expect, it } from 'vitest';
-import type { PrismaService } from '../../prisma/prisma.service.js';
+import { env } from 'cloudflare:test';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { Db, type SqlParam } from '../../core/db.js';
 import { ArgumentError, IslamicContentProviderError } from './errors.js';
 import { IslamicContentOptions } from './islamic-content-options.js';
-import { QuranProviderClient, canonicalizeQuranRequest, normalizeQuranPath, normalizeQuranQuery } from './quran-provider.client.js';
+import {
+  MAX_CACHEABLE_PAYLOAD_BYTES,
+  QuranProviderClient,
+  canonicalizeQuranRequest,
+  normalizeQuranPath,
+  normalizeQuranQuery,
+  utf8ByteLength,
+} from './quran-provider.client.js';
 
 interface CacheRow {
-  id: string;
-  provider: string;
   cacheKey: string;
-  payloadJson: unknown;
+  /** The stored provider text. */
+  payloadJson: string;
   contentType: string;
   retrievedAtUtc: Date;
   expiresAtUtc: Date;
-  payloadBytes: bigint;
+  payloadBytes: number;
 }
 
-interface FakeCache {
-  prisma: PrismaService;
-  rows: Map<string, CacheRow>;
-  lookups: number;
+/** The D1 helper, counting cache lookups. */
+class CountingDb extends Db {
+  lookups = 0;
+
+  override async first<T = Record<string, unknown>>(sql: string, ...params: SqlParam[]): Promise<T | null> {
+    this.lookups += 1;
+    return super.first<T>(sql, ...params);
+  }
 }
 
-function fakeCache(seed: CacheRow[] = []): FakeCache {
-  const rows = new Map(seed.map((row) => [row.cacheKey, row]));
-  const fake: FakeCache = {
-    rows,
-    lookups: 0,
-    prisma: {
-      islamicContentCacheEntry: {
-        findUnique: async (args: { where: { provider_cacheKey: { cacheKey: string } } }) => {
-          fake.lookups += 1;
-          const row = rows.get(args.where.provider_cacheKey.cacheKey);
-          return row ? { payloadJson: row.payloadJson, contentType: row.contentType, retrievedAtUtc: row.retrievedAtUtc, expiresAtUtc: row.expiresAtUtc } : null;
-        },
-        upsert: async (args: { where: { provider_cacheKey: { cacheKey: string } }; create: CacheRow; update: Partial<CacheRow> }) => {
-          const key = args.where.provider_cacheKey.cacheKey;
-          const existing = rows.get(key);
-          const row = existing ? { ...existing, ...args.update } : { ...args.create };
-          rows.set(key, row);
-          return row;
-        },
-        updateMany: async () => ({ count: 0 }),
+const d1 = (env as unknown as { DB: D1Database }).DB;
+
+async function seedCache(...rows: CacheRow[]): Promise<CountingDb> {
+  const db = new CountingDb(d1);
+  for (const [index, row] of rows.entries()) {
+    await db.run(
+      'INSERT INTO "IslamicContentCacheEntries" ("Id", "Provider", "CacheKey", "PayloadJson", "ContentType", "RetrievedAtUtc", "ExpiresAtUtc", "PayloadBytes") VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      `00000000-0000-0000-0000-00000000000${index + 1}`,
+      'alquran-cloud',
+      row.cacheKey,
+      row.payloadJson,
+      row.contentType,
+      row.retrievedAtUtc,
+      row.expiresAtUtc,
+      row.payloadBytes,
+    );
+  }
+  return db;
+}
+
+async function storedRows(db: Db): Promise<Map<string, CacheRow & { provider: string }>> {
+  const rows = await db.all<{ Provider: string; CacheKey: string; PayloadJson: string; ContentType: string; RetrievedAtUtc: string; ExpiresAtUtc: string; PayloadBytes: number }>(
+    'SELECT * FROM "IslamicContentCacheEntries"',
+  );
+  return new Map(
+    rows.map((row) => [
+      row.CacheKey,
+      {
+        provider: row.Provider,
+        cacheKey: row.CacheKey,
+        payloadJson: row.PayloadJson,
+        contentType: row.ContentType,
+        retrievedAtUtc: new Date(row.RetrievedAtUtc),
+        expiresAtUtc: new Date(row.ExpiresAtUtc),
+        payloadBytes: row.PayloadBytes,
       },
-    } as unknown as PrismaService,
-  };
-  return fake;
+    ]),
+  );
 }
 
 interface StubFetch {
@@ -67,20 +92,18 @@ function stubFetch(factory: (url: string) => Response): StubFetch {
 const NOW = new Date('2026-09-10T12:00:00.000Z');
 const DAY = 86_400_000;
 
-function createClient(cache: FakeCache, stub: StubFetch, cacheDays = 30): QuranProviderClient {
-  return new QuranProviderClient(cache.prisma, new IslamicContentOptions({ quranCacheDays: cacheDays }), { fetch: stub.fetch, now: () => NOW });
+function createClient(db: Db, stub: StubFetch, cacheDays = 30): QuranProviderClient {
+  return new QuranProviderClient(db, new IslamicContentOptions({ quranCacheDays: cacheDays }), { fetch: stub.fetch, now: () => NOW });
 }
 
 function row(cacheKey: string, payload: unknown, expiresAtUtc: Date): CacheRow {
   return {
-    id: '00000000-0000-0000-0000-000000000001',
-    provider: 'alquran-cloud',
     cacheKey,
-    payloadJson: payload,
+    payloadJson: JSON.stringify(payload),
     contentType: 'application/json',
     retrievedAtUtc: new Date(NOW.getTime() - DAY),
     expiresAtUtc,
-    payloadBytes: 0n,
+    payloadBytes: 0,
   };
 }
 
@@ -197,10 +220,14 @@ describe('canonicalizeQuranRequest', () => {
 });
 
 describe('QuranProviderClient.get', () => {
+  beforeEach(async () => {
+    await d1.prepare('DELETE FROM "IslamicContentCacheEntries"').run();
+  });
+
   it('returns a fresh cache hit without calling the provider', async () => {
-    const cache = fakeCache([row('/surah/1', { code: 200, data: { number: 1 } }, new Date(NOW.getTime() + DAY))]);
+    const db = await seedCache(row('/surah/1', { code: 200, data: { number: 1 } }, new Date(NOW.getTime() + DAY)));
     const stub = stubFetch(() => new Response('{}'));
-    const payload = await createClient(cache, stub).get('surah/1');
+    const payload = await createClient(db, stub).get('surah/1');
 
     expect(payload).toEqual({
       json: '{"code":200,"data":{"number":1}}',
@@ -214,88 +241,106 @@ describe('QuranProviderClient.get', () => {
   });
 
   it('fetches, validates and caches upstream JSON on a miss', async () => {
-    const cache = fakeCache();
+    const db = await seedCache();
     const body = '{"code":200,"status":"OK","data":{"name":"سُورَةُ ٱلْفَاتِحَةِ"}}';
     const stub = stubFetch(() => new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }));
 
-    const payload = await createClient(cache, stub, 400).get('surah/1', [['limit', '5']]);
+    const payload = await createClient(db, stub, 400).get('surah/1', [['limit', '5']]);
 
     expect(stub.urls).toEqual(['https://api.alquran.cloud/v1/surah/1?limit=5']);
     expect(payload).toEqual({ json: body, contentType: 'application/json', statusCode: 200, fromCache: false, isStale: false, retrievedAtUtc: NOW });
-    const stored = cache.rows.get('/surah/1?limit=5');
+    const stored = (await storedRows(db)).get('/surah/1?limit=5');
     expect(stored?.provider).toBe('alquran-cloud');
-    expect(stored?.payloadJson).toEqual(JSON.parse(body));
-    expect(stored?.payloadBytes).toBe(BigInt(Buffer.byteLength(body, 'utf8')));
+    expect(stored?.payloadJson).toBe(body);
+    expect(stored?.payloadBytes).toBe(utf8ByteLength(body));
+    expect(stored?.payloadBytes).toBeGreaterThan(body.length);
     expect(stored?.retrievedAtUtc).toEqual(NOW);
     expect(stored?.expiresAtUtc).toEqual(new Date(NOW.getTime() + 365 * DAY));
   });
 
   it('bypasses a fresh cache entry when forceRefresh is set', async () => {
-    const cache = fakeCache([row('/meta', { old: true }, new Date(NOW.getTime() + DAY))]);
+    const db = await seedCache(row('/meta', { old: true }, new Date(NOW.getTime() + DAY)));
     const stub = stubFetch(() => new Response('{"new":true}', { status: 200 }));
-    const payload = await createClient(cache, stub).get('meta', undefined, true);
+    const payload = await createClient(db, stub).get('meta', undefined, true);
     expect(payload.fromCache).toBe(false);
     expect(payload.json).toBe('{"new":true}');
-    expect(cache.rows.get('/meta')?.payloadJson).toEqual({ new: true });
+    const rows = await storedRows(db);
+    expect(rows.size).toBe(1);
+    expect(rows.get('/meta')?.payloadJson).toBe('{"new":true}');
   });
 
   it('serves the stale cache when the provider fails', async () => {
-    const cache = fakeCache([row('/surah/2', { stale: true }, new Date(NOW.getTime() - 1))]);
+    const db = await seedCache(row('/surah/2', { stale: true }, new Date(NOW.getTime() - 1)));
     const stub = stubFetch(() => new Response('upstream broke', { status: 500 }));
-    const payload = await createClient(cache, stub).get('surah/2');
+    const payload = await createClient(db, stub).get('surah/2');
     expect(payload).toMatchObject({ json: '{"stale":true}', statusCode: 200, fromCache: true, isStale: true });
 
     const offline = stubFetch(() => {
       throw new TypeError('fetch failed');
     });
-    const fallback = await createClient(cache, offline).get('surah/2');
+    const fallback = await createClient(db, offline).get('surah/2');
     expect(fallback).toMatchObject({ fromCache: true, isStale: true });
   });
 
   it('forwards upstream errors verbatim and substitutes a body when empty', async () => {
-    const cache = fakeCache();
+    const db = await seedCache();
     const notFound = stubFetch(() => new Response('{"code":404,"status":"Not Found"}', { status: 404, headers: { 'Content-Type': 'application/json' } }));
-    const payload = await createClient(cache, notFound).get('surah/999');
+    const payload = await createClient(db, notFound).get('surah/999');
     expect(payload).toMatchObject({ json: '{"code":404,"status":"Not Found"}', statusCode: 404, fromCache: false, isStale: false });
-    expect(cache.rows.size).toBe(0);
+    expect((await storedRows(db)).size).toBe(0);
 
     const empty = stubFetch(() => new Response('', { status: 502 }));
-    const fallback = await createClient(cache, empty).get('surah/999');
+    const fallback = await createClient(db, empty).get('surah/999');
     expect(fallback.json).toBe('{"code":502,"status":"UPSTREAM ERROR"}');
     expect(fallback.statusCode).toBe(502);
   });
 
   it('fails with the provider message when unreachable and nothing is cached', async () => {
+    const db = await seedCache();
     const stub = stubFetch(() => {
       throw new TypeError('fetch failed');
     });
-    await expect(createClient(fakeCache(), stub).get('surah/1')).rejects.toThrow("The Qur'an content provider is currently unavailable.");
+    await expect(createClient(db, stub).get('surah/1')).rejects.toThrow("The Qur'an content provider is currently unavailable.");
 
     const timeout = stubFetch(() => {
       throw new DOMException('timeout', 'TimeoutError');
     });
-    await expect(createClient(fakeCache(), timeout).get('surah/1')).rejects.toThrow(IslamicContentProviderError);
+    await expect(createClient(db, timeout).get('surah/1')).rejects.toThrow(IslamicContentProviderError);
   });
 
   it('rejects invalid upstream JSON', async () => {
+    const db = await seedCache();
     const stub = stubFetch(() => new Response('<html>', { status: 200 }));
-    await expect(createClient(fakeCache(), stub).get('surah/1')).rejects.toThrow("The Qur'an provider returned an invalid response.");
+    await expect(createClient(db, stub).get('surah/1')).rejects.toThrow("The Qur'an provider returned an invalid response.");
+    const large = stubFetch(() => new Response('<html>' + ' '.repeat(300_000), { status: 200 }));
+    await expect(createClient(db, large).get('surah/1')).rejects.toThrow("The Qur'an provider returned an invalid response.");
+    expect((await storedRows(db)).size).toBe(0);
+  });
+
+  it('passes a payload that is too large for a D1 row through without caching it', async () => {
+    const db = await seedCache();
+    const body = `{"code":200,"data":"${'x'.repeat(MAX_CACHEABLE_PAYLOAD_BYTES)}"}`;
+    const stub = stubFetch(() => new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    const payload = await createClient(db, stub).get('quran/en.sahih');
+    expect(payload.fromCache).toBe(false);
+    expect(payload.json.length).toBe(body.length);
+    expect((await storedRows(db)).size).toBe(0);
   });
 
   it('never caches random ayah responses', async () => {
-    const cache = fakeCache();
+    const db = await seedCache();
     const stub = stubFetch(() => new Response('{"code":200}', { status: 200 }));
-    const payload = await createClient(cache, stub).get('ayah/random/editions/quran-uthmani,en.sahih');
+    const payload = await createClient(db, stub).get('ayah/random/editions/quran-uthmani,en.sahih');
     expect(payload.fromCache).toBe(false);
-    expect(cache.lookups).toBe(0);
-    expect(cache.rows.size).toBe(0);
+    expect(db.lookups).toBe(0);
+    expect((await storedRows(db)).size).toBe(0);
   });
 
   it('rejects undocumented paths before touching the cache or provider', async () => {
-    const cache = fakeCache();
+    const db = await seedCache();
     const stub = stubFetch(() => new Response('{}'));
-    await expect(createClient(cache, stub).get('../etc/passwd')).rejects.toThrow(ArgumentError);
-    expect(cache.lookups).toBe(0);
+    await expect(createClient(db, stub).get('../etc/passwd')).rejects.toThrow(ArgumentError);
+    expect(db.lookups).toBe(0);
     expect(stub.urls).toEqual([]);
   });
 });

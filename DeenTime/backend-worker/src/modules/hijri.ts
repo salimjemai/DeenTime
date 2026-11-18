@@ -112,7 +112,8 @@ export function register(app: App): void {
       const existing = byMonth.get(`${generated.year}-${generated.month}`);
       if (!existing) {
         const created: HijriMonthMapRow = { id: newId(), organizationId: orgId, ...generated, updatedAtUtc: now() };
-        writes.push(insertStatement(c, created));
+        // A concurrent GET may have created the month already: the unique index keeps the first row.
+        writes.push(insertStatement(c, created, 'INSERT OR IGNORE'));
         all.push(created);
       } else if (!existing.locked && (existing.hijriMonthOnFirst <= 0 || existing.hijriYearOnFirst <= 1)) {
         const updated: HijriMonthMapRow = {
@@ -197,9 +198,9 @@ export function register(app: App): void {
     return c.json({ regenerated: generated.length, preservedLocked: locked.size });
   });
 
-  function insertStatement(c: Parameters<typeof db>[0], row: HijriMonthMapRow): D1PreparedStatement {
+  function insertStatement(c: Parameters<typeof db>[0], row: HijriMonthMapRow, verb: 'INSERT' | 'INSERT OR IGNORE' = 'INSERT'): D1PreparedStatement {
     return db(c).stmt(
-      INSERT_SQL,
+      verb === 'INSERT' ? INSERT_SQL : INSERT_SQL.replace('INSERT', verb),
       row.id,
       row.organizationId,
       row.year,

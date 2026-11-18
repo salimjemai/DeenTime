@@ -15,8 +15,8 @@ function clock(start = '2026-09-10T12:00:00Z'): { throttle: MemoryLoginThrottle;
   };
 }
 
-function fail(throttle: LoginThrottle, email: string, times: number): void {
-  for (let index = 0; index < times; index += 1) throttle.recordFailure(email);
+async function fail(throttle: LoginThrottle, email: string, times: number): Promise<void> {
+  for (let index = 0; index < times; index += 1) await throttle.recordFailure(email);
 }
 
 describe('MemoryLoginThrottle', async () => {
@@ -181,9 +181,11 @@ describe('D1LoginThrottle', () => {
     await throttle.recordFailure('imam@masjid.test');
     expect(await throttle.canAttempt('imam@masjid.test')).toEqual({ allowed: false, retryAfterSeconds: 60 });
 
-    await fail(throttle, 'imam@masjid.test', 4); // 9th in the window: blocked for 15 minutes
-    advance(15 * 60 - 30);
-    await throttle.recordFailure('imam@masjid.test'); // the window has expired, so this starts a new one
+    advance(10 * 60);
+    await fail(throttle, 'imam@masjid.test', 4); // 9th in the window, 10 minutes into it: blocked for 15 minutes
+    expect(await throttle.canAttempt('imam@masjid.test')).toEqual({ allowed: false, retryAfterSeconds: 900 });
+    advance(5 * 60 + 1); // the window has expired while the block still has 10 minutes to run
+    await throttle.recordFailure('imam@masjid.test'); // starts a new window, which drops the block
     expect(await throttle.canAttempt('imam@masjid.test')).toEqual({ allowed: true });
   });
 

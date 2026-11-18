@@ -1,4 +1,3 @@
-import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { AppConfig } from '../core/config.js';
 import { ProviderUnavailableError } from './errors.js';

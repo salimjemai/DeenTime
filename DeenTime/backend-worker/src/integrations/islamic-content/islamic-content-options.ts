@@ -1,4 +1,4 @@
-import { AppConfig } from '../../config/configuration.js';
+import type { AppConfig } from '../../core/config.js';
 import { ensureTrailingSlash } from './provider-http.js';
 
 export interface IslamicContentOptionValues {
