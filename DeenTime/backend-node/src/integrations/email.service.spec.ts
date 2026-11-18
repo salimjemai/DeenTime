@@ -44,7 +44,7 @@ const enabledSettings = {
   'Support:Email': ' support@iqamatime.test ',
 };
 
-const supportLine = '<p>Questions? Contact the IqamaTime administrator at <a href="mailto:support@iqamatime.test">support@iqamatime.test</a>.</p>';
+const supportLine = '<p>Questions? Contact the MasjidHub administrator at <a href="mailto:support@iqamatime.test">support@iqamatime.test</a>.</p>';
 
 describe('htmlEncode', () => {
   it('encodes like HtmlEncoder.Default', () => {
@@ -101,9 +101,9 @@ describe('RegistrationEmailSender when delivery is enabled', () => {
 
     expect(transport.sent).toEqual([
       {
-        from: { name: 'IqamaTime', address: 'noreply@iqamatime.test' },
+        from: { name: 'MasjidHub', address: 'noreply@iqamatime.test' },
         to: 'imam@masjid.test',
-        subject: 'Verify your IqamaTime administrator account',
+        subject: 'Verify your MasjidHub administrator account',
         html:
           '<p>Assalamu alaikum,</p><p>Confirm your administrator account for <strong>Masjid &lt;Al-Noor&gt; &amp; Co</strong>.</p>' +
           '<p><a href="https://app.test/verify?token=abc&#x2B;def">Verify email and activate the masjid</a></p>' +
@@ -115,7 +115,7 @@ describe('RegistrationEmailSender when delivery is enabled', () => {
 
   it('sends the invitation email with the exact .NET subject and body', async () => {
     const transport = fakeTransport();
-    const sender = new RegistrationEmailSender(testConfig({ ...enabledSettings, 'EmailDelivery:ReplyTo': 'admin@iqamatime.test', 'EmailDelivery:FromName': 'IqamaTime Admin' }, 'Production'), {
+    const sender = new RegistrationEmailSender(testConfig({ ...enabledSettings, 'EmailDelivery:ReplyTo': 'admin@iqamatime.test', 'EmailDelivery:FromName': 'MasjidHub Admin' }, 'Production'), {
       transport,
       logger: fakeLogger(),
     });
@@ -124,12 +124,12 @@ describe('RegistrationEmailSender when delivery is enabled', () => {
 
     expect(transport.sent).toEqual([
       {
-        from: { name: 'IqamaTime Admin', address: 'noreply@iqamatime.test' },
+        from: { name: 'MasjidHub Admin', address: 'noreply@iqamatime.test' },
         to: 'imam@masjid.test',
         replyTo: 'admin@iqamatime.test',
-        subject: 'You are invited to register your masjid with IqamaTime',
+        subject: 'You are invited to register your masjid with MasjidHub',
         html:
-          '<p>Assalamu alaikum,</p><p>IqamaTime has invited you to register <strong>Masjid &#x27;Al-Noor&#x27;</strong>.</p>' +
+          '<p>Assalamu alaikum,</p><p>MasjidHub has invited you to register <strong>Masjid &#x27;Al-Noor&#x27;</strong>.</p>' +
           '<p><a href="https://app.test/register?invite=xyz">Start secure masjid registration</a></p>' +
           '<p>You will create a password, complete the masjid details, and verify this email address; then sign in to open your masjid dashboard. This invitation expires in 7 days.</p>' +
           supportLine,
@@ -143,9 +143,9 @@ describe('RegistrationEmailSender when delivery is enabled', () => {
 
     await sender.sendPasswordReset('imam@masjid.test', 'https://app.test/reset?token="q"');
 
-    expect(transport.sent[0].subject).toBe('Reset your IqamaTime password');
+    expect(transport.sent[0].subject).toBe('Reset your MasjidHub password');
     expect(transport.sent[0].html).toBe(
-      '<p>Assalamu alaikum,</p><p>A password reset was requested for your IqamaTime administrator account.</p>' +
+      '<p>Assalamu alaikum,</p><p>A password reset was requested for your MasjidHub administrator account.</p>' +
         '<p><a href="https://app.test/reset?token=&quot;q&quot;">Choose a new password</a></p>' +
         '<p>This link expires in 30 minutes. If you did not request it, you can ignore this email; your password will not change.</p>',
     );

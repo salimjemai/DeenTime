@@ -1,0 +1,132 @@
+name: Deploy MasjidHub web to Cloudflare Pages
+
+# Manual only for now: Actions -> "Deploy MasjidHub web to Cloudflare Pages" -> Run workflow.
+# Publishes the Angular site together with the Workers + D1 API (DeenTime/backend-worker),
+# which runs as the Pages worker (DeenTime/docs/cloudflare-deployment.md).
+on:
+  workflow_dispatch:
+    inputs:
+      verify_public_domain:
+        description: Check https://masjidhub.jemaiinnovations.com after the deploy
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-masjidhub-production
+  cancel-in-progress: false
+
+env:
+  PAGES_PROJECT: masjidhub
+  PUBLIC_URL: https://masjidhub.jemaiinnovations.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: cloudflare-production
+      url: https://masjidhub.jemaiinnovations.com
+    defaults:
+      run:
+        working-directory: DeenTime/frontend/deentime-web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: DeenTime/frontend/deentime-web/package-lock.json
+      - run: npm ci
+      - name: Test and build the API worker
+        working-directory: DeenTime/backend-worker
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Test the fallback proxy worker
+        run: npm run pages:test
+      - name: Apply database migrations to D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 d1 migrations apply masjidhub --remote
+      - name: Build the production bundle
+        run: npm run build -- --configuration production
+      - name: Check the bundle and add the worker, routes and headers
+        run: npm run pages:prepare
+      - name: Verify deployment credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Missing CLOUDFLARE_API_TOKEN'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
+      - name: Create the Pages project on first use
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@4 pages project list | grep -qw "$PAGES_PROJECT"; then
+            echo "Pages project $PAGES_PROJECT exists."
+          else
+            # Wrangler 4.164 hands a plain "project create" to Workers, which fails for a
+            # Pages upload; --force creates the Pages project itself.
+            npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main --force ||
+              npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main
+          fi
+      - name: Keep the origin proxy key in step with the repository secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MASJIDHUB_PROXY_KEY: ${{ secrets.MASJIDHUB_PROXY_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MASJIDHUB_PROXY_KEY" ]; then
+            echo '::notice::MASJIDHUB_PROXY_KEY is not set; keeping the ORIGIN_PROXY_KEY already stored on the Pages project.'
+            exit 0
+          fi
+          printf '%s' "$MASJIDHUB_PROXY_KEY" | npx --yes wrangler@4 pages secret put ORIGIN_PROXY_KEY --project-name="$PAGES_PROJECT"
+      - name: Publish the site to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: DeenTime/frontend/deentime-web
+          command: pages deploy --project-name=masjidhub --branch=main
+      - name: Check the new deployment
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_URL" || { echo '::error::wrangler did not report a deployment URL'; exit 1; }
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 "$DEPLOYMENT_URL/" -o /tmp/masjidhub-index.html
+          grep -F '<title>MasjidHub' /tmp/masjidhub-index.html
+          # History routes must fall back to the app shell.
+          curl --fail --silent --show-error --retry 3 --retry-delay 5 "$DEPLOYMENT_URL/login" -o /tmp/masjidhub-login.html
+          grep -F '<title>MasjidHub' /tmp/masjidhub-login.html
+          # The worker must answer the API paths (the 503 case only applies to the fallback tunnel proxy).
+          status=$(curl --silent --output /tmp/masjidhub-health.txt --write-out '%{http_code}' "$DEPLOYMENT_URL/health/live")
+          case "$status" in
+            200) echo 'The API answers through the proxy.' ;;
+            503) grep -F 'MasjidHub is temporarily offline' /tmp/masjidhub-health.txt
+                 echo '::warning::The site is deployed, but the origin machine is not answering (branded 503).' ;;
+            *) echo "::error::/health/live returned $status instead of reaching the proxy worker"; exit 1 ;;
+          esac
+      - name: Check the public address
+        if: ${{ inputs.verify_public_domain }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 5 "$PUBLIC_URL/login" -o /tmp/masjidhub-live.html
+          grep -F '<title>MasjidHub' /tmp/masjidhub-live.html
+          # Existing masjid embeds load this script; it must keep its name.
+          curl --fail --silent --show-error --location -o /dev/null "$PUBLIC_URL/iqamatime-embed.js"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$PUBLIC_URL/health/live")
+          if [ "$status" != "200" ]; then
+            echo "::warning::$PUBLIC_URL/health/live returned $status: the origin machine or its tunnel is not running."
+          fi

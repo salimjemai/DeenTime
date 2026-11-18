@@ -1,0 +1,25 @@
+# Response headers for the static site on Cloudflare Pages. They mirror what the API's
+# securityHeaders() middleware sends when it serves the site itself: the dashboard may
+# not be framed, the public TV and widget pages may be embedded anywhere.
+# (Responses proxied to the API by _worker.js carry the API's own headers instead.)
+# "! Link": Pages turns index.html's <link rel="modulepreload" href="chunk-….js"> into a
+# Link header. A header ignores <base href="/">, so on /w/slug or /org/1/timings the
+# browser would preload /w/chunk-….js and get index.html back.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  ! Link
+
+/tv/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
+
+/w/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
+
+/w2/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *

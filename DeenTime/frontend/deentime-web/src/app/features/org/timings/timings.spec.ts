@@ -32,7 +32,7 @@ describe('TimingsComponent setup state', () => {
 
     expect(fixture.componentInstance.needsCriteria()).toBeTrue();
     expect(fixture.componentInstance.error()).toBe('');
-    expect(fixture.nativeElement.textContent).toContain('Tell IqamaTime where your mosque is.');
+    expect(fixture.nativeElement.textContent).toContain('Tell MasjidHub where your mosque is.');
     expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/org/org-1/profile');
   });
 });

@@ -1,0 +1,29 @@
+// LOCAL DEVELOPMENT ONLY (`npm run dev`, `npm run db:migrate:local`).
+// This file is never deployed. Production runs as the advanced-mode worker of the
+// Cloudflare Pages project configured in ../frontend/deentime-web/wrangler.toml, which
+// must declare the same bindings: DB (D1), UPLOADS (KV) and the built-in ASSETS.
+{
+  "name": "masjidhub-api-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "dev": { "port": 8788, "ip": "127.0.0.1" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "masjidhub-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [{ "binding": "UPLOADS", "id": "masjidhub-uploads-local" }],
+  // Stands in for the Pages ASSETS binding: non-API paths are served from here.
+  "assets": { "binding": "ASSETS", "directory": "./dev-assets", "run_worker_first": true },
+  // Same names as the backend-node environment variables. Local-only values; real
+  // secrets go in .dev.vars (git-ignored), never in this file.
+  "vars": {
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "Auth__Issuer": "deentime-local",
+    "Auth__SigningKey": "local-development-signing-key-not-a-secret-0123456789",
+    "Frontend__PublicBaseUrl": "http://127.0.0.1:4200"
+  }
+}

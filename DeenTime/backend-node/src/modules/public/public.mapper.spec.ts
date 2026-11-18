@@ -276,25 +276,25 @@ describe('iqama shaping', () => {
 
 describe('embed markup', () => {
   it('encodes like WebUtility.HtmlEncode', () => {
-    expect(webUtilityHtmlEncode(`IqamaTime · Café <b> & "q" 'a' 1+1 مسجد 😀 ÿ Ā`)).toBe('IqamaTime &#183; Caf&#233; &lt;b&gt; &amp; &quot;q&quot; &#39;a&#39; 1+1 مسجد &#128512; &#255; Ā');
+    expect(webUtilityHtmlEncode(`MasjidHub · Café <b> & "q" 'a' 1+1 مسجد 😀 ÿ Ā`)).toBe('MasjidHub &#183; Caf&#233; &lt;b&gt; &amp; &quot;q&quot; &#39;a&#39; 1+1 مسجد &#128512; &#255; Ā');
     expect(webUtilityHtmlEncode(' ')).toBe('&#160;');
     expect(webUtilityHtmlEncode('https://x.test/w/slug?a=1&b=2')).toBe('https://x.test/w/slug?a=1&amp;b=2');
   });
 
   it('renders the tv iframe without auto-height and the widget iframes with the loader script', () => {
-    const title = webUtilityHtmlEncode('IqamaTime · North Lamar Austin Muslim Community Center prayer times');
+    const title = webUtilityHtmlEncode('MasjidHub · North Lamar Austin Muslim Community Center prayer times');
     expect(iframe('https://public.deentime.test/tv/north-lamar', title, '100%', '720', false)).toBe(
-      '<iframe src="https://public.deentime.test/tv/north-lamar" title="IqamaTime &#183; North Lamar Austin Muslim Community Center prayer times" width="100%" height="720" loading="lazy" style="display:block;border:0;max-width:100%;overflow:hidden"></iframe>',
+      '<iframe src="https://public.deentime.test/tv/north-lamar" title="MasjidHub &#183; North Lamar Austin Muslim Community Center prayer times" width="100%" height="720" loading="lazy" style="display:block;border:0;max-width:100%;overflow:hidden"></iframe>',
     );
-    expect(iframe('https://public.deentime.test/w/north-lamar/daily', webUtilityHtmlEncode('IqamaTime · North Lamar Austin Muslim Community Center daily prayer times'), '390', '720', true)).toBe(
-      '<iframe src="https://public.deentime.test/w/north-lamar/daily" title="IqamaTime &#183; North Lamar Austin Muslim Community Center daily prayer times" width="390" height="720" loading="lazy" data-iqamatime-auto-height style="display:block;border:0;max-width:100%;overflow:hidden"></iframe><script async src="https://public.deentime.test/iqamatime-embed.js"></script>',
+    expect(iframe('https://public.deentime.test/w/north-lamar/daily', webUtilityHtmlEncode('MasjidHub · North Lamar Austin Muslim Community Center daily prayer times'), '390', '720', true)).toBe(
+      '<iframe src="https://public.deentime.test/w/north-lamar/daily" title="MasjidHub &#183; North Lamar Austin Muslim Community Center daily prayer times" width="390" height="720" loading="lazy" data-iqamatime-auto-height style="display:block;border:0;max-width:100%;overflow:hidden"></iframe><script async src="https://public.deentime.test/iqamatime-embed.js"></script>',
     );
   });
 
   it('HTML-encodes the organization name and the URL inside the markup', () => {
-    const title = webUtilityHtmlEncode(`IqamaTime · Masjid <Al-Noor> & "Friends" 'Center' prayer times`);
+    const title = webUtilityHtmlEncode(`MasjidHub · Masjid <Al-Noor> & "Friends" 'Center' prayer times`);
     expect(iframe('https://example.com:8443/w/al noor', title, '330', '820', true)).toBe(
-      `<iframe src="https://example.com:8443/w/al noor" title="IqamaTime &#183; Masjid &lt;Al-Noor&gt; &amp; &quot;Friends&quot; &#39;Center&#39; prayer times" width="330" height="820" loading="lazy" data-iqamatime-auto-height style="display:block;border:0;max-width:100%;overflow:hidden"></iframe><script async src="https://example.com:8443/iqamatime-embed.js"></script>`,
+      `<iframe src="https://example.com:8443/w/al noor" title="MasjidHub &#183; Masjid &lt;Al-Noor&gt; &amp; &quot;Friends&quot; &#39;Center&#39; prayer times" width="330" height="820" loading="lazy" data-iqamatime-auto-height style="display:block;border:0;max-width:100%;overflow:hidden"></iframe><script async src="https://example.com:8443/iqamatime-embed.js"></script>`,
     );
   });
 });

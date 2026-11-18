@@ -1,5 +1,9 @@
 # Staging deployment (self-hosted srv1)
 
+> The public site, https://masjidhub.jemaiinnovations.com, is hosted on Cloudflare Pages
+> with the API behind a Cloudflare Tunnel: see [../docs/cloudflare-deployment.md](../docs/cloudflare-deployment.md).
+> This page describes the VPS staging box, which is kept as an alternative origin.
+
 Staging runs on our own plain **Ubuntu 24.04** VPS (`srv1`, **70.36.101.120**)
 with **nginx + systemd + PostgreSQL + Node.js 22**. No CyberPanel, no
 OpenLiteSpeed and no Docker. The API is the Node.js implementation in

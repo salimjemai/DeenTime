@@ -250,7 +250,7 @@ describe('API integration', () => {
     expect(embed.status).toBe(200);
     const iframe = embed.body.iframe as string;
     expect(iframe).toContain(`src="${TEST_PUBLIC_BASE_URL}/w/`);
-    expect(iframe).toContain('title="IqamaTime');
+    expect(iframe).toContain('title="MasjidHub');
     expect(iframe).toContain('Integration Mosque prayer times');
     expect(embed.body.dailyWidgetUrl).toContain(`/w/${app.organizationSlug}/daily`);
     expect(embed.body.jumuahWidgetUrl).toContain(`/w/${app.organizationSlug}/jumuah`);
@@ -290,7 +290,7 @@ describe('API integration', () => {
       .http()
       .put(`/api/v1/design/${app.organizationId}`)
       .set(superUser())
-      .send({ headerImageUrl: 'https://cdn.example.test/masjid.jpg', iqamaHeadings: ['FAJR', 'IQM*'], footerHtml: '<p>IqamaTime</p>', theme: 'classic', tvFontScale: 75, widgetFontScale: 125, compactFontScale: 160, tvFontFamily: 'classic-serif', widgetFontFamily: 'modern-sans', compactFontFamily: 'system' });
+      .send({ headerImageUrl: 'https://cdn.example.test/masjid.jpg', iqamaHeadings: ['FAJR', 'IQM*'], footerHtml: '<p>MasjidHub</p>', theme: 'classic', tvFontScale: 75, widgetFontScale: 125, compactFontScale: 160, tvFontFamily: 'classic-serif', widgetFontFamily: 'modern-sans', compactFontFamily: 'system' });
     expect(update.status).toBe(204);
     const saved = await app.http().get(`/api/v1/design/${app.organizationId}`).set(superUser());
     expect(saved.body.tvFontScale).toBe(75);
@@ -328,7 +328,7 @@ describe('API integration', () => {
     expect(discovery.status).toBe(200);
     const widget = discovery.body.displays.widget;
     expect((widget.url as string).startsWith(`${TEST_PUBLIC_BASE_URL}/w/`)).toBe(true);
-    expect(widget.iframe).toContain('IqamaTime');
+    expect(widget.iframe).toContain('MasjidHub');
     expect(widget.iframe).toContain('&lt;East&gt;');
     expect(widget.iframe).toContain('&amp; Community');
     expect(widget.iframe).not.toContain('src="/w/');

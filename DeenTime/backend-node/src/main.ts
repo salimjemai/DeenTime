@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
   await app.get(StartupService).run();
   const { host, port } = resolveListenAddress(config);
   await app.listen(port, host);
-  app.get(Logger).log(`IqamaTime API (${config.environment}) listening on http://${host}:${port}`);
+  app.get(Logger).log(`MasjidHub API (${config.environment}) listening on http://${host}:${port}`);
 }
 
 await bootstrap();

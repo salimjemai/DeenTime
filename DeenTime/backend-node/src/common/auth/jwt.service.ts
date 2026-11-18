@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import { AppConfig } from '../../config/configuration.js';
 
-/** Claims carried by the IqamaTime session token (same names as the .NET API). */
+/** Claims carried by the MasjidHub session token (same names as the .NET API). */
 export interface SessionUser {
   sub: string;
   email: string | null;

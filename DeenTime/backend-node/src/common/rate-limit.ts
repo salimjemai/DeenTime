@@ -1,6 +1,7 @@
 import { Injectable, SetMetadata, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { AuthenticatedRequest } from './auth/claims.js';
+import { ClientAddressResolver } from './client-address.js';
 import { JsonResponseException } from './errors.js';
 
 /**
@@ -72,6 +73,7 @@ export class RateLimitGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly store: RateLimitStore,
+    private readonly clientAddress: ClientAddressResolver,
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -84,7 +86,7 @@ export class RateLimitGuard implements CanActivate {
     const partition =
       definition.partition === 'user'
         ? `${request.user?.orgId ?? ''}:${request.user?.sub ?? ''}`
-        : (request.socket?.remoteAddress ?? request.ip ?? 'unknown');
+        : (this.clientAddress.resolve(request) ?? 'unknown');
     if (!this.store.tryAcquire(policy, partition)) throw new JsonResponseException(429, '');
     return true;
   }

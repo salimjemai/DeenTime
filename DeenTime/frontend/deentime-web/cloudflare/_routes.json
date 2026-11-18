@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "include": [
+    "/api/*",
+    "/public/*",
+    "/uploads/*",
+    "/health/*",
+    "/jobs",
+    "/jobs/*",
+    "/clock",
+    "/iqama-widget.php",
+    "/iqama-widget2.php"
+  ],
+  "exclude": []
+}

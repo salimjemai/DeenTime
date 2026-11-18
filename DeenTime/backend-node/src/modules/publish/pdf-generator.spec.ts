@@ -40,7 +40,7 @@ const criteria: PrayerCriteriaInput = {
 };
 
 const organization = {
-  name: 'IqamaTime Demo Mosque',
+  name: 'MasjidHub Demo Mosque',
   addressLine: '14300 Rountree Ranch Lane',
   city: 'Austin',
   state: 'TX',
@@ -69,7 +69,7 @@ const iqamaEntries: PdfIqamaEntry[] = [
 function input(overrides: Partial<SchedulePdfInput> = {}): SchedulePdfInput {
   return {
     organization,
-    design: { iqamaHeadings: ['FAJR', 'IQM', 'SUNRISE', 'start', 'IQM', 'ASR', 'IQM', 'SUNSET', 'ISHA', 'Starts'], footerHtml: '<p>&copy; 2026 Demo Mosque &middot; <b>IqamaTime</b></p>' },
+    design: { iqamaHeadings: ['FAJR', 'IQM', 'SUNRISE', 'start', 'IQM', 'ASR', 'IQM', 'SUNSET', 'ISHA', 'Starts'], footerHtml: '<p>&copy; 2026 Demo Mosque &middot; <b>MasjidHub</b></p>' },
     criteria,
     iqamaEntries,
     hijriAnchors: anchors2026,
@@ -179,12 +179,12 @@ describe('buildScheduleDocument', () => {
     expect(definition.pageMargins).toEqual([20, 116, 20, 29]);
     expect(typeof definition.header).toBe('function');
     expect(typeof definition.footer).toBe('function');
-    expect((definition.footer as () => unknown)()).toEqual({ text: '© 2026 Demo Mosque ·  IqamaTime', fontSize: 9, alignment: 'center', margin: [20, 0, 20, 0] });
+    expect((definition.footer as () => unknown)()).toEqual({ text: '© 2026 Demo Mosque ·  MasjidHub', fontSize: 9, alignment: 'center', margin: [20, 0, 20, 0] });
     expect((definition.header as () => unknown)()).toEqual({
       stack: [
         { text: 'Adhan & Iqama Timings', fontSize: 22, bold: true, alignment: 'center' },
         { text: '(February 2026)', fontSize: 12, alignment: 'center' },
-        { text: 'IqamaTime Demo Mosque', fontSize: 16, bold: true, alignment: 'center' },
+        { text: 'MasjidHub Demo Mosque', fontSize: 16, bold: true, alignment: 'center' },
         { text: '14300 Rountree Ranch Lane Austin TX 78717', fontSize: 9, alignment: 'center' },
         { text: 'Phone: 4094543454     Email: demo@iqamatime.test     Web: https://deentime.dev', fontSize: 8, alignment: 'center' },
       ],

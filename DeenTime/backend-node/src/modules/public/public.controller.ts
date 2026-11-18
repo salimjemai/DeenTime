@@ -121,7 +121,7 @@ export class PublicController {
     const dailyWidgetUrl = absoluteRoute(origin, `/w/${escapedSlug}/daily`);
     const jumuahWidgetUrl = absoluteRoute(origin, `/w/${escapedSlug}/jumuah`);
     const compactUrl = absoluteRoute(origin, `/w2/${escapedSlug}`);
-    const encodedTitle = webUtilityHtmlEncode(`IqamaTime · ${org.name} prayer times`);
+    const encodedTitle = webUtilityHtmlEncode(`MasjidHub · ${org.name} prayer times`);
 
     return {
       organization: { name: org.name, slug: org.slug },
@@ -129,8 +129,8 @@ export class PublicController {
         tv: { url: tvUrl, iframe: iframe(tvUrl, encodedTitle, '100%', '720', false) },
         widget: { url: widgetUrl, iframe: iframe(widgetUrl, encodedTitle, '390', '920', true) },
         combined: { url: widgetUrl, iframe: iframe(widgetUrl, encodedTitle, '390', '920', true) },
-        daily: { url: dailyWidgetUrl, iframe: iframe(dailyWidgetUrl, webUtilityHtmlEncode(`IqamaTime · ${org.name} daily prayer times`), '390', '720', true) },
-        jumuah: { url: jumuahWidgetUrl, iframe: iframe(jumuahWidgetUrl, webUtilityHtmlEncode(`IqamaTime · ${org.name} Friday prayer times`), '390', '560', true) },
+        daily: { url: dailyWidgetUrl, iframe: iframe(dailyWidgetUrl, webUtilityHtmlEncode(`MasjidHub · ${org.name} daily prayer times`), '390', '720', true) },
+        jumuah: { url: jumuahWidgetUrl, iframe: iframe(jumuahWidgetUrl, webUtilityHtmlEncode(`MasjidHub · ${org.name} Friday prayer times`), '390', '560', true) },
         compact: { url: compactUrl, iframe: iframe(compactUrl, encodedTitle, '330', '820', true) },
       },
       supportedParameters: {
@@ -140,7 +140,7 @@ export class PublicController {
         layout: [...SUPPORTED_LAYOUTS],
       },
       defaults: { theme: 'default', fontScale: 100, locale: 'en-US' },
-      provider: 'IqamaTime',
+      provider: 'MasjidHub',
     };
   }
 

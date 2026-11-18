@@ -38,7 +38,7 @@ export interface AuthPublicConfig {
   captchaEnabled: boolean;
   captchaSiteKey?: string;
   addressAutocompleteEnabled: boolean;
-  /** Masjids join only through an invitation sent by the IqamaTime administrator. */
+  /** Masjids join only through an invitation sent by the MasjidHub administrator. */
   registrationByInvitationOnly?: boolean;
   supportEmail?: string | null;
   supportPhone?: string | null;

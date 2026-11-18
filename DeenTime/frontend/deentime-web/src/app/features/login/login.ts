@@ -339,7 +339,7 @@ export class LoginComponent implements OnInit {
         this.isRegister.set(false);
         this.applyModeValidators();
         this.invitationError.set(error.status === 400 || error.status === 404
-          ? 'This invitation link is invalid, has expired, or was already used. Contact the IqamaTime administrator for a new invitation.'
+          ? 'This invitation link is invalid, has expired, or was already used. Contact the MasjidHub administrator for a new invitation.'
           : (error.error?.message ?? 'The invitation could not be loaded. Please try the link again.'));
       }
     });

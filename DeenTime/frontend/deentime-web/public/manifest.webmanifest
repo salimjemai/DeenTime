@@ -1,6 +1,9 @@
 {
-  "name": "deentime-web",
-  "short_name": "deentime-web",
+  "name": "MasjidHub",
+  "short_name": "MasjidHub",
+  "description": "Manage, publish, and display accurate mosque prayer and iqama times.",
+  "theme_color": "#192b3e",
+  "background_color": "#192b3e",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",

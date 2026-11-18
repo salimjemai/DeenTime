@@ -1,0 +1,22 @@
+# Cloudflare Tunnel for the MasjidHub API on the origin machine.
+#
+# `masjidhub-origin.ps1 tunnel-setup` writes this file for you as
+# C:\MasjidHub\cloudflared\config.yml (see docs/cloudflare-deployment.md). To do it by hand:
+#
+#   cloudflared tunnel login                      # browser sign-in, pick jemaiinnovations.com
+#   cloudflared tunnel create masjidhub
+#   cloudflared tunnel route dns masjidhub masjidhub-origin.jemaiinnovations.com
+#
+# Keep the hostname one level below the zone (masjidhub-origin, not origin.masjidhub):
+# Cloudflare's free Universal SSL certificate only covers one level of subdomain.
+#
+# Only the API is published. The website itself is served by Cloudflare Pages, which
+# forwards /api, /public, /uploads, /health and /jobs to this hostname.
+
+tunnel: TUNNEL_ID
+credentials-file: C:\Users\YOU\.cloudflared\TUNNEL_ID.json
+
+ingress:
+  - hostname: masjidhub-origin.jemaiinnovations.com
+    service: http://127.0.0.1:5080
+  - service: http_status:404
