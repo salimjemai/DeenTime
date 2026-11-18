@@ -5,23 +5,14 @@ Worker (`mushafplus-api` at `https://api.jemaiinnovations.com`, D1 `mushafplus`)
 to accounts and family groups. This folder is that code, kept here so Deen Time's tests
 run on it. It has no npm dependencies and no secrets.
 
-## Moving it into the shared backend
+## Where it lives now
 
-The Mushaf+ backend (`MushafPlus/backend`) owns that Worker, so these steps are done
-there, not from this repository.
-
-1. Copy `src/*.ts` to `backend/src/masjid/`.
-2. Copy `migrations/0002_masjids.sql` to `backend/migrations/0002_masjids.sql`. It runs
-   after `0001_init.sql` and references `users(id) ON DELETE CASCADE`, so deleting an
-   account deletes the masjids it owns. It never writes to `users` or `sessions`.
-3. Copy `test-shared/masjid.test.ts` to `backend/test/masjid.test.ts`.
-4. Mount it in `backend/src/index.ts`, at the top of `dispatch()`:
+The live copy is in the shared backend: `MushafPlus/backend/src/masjid/` and
+`backend/migrations/0002_masjids.sql` (MushafPlus PR #9, commit 82cb1fa, byte-for-byte
+the same as this folder). It is mounted at the top of `dispatch()` in
+`backend/src/index.ts`:
 
 ```ts
-import { requireUser } from './auth';
-import { handleMasjidApi } from './masjid/masjid-api';
-
-// inside dispatch(), right after `const url = new URL(request.url);`
 if (url.pathname.startsWith('/v1/masjid/')) {
   return handleMasjidApi(request, url.pathname.slice('/v1/masjid'.length), {
     db: env.DB,
@@ -30,17 +21,10 @@ if (url.pathname.startsWith('/v1/masjid/')) {
 }
 ```
 
-`requireUser` throws the backend's own `ApiError` (401 `unauthorized` or
-`session_expired`); the module answers with that error as it is.
-
-Checked on 2026-11-18 against `claude/project-thread-n6yp2t` (commit aadc738): with
-the four steps applied in a scratch copy, `tsc --noEmit` passes and all 35 tests pass
-(the backend's 34 plus `masjid.test.ts`, which signs up, sets up a masjid, edits it,
-reads the public page and deletes the account).
-
-Two things to know in that Worker: its wrapper sets `cache-control: no-store` on every
-answer, so the public page is not cached for 60 seconds as the module asks; and its
-CORS list allows GET, POST, PATCH and DELETE, which is all the web app uses.
+The Mushaf+ backend owns that copy and its end-to-end test (`backend/test/masjid.test.ts`).
+If you change a file here, apply the same change there; the two must stay identical.
+That Worker keeps the public page's `public, max-age=60` cache and its
+`Access-Control-Allow-Origin: *`; signed-in answers stay `no-store`.
 
 ## Routes
 
