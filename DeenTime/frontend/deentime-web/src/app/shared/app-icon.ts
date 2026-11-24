@@ -23,8 +23,7 @@ export type AppIconName =
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       @switch (name) {
         @case ('brand') {
-          <path d="M4.25 20V10.5L7 8.1V5.9L8.5 4.4 10 5.9v1.08L12 5.25l2 1.73V5.9l1.5-1.5L17 5.9v2.2l2.75 2.4V20" />
-          <path d="M2.75 20h18.5M8.25 20v-5.1a3.75 3.75 0 0 1 7.5 0V20M4.25 11h3M16.75 11h3" />
+          <image href="icons/masjidhub.svg" width="24" height="24" />
         }
         @case ('timings') {
           <circle cx="11" cy="12" r="7.25" />
@@ -79,6 +78,7 @@ export type AppIconName =
   styles: [`
     :host { display: inline-grid; width: 1.5rem; height: 1.5rem; place-items: center; }
     svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    svg > image { clip-path: inset(0 round 4px); }
     path, rect, circle {
       vector-effect: non-scaling-stroke;
       stroke: currentColor;
